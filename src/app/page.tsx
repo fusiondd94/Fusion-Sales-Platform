@@ -23,7 +23,7 @@ export default function Home() {
         <div className="nav-links">
           <a href="#offers">Services</a>
           <a href="#sales-flow">Sales Flow</a>
-          <a href="/admin">CRM</a>
+          <a href="/fusionadmin">CRM</a>
           <a href="/portal">Portal</a>
         </div>
         <a className="nav-cta" href="#sales-flow">Start</a>

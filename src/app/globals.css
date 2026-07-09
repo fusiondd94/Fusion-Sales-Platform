@@ -88,7 +88,8 @@ textarea {
 .primary-button,
 .secondary-button,
 .option-button,
-.icon-button {
+.icon-button,
+.ghost-button {
   border: 1px solid var(--line);
   cursor: pointer;
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
@@ -168,6 +169,16 @@ h1 {
   padding: 0.85rem 1.1rem;
 }
 
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
 .secondary-button {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
@@ -177,7 +188,8 @@ h1 {
 .secondary-button:hover,
 .nav-cta:hover,
 .option-button:hover,
-.icon-button:hover {
+.icon-button:hover,
+.ghost-button:hover {
   transform: translateY(-2px);
 }
 
@@ -316,7 +328,8 @@ h1 {
 }
 
 .form-grid input,
-.form-grid textarea {
+.form-grid textarea,
+.login-card input {
   width: 100%;
   min-height: 3rem;
   border: 1px solid var(--line);
@@ -327,7 +340,8 @@ h1 {
 }
 
 .form-grid input:focus,
-.form-grid textarea:focus {
+.form-grid textarea:focus,
+.login-card input:focus {
   border-color: rgba(49, 215, 255, 0.85);
 }
 
@@ -426,6 +440,64 @@ h1 {
   display: grid;
   grid-template-columns: 0.75fr 1.25fr;
   gap: 1rem;
+}
+
+.login-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1.25rem;
+  background:
+    linear-gradient(135deg, rgba(8, 17, 31, 0.94), rgba(23, 26, 31, 0.94)),
+    radial-gradient(circle at 18% 18%, rgba(49, 215, 255, 0.22), transparent 26rem),
+    radial-gradient(circle at 82% 74%, rgba(245, 184, 75, 0.18), transparent 24rem);
+}
+
+.login-brand {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.25rem;
+}
+
+.login-card {
+  display: grid;
+  width: min(100%, 440px);
+  gap: 0.95rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.07);
+  padding: 1.35rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  line-height: 1;
+}
+
+.login-card label {
+  display: grid;
+  gap: 0.4rem;
+  color: #dce7f5;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.login-card input {
+  width: 100%;
+  min-height: 3rem;
+  outline: none;
+}
+
+.login-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid rgba(245, 184, 75, 0.45);
+  background: rgba(245, 184, 75, 0.12);
+  color: var(--gold);
 }
 
 @keyframes moveBar {

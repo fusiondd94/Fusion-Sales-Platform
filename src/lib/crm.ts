@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { CustomerInfo } from "@/lib/customer";
 import { Answers } from "@/lib/offers";
+import { demoClients, demoTasks, pipelineSummary } from "@/lib/records";
 
 type SalesRecommendation = {
   packageKey: string;
@@ -21,6 +22,32 @@ type LeadRecord = {
   id: string;
   lead_code: string;
   status: string;
+};
+
+type DashboardLead = {
+  id: string;
+  lead_code: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  company: string;
+  website: string | null;
+  package_name: string;
+  total_today: number;
+  monthly_due: number;
+  discount_percent: number;
+  status: string;
+  created_at: string;
+};
+
+type DashboardTask = {
+  id: string;
+  title: string;
+  owner: string;
+  status: string;
+  priority: string;
+  due_at: string | null;
+  company?: string | null;
 };
 
 let cachedClient: SupabaseClient<any> | null = null;
@@ -45,6 +72,76 @@ function getServiceClient() {
 
 export function isCrmConfigured() {
   return Boolean(getServiceClient());
+}
+
+function demoDashboardRecords() {
+  return {
+    summary: pipelineSummary,
+    leads: demoClients.map((client) => ({
+      id: client.id,
+      lead_code: client.id,
+      customer_name: client.name,
+      customer_email: client.email,
+      customer_phone: client.phone,
+      company: client.company,
+      website: client.website || null,
+      package_name: client.recommendation.packageName,
+      total_today: client.recommendation.totalToday,
+      monthly_due: client.recommendation.monthlyDue,
+      discount_percent: client.recommendation.discountPercent,
+      status: client.status,
+      created_at: client.createdAt
+    })),
+    tasks: demoTasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      owner: task.owner,
+      status: task.status,
+      priority: "normal",
+      due_at: null,
+      company: task.client
+    }))
+  };
+}
+
+export async function getFusionDashboardRecords() {
+  const supabase = getServiceClient();
+  if (!supabase) return demoDashboardRecords();
+
+  const [{ data: leads, error: leadsError }, { data: tasks, error: tasksError }] = await Promise.all([
+    supabase
+      .from("crm_leads")
+      .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, package_name, total_today, monthly_due, discount_percent, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("crm_tasks")
+      .select("id, title, owner, status, priority, due_at, crm_leads(company)")
+      .order("due_at", { ascending: true, nullsFirst: false })
+      .limit(50)
+  ]);
+
+  if (leadsError || tasksError) {
+    console.error("Unable to load Fusion admin dashboard records.", { leadsError, tasksError });
+    return demoDashboardRecords();
+  }
+
+  const safeLeads = (leads || []) as DashboardLead[];
+  const safeTasks = ((tasks || []) as Array<DashboardTask & { crm_leads?: { company?: string | null } | null }>).map((task) => ({
+    ...task,
+    company: task.crm_leads?.company || null
+  }));
+
+  return {
+    summary: [
+      { label: "New leads", value: safeLeads.filter((lead) => lead.status === "captured").length },
+      { label: "Checkout started", value: safeLeads.filter((lead) => lead.status === "checkout_started").length },
+      { label: "Paid clients", value: safeLeads.filter((lead) => lead.status === "paid").length },
+      { label: "Open tasks", value: safeTasks.filter((task) => task.status !== "done").length }
+    ],
+    leads: safeLeads,
+    tasks: safeTasks
+  };
 }
 
 export function createLeadCode() {
