@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { fulfillCheckout, recordStripeEvent } from "@/lib/crm";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
@@ -24,6 +25,8 @@ export async function POST(request: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
+    await recordStripeEvent(event);
+    await fulfillCheckout(session);
     console.info("Create Fusion client portal, CRM deal, and onboarding tasks", {
       customer: session.customer,
       subscription: session.subscription,
@@ -32,6 +35,7 @@ export async function POST(request: Request) {
   }
 
   if (event.type === "invoice.payment_failed") {
+    await recordStripeEvent(event);
     console.info("Create revenue recovery task for Fusion sales follow-up", event.data.object.id);
   }
 

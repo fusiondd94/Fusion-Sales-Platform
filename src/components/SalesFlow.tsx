@@ -48,12 +48,14 @@ export function SalesFlow() {
       body: JSON.stringify({ customer, answers, recommendation })
     });
     const leadPayload = await leadResponse.json();
-    if (leadPayload.leadId) setLeadId(leadPayload.leadId);
+    const capturedLeadId = leadPayload.leadId as string | undefined;
+    if (capturedLeadId) setLeadId(capturedLeadId);
 
     const response = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        leadId: capturedLeadId,
         customer,
         answers,
         recommendation

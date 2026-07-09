@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { customerSchema } from "@/lib/customer";
+import { markCheckoutStarted } from "@/lib/crm";
 import { getAppUrl, getStripe } from "@/lib/stripe";
 
 const checkoutSchema = z.object({
+  leadId: z.string().optional(),
   customer: customerSchema,
   answers: z.record(z.union([z.string(), z.array(z.string())])),
   recommendation: z.object({
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const { customer, answers, recommendation } = parsed.data;
+  const { leadId, customer, answers, recommendation } = parsed.data;
   const lineItems = [
     {
       price_data: {
@@ -69,6 +71,7 @@ export async function POST(request: Request) {
       customerEmail: customer.email,
       customerPhone: customer.phone,
       company: customer.company,
+      leadCode: leadId || "",
       website: customer.website || "",
       packageKey: recommendation.packageKey,
       packageName: recommendation.packageName,
@@ -85,6 +88,8 @@ export async function POST(request: Request) {
       }
     }
   });
+
+  await markCheckoutStarted(leadId, session);
 
   return NextResponse.json({ url: session.url });
 }
