@@ -2,15 +2,20 @@
 
 import { ArrowRight, Check, ChevronLeft, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
+import { CustomerInfo, emptyCustomer } from "@/lib/customer";
 import { Answers, calculateRecommendation, questions } from "@/lib/offers";
 
 export function SalesFlow() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
+  const [customer, setCustomer] = useState<CustomerInfo>(emptyCustomer);
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const question = questions[step];
+  const question = questions[Math.min(step, questions.length - 1)];
   const recommendation = useMemo(() => calculateRecommendation(answers), [answers]);
-  const progress = Math.round(((step + 1) / questions.length) * 100);
+  const isContactStep = step === questions.length;
+  const progress = Math.round(((step + 1) / (questions.length + 1)) * 100);
 
   function select(value: string) {
     if (question.multi) {
@@ -29,16 +34,27 @@ export function SalesFlow() {
   }
 
   async function checkout() {
+    setError("");
+    if (!customer.name || !customer.email || !customer.phone || !customer.company) {
+      setError("Add your name, email, phone, and business name so Fusion can create your client record.");
+      setStep(questions.length);
+      return;
+    }
+
     setIsCheckingOut(true);
+    const leadResponse = await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customer, answers, recommendation })
+    });
+    const leadPayload = await leadResponse.json();
+    if (leadPayload.leadId) setLeadId(leadPayload.leadId);
+
     const response = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customer: {
-          name: "Fusion Prospect",
-          email: "prospect@example.com",
-          company: "New Website Client"
-        },
+        customer,
         answers,
         recommendation
       })
@@ -52,33 +68,79 @@ export function SalesFlow() {
     window.location.href = "/portal?demo=1";
   }
 
+  function updateCustomer(key: keyof CustomerInfo, value: string) {
+    setCustomer((current) => ({ ...current, [key]: value }));
+  }
+
+  function nextStep() {
+    setError("");
+    setStep(Math.min(questions.length, step + 1));
+  }
+
   return (
     <div className="sales-grid" id="sales-flow">
       <section className="flow-panel">
         <div className="progress" aria-label={`Progress ${progress}%`}>
           <span style={{ width: `${progress}%` }} />
         </div>
-        <p className="eyebrow">{question.eyebrow}</p>
-        <h2>{question.title}</h2>
-        <p className="muted">{question.help}</p>
-        <div className="option-grid">
-          {question.options.map((option) => (
-            <button
-              className={`option-button ${isActive(option.value) ? "active" : ""}`}
-              key={option.value}
-              onClick={() => select(option.value)}
-              type="button"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        {isContactStep ? (
+          <>
+            <p className="eyebrow">Client record</p>
+            <h2>Where should Fusion send your proposal and onboarding access?</h2>
+            <p className="muted">This creates the lead record for follow-up and becomes the client account profile after payment.</p>
+            <div className="form-grid">
+              <label>
+                Full name
+                <input value={customer.name} onChange={(event) => updateCustomer("name", event.target.value)} placeholder="Your name" />
+              </label>
+              <label>
+                Business email
+                <input value={customer.email} onChange={(event) => updateCustomer("email", event.target.value)} placeholder="you@business.com" />
+              </label>
+              <label>
+                Phone
+                <input value={customer.phone} onChange={(event) => updateCustomer("phone", event.target.value)} placeholder="Best callback number" />
+              </label>
+              <label>
+                Business name
+                <input value={customer.company} onChange={(event) => updateCustomer("company", event.target.value)} placeholder="Company LLC" />
+              </label>
+              <label className="full-field">
+                Current website or domain
+                <input value={customer.website} onChange={(event) => updateCustomer("website", event.target.value)} placeholder="example.com or not yet purchased" />
+              </label>
+              <label className="full-field">
+                Anything Fusion should know?
+                <textarea value={customer.projectNotes} onChange={(event) => updateCustomer("projectNotes", event.target.value)} placeholder="Tell us about your offer, market, competitors, or deadline." />
+              </label>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="eyebrow">{question.eyebrow}</p>
+            <h2>{question.title}</h2>
+            <p className="muted">{question.help}</p>
+            <div className="option-grid">
+              {question.options.map((option) => (
+                <button
+                  className={`option-button ${isActive(option.value) ? "active" : ""}`}
+                  key={option.value}
+                  onClick={() => select(option.value)}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {error ? <p className="form-error">{error}</p> : null}
         <div className="flow-actions">
           <button className="secondary-button" disabled={step === 0} onClick={() => setStep(Math.max(0, step - 1))} type="button">
             <ChevronLeft size={17} /> Back
           </button>
-          <button className="primary-button" onClick={() => setStep(Math.min(questions.length - 1, step + 1))} type="button">
-            {step === questions.length - 1 ? "Refine offer" : "Continue"} <ArrowRight size={17} />
+          <button className="primary-button" onClick={isContactStep ? checkout : nextStep} type="button">
+            {isContactStep ? "Save lead and checkout" : "Continue"} <ArrowRight size={17} />
           </button>
         </div>
       </section>
@@ -101,6 +163,7 @@ export function SalesFlow() {
           ))}
         </ul>
         <p>{recommendation.salesAngle}</p>
+        {leadId ? <p className="status-pill">Lead captured: {leadId}</p> : null}
         <button className="primary-button" disabled={isCheckingOut} onClick={checkout} type="button">
           {isCheckingOut ? "Preparing checkout..." : "Secure this offer"} <CreditCard size={17} />
         </button>

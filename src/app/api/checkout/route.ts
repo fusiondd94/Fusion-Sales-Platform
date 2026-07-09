@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { customerSchema } from "@/lib/customer";
 import { getAppUrl, getStripe } from "@/lib/stripe";
 
 const checkoutSchema = z.object({
-  customer: z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    company: z.string().min(1)
-  }),
+  customer: customerSchema,
   answers: z.record(z.union([z.string(), z.array(z.string())])),
   recommendation: z.object({
     packageKey: z.string(),
@@ -69,10 +66,14 @@ export async function POST(request: Request) {
     line_items: lineItems,
     metadata: {
       customerName: customer.name,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
       company: customer.company,
+      website: customer.website || "",
       packageKey: recommendation.packageKey,
       packageName: recommendation.packageName,
       discountPercent: String(recommendation.discountPercent),
+      projectNotes: (customer.projectNotes || "").slice(0, 450),
       answers: JSON.stringify(answers).slice(0, 450)
     },
     success_url: `${appUrl}/portal?session_id={CHECKOUT_SESSION_ID}`,

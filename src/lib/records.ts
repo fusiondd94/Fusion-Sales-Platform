@@ -5,6 +5,8 @@ export type ClientRecord = {
   name: string;
   email: string;
   company: string;
+  phone: string;
+  website?: string;
   status: "New Lead" | "Paid" | "Onboarding" | "In Production";
   recommendation: Recommendation;
   answers: Answers;
@@ -17,6 +19,8 @@ export const demoClients: ClientRecord[] = [
     name: "Maya Pierre",
     email: "maya@example.com",
     company: "Pierre Studio",
+    phone: "(305) 555-0198",
+    website: "pierrestudio.com",
     status: "Onboarding",
     recommendation: {
       packageKey: "growth",
@@ -41,4 +45,11 @@ export const demoTasks = [
   { id: "TASK-101", client: "Pierre Studio", title: "Confirm sitemap and domain choice", owner: "Sales", due: "Today", status: "Open" },
   { id: "TASK-102", client: "Pierre Studio", title: "Prepare hosting/security bundle", owner: "Ops", due: "Tomorrow", status: "Open" },
   { id: "TASK-103", client: "New checkout lead", title: "Follow up if payment is abandoned", owner: "CRM", due: "Automated", status: "Watching" }
+];
+
+export const pipelineSummary = [
+  { label: "New leads", value: 8 },
+  { label: "Checkout started", value: 3 },
+  { label: "Paid clients", value: 1 },
+  { label: "Open tasks", value: demoTasks.length }
 ];

@@ -1,5 +1,5 @@
 import { ClipboardList, UsersRound } from "lucide-react";
-import { demoClients, demoTasks } from "@/lib/records";
+import { demoClients, demoTasks, pipelineSummary } from "@/lib/records";
 
 export default function AdminPage() {
   return (
@@ -16,6 +16,22 @@ export default function AdminPage() {
         <section className="section" style={{ paddingInline: 0, paddingTop: "2rem" }}>
           <p className="eyebrow">Backend command center</p>
           <h1 style={{ fontSize: "clamp(2.4rem, 5vw, 4.8rem)" }}>Clients, deals, and production tasks.</h1>
+          <div className="metric-grid" style={{ marginBottom: "1rem" }}>
+            {pipelineSummary.map((item) => (
+              <div className="metric" key={item.label}>
+                <strong>{item.value}</strong>
+                <span className="muted">{item.label}</span>
+              </div>
+            ))}
+          </div>
+          <article className="admin-panel" style={{ marginBottom: "1rem" }}>
+            <p className="eyebrow">Admin access</p>
+            <h2>Management console is ready for auth and database wiring.</h2>
+            <p className="muted">
+              This backend view will manage captured leads, paid clients, Stripe status, onboarding tasks, domain/hosting work,
+              and follow-up actions. Add production auth before making this route public with real customer data.
+            </p>
+          </article>
           <div className="sales-grid">
             <article className="admin-panel">
               <h2><UsersRound size={22} /> CRM Pipeline</h2>
@@ -23,6 +39,7 @@ export default function AdminPage() {
                 <thead>
                   <tr>
                     <th>Client</th>
+                    <th>Contact</th>
                     <th>Package</th>
                     <th>Value</th>
                     <th>Status</th>
@@ -31,7 +48,8 @@ export default function AdminPage() {
                 <tbody>
                   {demoClients.map((client) => (
                     <tr key={client.id}>
-                      <td>{client.company}<br /><span className="muted">{client.email}</span></td>
+                      <td>{client.company}<br /><span className="muted">{client.website || "No website yet"}</span></td>
+                      <td>{client.name}<br /><span className="muted">{client.email} · {client.phone}</span></td>
                       <td>{client.recommendation.packageName}</td>
                       <td>${client.recommendation.totalToday.toLocaleString()} + ${client.recommendation.monthlyDue}/mo</td>
                       <td><span className="status-pill">{client.status}</span></td>
