@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { customerSchema } from "@/lib/customer";
+import { captureLead } from "@/lib/crm";
 
 const leadSchema = z.object({
   customer: customerSchema,
@@ -11,7 +12,6 @@ const leadSchema = z.object({
 export async function POST(request: Request) {
   const parsed = leadSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid lead payload.", details: parsed.error.flatten() }, { status: 400 });
-  const leadId = `FDD-${Date.now().toString(36).toUpperCase()}`;
-  console.info("Fusion sales lead captured", { leadId, customer: parsed.data.customer, recommendation: parsed.data.recommendation, answers: parsed.data.answers });
-  return NextResponse.json({ leadId, status: "captured", nextAction: "checkout" });
+  const lead = await captureLead(parsed.data);
+  return NextResponse.json({ leadId: lead.leadId, status: "captured", persisted: lead.persisted, nextAction: "checkout" });
 }
