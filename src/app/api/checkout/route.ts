@@ -26,7 +26,8 @@ export async function POST(request: Request) {
   }
 
   const stripe = getStripe();
-  const appUrl = getAppUrl();
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const appUrl = configuredAppUrl || new URL(request.url).origin || getAppUrl();
 
   if (!stripe) {
     return NextResponse.json({
