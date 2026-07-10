@@ -1,5 +1,6 @@
 import { ArrowRight, BarChart3, Globe2, LockKeyhole, Mail, Megaphone, Server, ShoppingCart, Wand2 } from "lucide-react";
 import { ClosingSignals, SalesFlow } from "@/components/SalesFlow";
+import { getFusionAdminUser } from "@/lib/auth";
 
 const offers = [
   { icon: Globe2, title: "Domains", text: "Secure the name, connect DNS, and make launch clean." },
@@ -9,10 +10,12 @@ const offers = [
   { icon: ShoppingCart, title: "E-commerce", text: "Product structure, checkout readiness, and launch QA." },
   { icon: Megaphone, title: "Marketing", text: "Lead capture, analytics, and campaign-ready pages." },
   { icon: Wand2, title: "Website Design", text: "Elegant websites designed to convert and scale." },
-  { icon: BarChart3, title: "CRM Follow-up", text: "Every paid intake becomes a managed client workflow." }
+  { icon: BarChart3, title: "Follow-up Workflow", text: "Every paid intake becomes a managed client workflow." }
 ];
 
-export default function Home() {
+export default async function Home() {
+  const adminUser = await getFusionAdminUser();
+
   return (
     <main className="shell">
       <nav className="nav">
@@ -23,8 +26,9 @@ export default function Home() {
         <div className="nav-links">
           <a href="#offers">Services</a>
           <a href="#sales-flow">Sales Flow</a>
-          <a href="/fusionadmin">CRM</a>
+          {adminUser?.isAllowed ? <a href="/fusionadmin">CRM</a> : null}
           <a href="/portal">Portal</a>
+          {adminUser?.isAllowed ? <span className="nav-user">Signed in as {adminUser.displayName}</span> : null}
         </div>
         <a className="nav-cta" href="#sales-flow">Start</a>
       </nav>
