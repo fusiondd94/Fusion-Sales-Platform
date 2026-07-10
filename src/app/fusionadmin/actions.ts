@@ -21,6 +21,7 @@ import {
   createSalesProposal,
   createSalesService
 } from "@/lib/sales-ops";
+import { updateClientProject } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
@@ -151,6 +152,26 @@ export async function updateFusionTask(formData: FormData) {
 
   revalidatePath("/fusionadmin");
   revalidatePath("/fusionadmin/tasks");
+}
+
+export async function updateFusionClientProject(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await updateClientProject({
+    actorId: user.id,
+    clientId: String(formData.get("clientId") || ""),
+    projectName: String(formData.get("projectName") || "Website Project"),
+    projectStatus: String(formData.get("projectStatus") || "in_progress"),
+    liveUrl: String(formData.get("liveUrl") || ""),
+    previewUrl: String(formData.get("previewUrl") || ""),
+    currentPhase: String(formData.get("currentPhase") || "Design Review"),
+    clientInstructions: String(formData.get("clientInstructions") || "")
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+  revalidatePath("/portal");
 }
 
 export async function createFusionNote(formData: FormData) {

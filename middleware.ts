@@ -31,6 +31,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/fusionadmin/:path*"]
+  matcher: ["/fusionadmin/:path*", "/portal/:path*"]
 };
-

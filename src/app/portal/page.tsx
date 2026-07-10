@@ -1,53 +1,13 @@
-import { Check, FileText, LifeBuoy, Rocket } from "lucide-react";
+import { redirect } from "next/navigation";
+import { getClientPortalWorkspace } from "@/lib/portal";
+import { PortalWorkspace } from "./PortalWorkspace";
 
-export default function PortalPage() {
-  return (
-    <main className="shell">
-      <div className="admin-shell">
-        <nav className="nav" style={{ paddingInline: 0 }}>
-          <a className="brand" href="/">
-            <span className="brand-mark">FDD</span>
-            <span>Client Portal</span>
-          </a>
-          <a className="nav-cta" href="/">New quote</a>
-        </nav>
+export default async function PortalPage() {
+  const workspace = await getClientPortalWorkspace();
 
-        <section className="section" style={{ paddingInline: 0, paddingTop: "2rem" }}>
-          <p className="eyebrow">Welcome to onboarding</p>
-          <h1 style={{ fontSize: "clamp(2.4rem, 5vw, 4.8rem)" }}>Your Fusion project has a home now.</h1>
-          <div className="portal-grid">
-            <aside className="result-panel">
-              <h2>Launch checklist</h2>
-              <ul className="inclusion-list">
-                <li><Check size={17} color="var(--green)" /> Payment confirmation</li>
-                <li><Check size={17} color="var(--green)" /> Domain and hosting review</li>
-                <li><Check size={17} color="var(--green)" /> Brand intake</li>
-                <li><Check size={17} color="var(--green)" /> Content and page planning</li>
-              </ul>
-            </aside>
-            <section className="admin-panel">
-              <h2>Project workspace</h2>
-              <div className="offer-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-                <article className="offer-tile">
-                  <Rocket size={22} />
-                  <h3>Kickoff</h3>
-                  <p className="muted">Confirm goals, pages, domain, and timeline.</p>
-                </article>
-                <article className="offer-tile">
-                  <FileText size={22} />
-                  <h3>Assets</h3>
-                  <p className="muted">Upload copy, logos, offers, and brand references.</p>
-                </article>
-                <article className="offer-tile">
-                  <LifeBuoy size={22} />
-                  <h3>Support</h3>
-                  <p className="muted">Track questions and next actions with Fusion.</p>
-                </article>
-              </div>
-            </section>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
+  if (!workspace) {
+    redirect("/portal/login");
+  }
+
+  return <PortalWorkspace workspace={workspace} />;
 }

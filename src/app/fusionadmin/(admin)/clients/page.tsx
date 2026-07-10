@@ -1,6 +1,7 @@
 import { Building2, Search, UserRoundPlus, UsersRound } from "lucide-react";
-import { createFusionContact, updateFusionContact } from "@/app/fusionadmin/actions";
+import { createFusionContact, updateFusionClientProject, updateFusionContact } from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
+import { getAdminPortalClients } from "@/lib/portal";
 import { EmptyState, formatCurrency, optionList, PageHeader } from "../crm-ui";
 
 type PageProps = {
@@ -9,9 +10,13 @@ type PageProps = {
 
 export default async function FusionClientsPage({ searchParams }: PageProps) {
   const filters = (await searchParams) || {};
-  const crm = await getFusionCrmWorkspace(filters);
+  const [crm, portalClients] = await Promise.all([
+    getFusionCrmWorkspace(filters),
+    getAdminPortalClients()
+  ]);
   const leadSources = optionList(crm.settings?.lead_sources);
   const contactStatuses = Array.from(new Set(["new", "prospect", "qualified", "client", "inactive", ...(crm.settings?.lead_statuses || [])]));
+  const projectStatuses = ["not_started", "in_progress", "review", "done", "on_hold"];
 
   return (
     <div className="admin-content">
@@ -146,6 +151,71 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               </form>
             ))}
             {!crm.contacts.length ? <EmptyState>No contacts yet. Create the first one from the form.</EmptyState> : null}
+          </div>
+        </article>
+
+        <article className="admin-panel panel-span-2">
+          <div className="panel-heading">
+            <h2><Building2 size={20} /> Client portal projects</h2>
+            <span className="status-pill">{portalClients.length}</span>
+          </div>
+          <div className="portal-admin-grid">
+            {portalClients.map((client) => (
+              <form key={client.id} className="record-edit-card" action={updateFusionClientProject}>
+                <input name="clientId" type="hidden" value={client.id} />
+                <div className="record-edit-heading">
+                  <strong>{client.company}</strong>
+                  <span className="status-pill">{client.project?.project_status || "in_progress"}</span>
+                </div>
+                <p className="muted">
+                  {client.customer_name} · {client.customer_email} · {client.commentCount || 0} comments · {client.fileCount || 0} files
+                </p>
+                <div className="record-edit-grid">
+                  <label>
+                    Project name
+                    <input name="projectName" defaultValue={client.project?.project_name || "Website Project"} />
+                  </label>
+                  <label>
+                    Project status
+                    <select name="projectStatus" defaultValue={client.project?.project_status || "in_progress"}>
+                      {projectStatuses.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Current phase
+                    <input name="currentPhase" defaultValue={client.project?.current_phase || "Design Review"} />
+                  </label>
+                  <label>
+                    Preview URL for client
+                    <input name="previewUrl" defaultValue={client.project?.preview_url || ""} placeholder="https://preview-domain.com" />
+                  </label>
+                  <label>
+                    Final live URL
+                    <input name="liveUrl" defaultValue={client.project?.live_url || ""} placeholder="https://client-domain.com" />
+                  </label>
+                  <label>
+                    Portal access
+                    <input readOnly value={client.portal_user_id ? "Client account connected" : "Waiting for client login"} />
+                  </label>
+                  <label className="full-field">
+                    Client instructions
+                    <textarea name="clientInstructions" defaultValue={client.project?.client_instructions || ""} placeholder="Tell the client what to review or upload next." />
+                  </label>
+                </div>
+                {client.recentComments?.length ? (
+                  <div className="portal-admin-comments">
+                    {client.recentComments.map((comment) => (
+                      <p key={comment.id}>
+                        <strong>{comment.author_name}</strong>
+                        <span>{comment.body}</span>
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+                <button className="secondary-button compact-button" type="submit">Save portal project</button>
+              </form>
+            ))}
+            {!portalClients.length ? <EmptyState>Paid client records will appear here after checkout creates the client profile.</EmptyState> : null}
           </div>
         </article>
       </section>
