@@ -442,6 +442,290 @@ h1 {
   color: var(--muted-strong);
 }
 
+.admin-app {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+  background: #07111f;
+  color: var(--text);
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  border-right: 1px solid rgba(175, 212, 240, 0.16);
+  background: #0b1626;
+  padding: 1.15rem;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 4rem;
+  color: #ffffff;
+}
+
+.admin-brand span:last-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.admin-brand small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-menu {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  padding: 1rem 0;
+}
+
+.admin-menu a,
+.admin-sidebar-footer .ghost-button {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.8rem;
+  border: 1px solid transparent;
+  color: var(--muted-strong);
+  padding: 0.75rem;
+  font-weight: 800;
+}
+
+.admin-menu a:hover,
+.admin-menu a.active {
+  border-color: rgba(49, 215, 255, 0.32);
+  background: #12233a;
+  color: #ffffff;
+}
+
+.admin-sidebar-footer {
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(175, 212, 240, 0.16);
+}
+
+.admin-sidebar-footer form,
+.admin-sidebar-footer button {
+  width: 100%;
+}
+
+.admin-main {
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+.admin-topbar,
+.admin-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-topbar {
+  min-height: 5rem;
+  border-bottom: 1px solid rgba(175, 212, 240, 0.14);
+  margin-bottom: 1.25rem;
+}
+
+.admin-topbar h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.admin-user-card {
+  display: grid;
+  justify-items: end;
+  gap: 0.15rem;
+  border: 1px solid rgba(175, 212, 240, 0.2);
+  background: #0d1a2d;
+  padding: 0.7rem 0.9rem;
+}
+
+.admin-user-card span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-page-header {
+  align-items: end;
+  border: 1px solid rgba(175, 212, 240, 0.16);
+  background: #0d1a2d;
+  padding: 1.1rem;
+}
+
+.admin-page-header h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.7rem;
+}
+
+.admin-page-header .muted {
+  max-width: 760px;
+  margin: 0;
+}
+
+.admin-page-action {
+  min-width: min(100%, 440px);
+}
+
+.admin-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(175, 212, 240, 0.25);
+  background: #07111f;
+  padding: 0.45rem;
+}
+
+.admin-search input {
+  min-height: 2.55rem;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  outline: none;
+}
+
+.admin-search button {
+  min-height: 2.55rem;
+  border: 1px solid rgba(49, 215, 255, 0.34);
+  background: #12314c;
+  color: #ffffff;
+  padding: 0 0.9rem;
+  font-weight: 900;
+}
+
+.admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-metric {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid rgba(175, 212, 240, 0.16);
+  background: #0d1a2d;
+  padding: 1rem;
+}
+
+.admin-metric strong {
+  color: #ffffff;
+  font-size: 1.35rem;
+}
+
+.admin-metric span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.admin-dashboard-grid,
+.admin-two-column {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-two-column {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.42fr);
+}
+
+.panel-span-2 {
+  grid-column: span 2;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.compact-board {
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+}
+
+.pricing-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.price-editor {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid rgba(175, 212, 240, 0.18);
+  background: #0f1b2d;
+  padding: 0.9rem;
+}
+
+.price-editor-heading,
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.price-editor-heading strong {
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.toggle-row {
+  justify-content: flex-start;
+  color: var(--muted-strong);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.price-editor label,
+.quick-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--muted-strong);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.price-editor input,
+.price-editor textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid rgba(175, 212, 240, 0.32);
+  background: #07111f;
+  color: var(--text);
+  padding: 0.7rem;
+  outline: none;
+}
+
+.price-editor textarea {
+  min-height: 5.8rem;
+  resize: vertical;
+}
+
+.form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .admin-shell {
   max-width: 1180px;
   min-height: 100vh;
@@ -843,6 +1127,48 @@ h1 {
 }
 
 @media (max-width: 880px) {
+  .admin-app {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+    height: auto;
+    gap: 0.75rem;
+    border-right: 0;
+    border-bottom: 1px solid rgba(175, 212, 240, 0.16);
+  }
+
+  .admin-menu {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-sidebar-footer,
+  .admin-topbar,
+  .admin-page-header {
+    align-items: stretch;
+  }
+
+  .admin-topbar,
+  .admin-page-header {
+    flex-direction: column;
+  }
+
+  .admin-user-card {
+    justify-items: start;
+  }
+
+  .admin-metrics,
+  .admin-dashboard-grid,
+  .admin-two-column,
+  .pricing-admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-span-2 {
+    grid-column: auto;
+  }
+
   .hero,
   .sales-grid,
   .portal-grid,
@@ -882,6 +1208,24 @@ h1 {
 }
 
 @media (max-width: 560px) {
+  .admin-main {
+    padding: 0.85rem;
+  }
+
+  .admin-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-menu a {
+    min-height: 2.55rem;
+    padding: 0.65rem;
+  }
+
+  .admin-search,
+  .form-grid.two {
+    grid-template-columns: 1fr;
+  }
+
   .option-grid,
   .form-grid,
   .offer-grid,

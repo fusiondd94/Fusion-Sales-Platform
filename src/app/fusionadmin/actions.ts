@@ -3,7 +3,15 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireFusionAdmin } from "@/lib/auth";
-import { createCrmContact, createCrmDeal, createCrmNote, createCrmTask } from "@/lib/crm";
+import {
+  createCrmContact,
+  createCrmDeal,
+  createCrmNote,
+  createCrmTask,
+  inviteCrmTeamMember,
+  updateCrmBrandSettings,
+  updateCrmServicePackage
+} from "@/lib/crm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function signInFusionAdmin(_: unknown, formData: FormData) {
@@ -50,6 +58,7 @@ export async function createFusionContact(formData: FormData) {
   });
 
   revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
 }
 
 export async function createFusionDeal(formData: FormData) {
@@ -67,6 +76,7 @@ export async function createFusionDeal(formData: FormData) {
   });
 
   revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/deals");
 }
 
 export async function createFusionTask(formData: FormData) {
@@ -82,6 +92,7 @@ export async function createFusionTask(formData: FormData) {
   });
 
   revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/tasks");
 }
 
 export async function createFusionNote(formData: FormData) {
@@ -95,4 +106,51 @@ export async function createFusionNote(formData: FormData) {
   });
 
   revalidatePath("/fusionadmin");
+}
+
+export async function updateFusionBrandSettings(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await updateCrmBrandSettings({
+    actorId: user.id,
+    logoUrl: String(formData.get("logoUrl") || ""),
+    primaryColor: String(formData.get("primaryColor") || ""),
+    accentColor: String(formData.get("accentColor") || "")
+  });
+
+  revalidatePath("/fusionadmin/settings");
+}
+
+export async function updateFusionServicePackage(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await updateCrmServicePackage({
+    actorId: user.id,
+    packageId: String(formData.get("packageId") || ""),
+    packageName: String(formData.get("packageName") || ""),
+    description: String(formData.get("description") || ""),
+    setupPrice: Number(formData.get("setupPrice") || 0),
+    monthlyPrice: Number(formData.get("monthlyPrice") || 0),
+    isActive: formData.get("isActive") === "on"
+  });
+
+  revalidatePath("/fusionadmin/settings");
+}
+
+export async function inviteFusionTeamMember(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await inviteCrmTeamMember({
+    actorId: user.id,
+    email: String(formData.get("email") || ""),
+    displayName: String(formData.get("displayName") || ""),
+    title: String(formData.get("title") || ""),
+    roleId: String(formData.get("roleId") || "")
+  });
+
+  revalidatePath("/fusionadmin/team");
+  revalidatePath("/fusionadmin/settings");
 }

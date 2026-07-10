@@ -24,7 +24,7 @@ type LeadRecord = {
   status: string;
 };
 
-type DashboardLead = {
+export type DashboardLead = {
   id: string;
   lead_code: string;
   customer_name: string;
@@ -40,7 +40,7 @@ type DashboardLead = {
   created_at: string;
 };
 
-type DashboardTask = {
+export type DashboardTask = {
   id: string;
   title: string;
   owner: string;
@@ -50,7 +50,7 @@ type DashboardTask = {
   company?: string | null;
 };
 
-type CrmCompany = {
+export type CrmCompany = {
   id: string;
   company_name: string;
   industry: string | null;
@@ -62,7 +62,7 @@ type CrmCompany = {
   created_at: string;
 };
 
-type CrmContact = {
+export type CrmContact = {
   id: string;
   company_id: string | null;
   display_name: string;
@@ -75,7 +75,7 @@ type CrmContact = {
   crm_companies?: { company_name?: string | null } | null;
 };
 
-type CrmDeal = {
+export type CrmDeal = {
   id: string;
   company_id: string | null;
   stage_id: string | null;
@@ -90,7 +90,7 @@ type CrmDeal = {
   crm_companies?: { company_name?: string | null } | null;
 };
 
-type CrmNote = {
+export type CrmNote = {
   id: string;
   entity_type: string;
   body: string;
@@ -98,7 +98,7 @@ type CrmNote = {
   created_at: string;
 };
 
-type CrmActivity = {
+export type CrmActivity = {
   id: string;
   action_type: string;
   entity_type: string;
@@ -106,7 +106,7 @@ type CrmActivity = {
   created_at: string;
 };
 
-type CrmStage = {
+export type CrmStage = {
   id: string;
   name: string;
   stage_order: number;
@@ -115,11 +115,42 @@ type CrmStage = {
   is_lost: boolean;
 };
 
-type CrmSettings = {
+export type CrmSettings = {
   lead_statuses: string[];
   lead_sources: string[];
   task_types: string[];
   lost_reasons: string[];
+  logo_url: string | null;
+  primary_color: string;
+  accent_color: string;
+};
+
+export type CrmServicePackage = {
+  id: string;
+  package_key: string;
+  package_name: string;
+  description: string | null;
+  setup_price: number;
+  monthly_price: number;
+  inclusions: string[];
+  is_active: boolean;
+  sort_order: number;
+};
+
+export type CrmRole = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+};
+
+export type CrmTeamMember = {
+  id: string;
+  user_id: string;
+  status: string;
+  title: string | null;
+  created_at: string;
+  crm_profiles?: { display_name?: string | null; email?: string | null } | null;
 };
 
 export type CrmSearchParams = {
@@ -274,7 +305,7 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
   if (!supabase) {
     const demo = demoDashboardRecords();
     return {
-      organization: { name: "Fusion Digital Dynamics LLC", default_currency: "USD", default_time_zone: "America/New_York" },
+      organization: { name: "Fusion Digital Dynamics LLC", website: "https://fddynamics.com", default_currency: "USD", default_time_zone: "America/New_York" },
       summary: demo.summary,
       leads: demo.leads,
       tasks: demo.tasks,
@@ -325,7 +356,7 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
     supabase.from("crm_notes").select("id, entity_type, body, is_pinned, created_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(20),
     supabase.from("crm_activities").select("id, action_type, entity_type, summary, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(30),
     supabase.from("crm_pipeline_stages").select("id, name, stage_order, probability, is_won, is_lost").eq("organization_id", organizationId).eq("is_active", true).order("stage_order", { ascending: true }),
-    supabase.from("crm_app_settings").select("lead_statuses, lead_sources, task_types, lost_reasons").eq("organization_id", organizationId).single(),
+    supabase.from("crm_app_settings").select("lead_statuses, lead_sources, task_types, lost_reasons, logo_url, primary_color, accent_color").eq("organization_id", organizationId).single(),
     supabase.from("crm_notifications").select("id, title, created_at, read_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(10)
   ]);
 
@@ -385,6 +416,164 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
     settings: settingsResult.data as CrmSettings | null,
     notifications: notificationsResult.data || []
   };
+}
+
+export async function getFusionAdminSettings() {
+  const supabase = getServiceClient();
+  if (!supabase) {
+    return {
+      organization: { name: "Fusion Digital Dynamics LLC", website: "https://fddynamics.com", default_currency: "USD", default_time_zone: "America/New_York" },
+      settings: null as CrmSettings | null,
+      packages: [] as CrmServicePackage[],
+      roles: [] as CrmRole[],
+      members: [] as CrmTeamMember[]
+    };
+  }
+
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) {
+    return { organization: null, settings: null, packages: [], roles: [], members: [] };
+  }
+
+  const [organizationResult, settingsResult, packagesResult, rolesResult, membersResult] = await Promise.all([
+    supabase.from("crm_organizations").select("name, business_email, business_phone, website, default_currency, default_time_zone").eq("id", organizationId).single(),
+    supabase.from("crm_app_settings").select("lead_statuses, lead_sources, task_types, lost_reasons, logo_url, primary_color, accent_color").eq("organization_id", organizationId).single(),
+    supabase.from("crm_service_packages").select("id, package_key, package_name, description, setup_price, monthly_price, inclusions, is_active, sort_order").eq("organization_id", organizationId).order("sort_order", { ascending: true }),
+    supabase.from("crm_roles").select("id, name, slug, description").eq("organization_id", organizationId).order("name", { ascending: true }),
+    supabase.from("crm_organization_members").select("id, user_id, status, title, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false })
+  ]);
+  const members = (membersResult.data || []) as CrmTeamMember[];
+  const profileIds = members.map((member) => member.user_id).filter(Boolean);
+  const profilesResult = profileIds.length
+    ? await supabase.from("crm_profiles").select("id, display_name, email").in("id", profileIds)
+    : { data: [] as Array<{ id: string; display_name: string | null; email: string | null }> };
+  const profileById = new Map((profilesResult.data || []).map((profile) => [profile.id, profile]));
+
+  return {
+    organization: organizationResult.data || null,
+    settings: settingsResult.data as CrmSettings | null,
+    packages: (packagesResult.data || []) as CrmServicePackage[],
+    roles: (rolesResult.data || []) as CrmRole[],
+    members: members.map((member) => ({
+      ...member,
+      crm_profiles: profileById.get(member.user_id) || null
+    }))
+  };
+}
+
+export async function updateCrmBrandSettings(input: {
+  actorId: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  accentColor?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { error } = await supabase
+    .from("crm_app_settings")
+    .update({
+      logo_url: input.logoUrl?.trim() || null,
+      primary_color: input.primaryColor?.trim() || "#31d7ff",
+      accent_color: input.accentColor?.trim() || "#f5b84b",
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId);
+
+  if (error) return { ok: false, error: "Unable to update brand settings." };
+  await logActivity(supabase, organizationId, input.actorId, "settings.updated", "settings", organizationId, "Brand settings updated");
+  return { ok: true };
+}
+
+export async function updateCrmServicePackage(input: {
+  actorId: string;
+  packageId: string;
+  packageName: string;
+  description?: string;
+  setupPrice: number;
+  monthlyPrice: number;
+  isActive: boolean;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { error } = await supabase
+    .from("crm_service_packages")
+    .update({
+      package_name: input.packageName.trim(),
+      description: input.description?.trim() || null,
+      setup_price: Math.max(0, Math.round(input.setupPrice || 0)),
+      monthly_price: Math.max(0, Math.round(input.monthlyPrice || 0)),
+      is_active: input.isActive,
+      updated_by: input.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", input.packageId);
+
+  if (error) return { ok: false, error: "Unable to update package pricing." };
+  await logActivity(supabase, organizationId, input.actorId, "settings.pricing_updated", "service_package", input.packageId, `Pricing updated: ${input.packageName}`);
+  return { ok: true };
+}
+
+export async function inviteCrmTeamMember(input: {
+  actorId: string;
+  email: string;
+  displayName?: string;
+  title?: string;
+  roleId?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const email = normalizeEmail(input.email);
+  if (!email) return { ok: false, error: "Email is required." };
+
+  const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+    data: { full_name: input.displayName?.trim() || displayNameFromEmail(email) }
+  });
+
+  if (inviteError || !invited.user) {
+    return { ok: false, error: inviteError?.message || "Unable to invite team member." };
+  }
+
+  await supabase.from("crm_profiles").upsert({
+    id: invited.user.id,
+    email,
+    display_name: input.displayName?.trim() || displayNameFromEmail(email),
+    status: "active",
+    updated_at: new Date().toISOString()
+  });
+
+  const { data: member, error: memberError } = await supabase
+    .from("crm_organization_members")
+    .upsert({
+      organization_id: organizationId,
+      user_id: invited.user.id,
+      status: "active",
+      title: input.title?.trim() || null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "organization_id,user_id", ignoreDuplicates: false })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (memberError || !member) return { ok: false, error: "User invited, but team membership could not be saved." };
+
+  if (input.roleId) {
+    await supabase.from("crm_member_roles").upsert({
+      member_id: member.id,
+      role_id: input.roleId
+    });
+  }
+
+  await logActivity(supabase, organizationId, input.actorId, "team.invited", "team_member", member.id, `Team invitation sent to ${email}`);
+  return { ok: true };
 }
 
 export function createLeadCode() {
