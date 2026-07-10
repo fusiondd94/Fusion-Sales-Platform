@@ -767,6 +767,22 @@ h1 {
   min-width: min(100%, 440px);
 }
 
+.dashboard-content .admin-page-header {
+  border-color: var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
+  box-shadow: var(--fusion-shadow-sm);
+}
+
+.dashboard-content .admin-page-header h2 {
+  color: var(--fusion-text);
+}
+
+.dashboard-content .admin-page-header .muted {
+  color: var(--fusion-text-muted);
+}
+
 .admin-search {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -794,6 +810,103 @@ h1 {
   font-weight: 900;
 }
 
+.dashboard-content .admin-search {
+  border-color: var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface-muted);
+}
+
+.dashboard-content .admin-search input {
+  color: var(--fusion-text);
+}
+
+.dashboard-content .admin-search button {
+  border-color: var(--fusion-teal-900);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-teal-900);
+  color: #ffffff;
+}
+
+.dashboard-brief {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.34fr);
+  gap: 1rem;
+}
+
+.dashboard-brief-card,
+.dashboard-focus-card,
+.dashboard-panel {
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
+  box-shadow: var(--fusion-shadow-sm);
+}
+
+.dashboard-brief-card {
+  padding: 1.25rem;
+}
+
+.dashboard-brief-card h2 {
+  margin: 0 0 0.5rem;
+  color: var(--fusion-text);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.08;
+}
+
+.dashboard-brief-card .muted {
+  max-width: 760px;
+  color: var(--fusion-text-muted);
+}
+
+.dashboard-brief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.dashboard-brief-actions .secondary-button {
+  border-color: var(--fusion-border-strong);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface);
+  color: var(--fusion-teal-900);
+}
+
+.dashboard-focus-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.dashboard-focus-card div {
+  display: grid;
+  align-content: center;
+  gap: 0.35rem;
+  min-height: 9rem;
+  padding: 1rem;
+}
+
+.dashboard-focus-card div + div {
+  border-left: 1px solid var(--fusion-border);
+}
+
+.dashboard-focus-card svg {
+  color: var(--fusion-teal-900);
+}
+
+.dashboard-focus-card span {
+  color: var(--fusion-text);
+  font-size: 2rem;
+  font-weight: 950;
+}
+
+.dashboard-focus-card small {
+  color: var(--fusion-text-muted);
+  font-weight: 820;
+}
+
 .admin-metrics {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -817,6 +930,34 @@ h1 {
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 800;
+}
+
+.dashboard-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.dashboard-metrics .admin-metric {
+  border-color: var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
+  box-shadow: var(--fusion-shadow-sm);
+}
+
+.dashboard-metrics .admin-metric strong {
+  color: var(--fusion-teal-900);
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.dashboard-metrics .admin-metric span {
+  color: var(--fusion-text);
+}
+
+.dashboard-metrics .admin-metric small {
+  color: var(--fusion-text-muted);
+  font-size: 0.76rem;
+  font-weight: 760;
 }
 
 .admin-dashboard-grid,
@@ -1087,6 +1228,129 @@ h1 {
 
 .deal-card b {
   color: var(--gold);
+}
+
+.dashboard-panel {
+  padding: 1rem;
+}
+
+.dashboard-panel .panel-heading {
+  border-bottom: 1px solid var(--fusion-border);
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.75rem;
+}
+
+.dashboard-panel .panel-heading h2,
+.dashboard-panel h2 {
+  color: var(--fusion-text);
+}
+
+.dashboard-panel .status-pill {
+  border-color: color-mix(in srgb, var(--fusion-teal-900) 28%, white);
+  border-radius: 999px;
+  background: var(--fusion-teal-100);
+  color: var(--fusion-teal-900);
+}
+
+.dashboard-panel .pipeline-board {
+  gap: 0.85rem;
+}
+
+.dashboard-panel .pipeline-stage {
+  border-color: var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface-muted);
+}
+
+.dashboard-panel .stage-heading {
+  align-items: flex-start;
+  margin-bottom: 0.7rem;
+}
+
+.dashboard-panel .stage-heading div {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+}
+
+.dashboard-panel .stage-heading strong,
+.dashboard-panel .deal-card strong,
+.dashboard-panel .stack-list strong,
+.dashboard-panel .timeline-list strong,
+.dashboard-focus-list strong {
+  color: var(--fusion-text);
+}
+
+.dashboard-panel .stage-heading small,
+.dashboard-panel .deal-card span,
+.dashboard-panel .stack-list .muted,
+.dashboard-panel .timeline-list .muted,
+.dashboard-focus-list span {
+  color: var(--fusion-text-muted);
+}
+
+.dashboard-panel .stage-heading span {
+  color: var(--fusion-teal-900);
+}
+
+.stage-probability {
+  height: 0.42rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--fusion-gray-200);
+}
+
+.stage-probability span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--fusion-teal-900), var(--fusion-gold-600));
+}
+
+.dashboard-panel .deal-card,
+.dashboard-panel .stack-list p,
+.dashboard-panel .timeline-list p,
+.dashboard-focus-list p {
+  border-color: var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface);
+}
+
+.dashboard-panel .deal-card {
+  box-shadow: var(--fusion-shadow-sm);
+}
+
+.dashboard-panel .deal-card b {
+  color: var(--fusion-gold-700);
+}
+
+.dashboard-focus-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.dashboard-focus-list h3 {
+  margin: 0.25rem 0 0;
+  color: var(--fusion-charcoal-800);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dashboard-focus-list p {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.dashboard-panel .admin-empty,
+.dashboard-focus-list .admin-empty {
+  border: 1px dashed var(--fusion-border-strong);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text-muted);
+  padding: 0.75rem;
 }
 
 .empty-line {
@@ -2170,6 +2434,7 @@ h1 {
   }
 
   .admin-metrics,
+  .dashboard-brief,
   .admin-dashboard-grid,
   .admin-two-column,
   .pricing-admin-grid {
@@ -2248,6 +2513,10 @@ h1 {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
 
+  .dashboard-focus-card {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .login-story {
     min-height: 420px;
   }
@@ -2272,6 +2541,23 @@ h1 {
 
   .admin-menu a small {
     display: none;
+  }
+
+  .dashboard-focus-card {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-brief-actions {
+    flex-direction: column;
+  }
+
+  .dashboard-focus-card div + div {
+    border-top: 1px solid var(--fusion-border);
+    border-left: 0;
+  }
+
+  .dashboard-brief-actions .secondary-button {
+    width: 100%;
   }
 
   .admin-menu a {
