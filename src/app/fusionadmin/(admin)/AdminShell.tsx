@@ -6,9 +6,14 @@ import type { ReactNode } from "react";
 import {
   BarChart3,
   BriefcaseBusiness,
+  CalendarDays,
   ClipboardList,
+  FileText,
+  FormInput,
+  Library,
   LayoutDashboard,
   LogOut,
+  Mail,
   Settings,
   UsersRound,
   UserRoundCog
@@ -20,6 +25,12 @@ const navItems = [
   { href: "/fusionadmin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/fusionadmin/clients", label: "Clients", icon: UsersRound },
   { href: "/fusionadmin/deals", label: "Deals", icon: BriefcaseBusiness },
+  { href: "/fusionadmin/services", label: "Services", icon: Library },
+  { href: "/fusionadmin/proposals", label: "Proposals", icon: FileText },
+  { href: "/fusionadmin/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/fusionadmin/email-templates", label: "Email", icon: Mail },
+  { href: "/fusionadmin/forms", label: "Forms", icon: FormInput },
+  { href: "/fusionadmin/reports", label: "Reports", icon: BarChart3 },
   { href: "/fusionadmin/tasks", label: "Tasks", icon: ClipboardList },
   { href: "/fusionadmin/team", label: "Team", icon: UserRoundCog },
   { href: "/fusionadmin/settings", label: "Settings", icon: Settings }

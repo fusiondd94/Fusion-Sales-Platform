@@ -12,7 +12,24 @@ import {
   updateCrmBrandSettings,
   updateCrmServicePackage
 } from "@/lib/crm";
+import {
+  createSalesAppointment,
+  createSalesCrmForm,
+  createSalesEmailTemplate,
+  createSalesProposal,
+  createSalesService
+} from "@/lib/sales-ops";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
+  const text = String(value || "");
+  return allowed.includes(text as T) ? text as T : fallback;
+}
+
+function optionalEnumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[]) {
+  const text = String(value || "");
+  return allowed.includes(text as T) ? text as T : "";
+}
 
 export async function signInFusionAdmin(_: unknown, formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -153,4 +170,101 @@ export async function inviteFusionTeamMember(formData: FormData) {
 
   revalidatePath("/fusionadmin/team");
   revalidatePath("/fusionadmin/settings");
+}
+
+export async function createFusionService(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createSalesService({
+    actorId: user.id,
+    serviceName: String(formData.get("serviceName") || ""),
+    sku: String(formData.get("sku") || ""),
+    categoryId: String(formData.get("categoryId") || ""),
+    shortDescription: String(formData.get("shortDescription") || ""),
+    billingType: enumValue(formData.get("billingType"), ["one_time", "recurring", "usage_based", "custom_quote"] as const, "one_time"),
+    pricingModel: enumValue(formData.get("pricingModel"), ["fixed_price", "starting_at", "price_range", "per_unit", "hourly", "custom_quote"] as const, "fixed_price"),
+    basePrice: Number(formData.get("basePrice") || 0),
+    minimumPrice: Number(formData.get("minimumPrice") || 0),
+    maximumPrice: Number(formData.get("maximumPrice") || 0),
+    internalEstimatedCost: Number(formData.get("internalEstimatedCost") || 0),
+    recurringInterval: optionalEnumValue(formData.get("recurringInterval"), ["monthly", "quarterly", "semiannual", "annual", "custom"] as const),
+    isFeatured: formData.get("isFeatured") === "on",
+    publicVisibility: formData.get("publicVisibility") === "on"
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/services");
+  revalidatePath("/fusionadmin/reports");
+}
+
+export async function createFusionProposal(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createSalesProposal({
+    actorId: user.id,
+    proposalTitle: String(formData.get("proposalTitle") || ""),
+    serviceId: String(formData.get("serviceId") || ""),
+    quantity: Number(formData.get("quantity") || 1),
+    discountType: enumValue(formData.get("discountType"), ["none", "fixed", "percent"] as const, "none"),
+    discountValue: Number(formData.get("discountValue") || 0),
+    expirationDate: String(formData.get("expirationDate") || "")
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/proposals");
+  revalidatePath("/fusionadmin/reports");
+}
+
+export async function createFusionAppointment(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createSalesAppointment({
+    actorId: user.id,
+    title: String(formData.get("title") || ""),
+    appointmentTypeId: String(formData.get("appointmentTypeId") || ""),
+    startsAt: String(formData.get("startsAt") || ""),
+    endsAt: String(formData.get("endsAt") || ""),
+    location: String(formData.get("location") || ""),
+    meetingUrl: String(formData.get("meetingUrl") || "")
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/calendar");
+  revalidatePath("/fusionadmin/reports");
+}
+
+export async function createFusionEmailTemplate(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createSalesEmailTemplate({
+    actorId: user.id,
+    templateName: String(formData.get("templateName") || ""),
+    subject: String(formData.get("subject") || ""),
+    body: String(formData.get("body") || ""),
+    category: String(formData.get("category") || "General Sales"),
+    visibility: enumValue(formData.get("visibility"), ["private", "shared"] as const, "shared")
+  });
+
+  revalidatePath("/fusionadmin/email-templates");
+}
+
+export async function createFusionCrmForm(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createSalesCrmForm({
+    actorId: user.id,
+    formName: String(formData.get("formName") || ""),
+    formType: String(formData.get("formType") || "Lead Inquiry"),
+    description: String(formData.get("description") || ""),
+    isPublished: formData.get("isPublished") === "on"
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/forms");
+  revalidatePath("/fusionadmin/reports");
 }

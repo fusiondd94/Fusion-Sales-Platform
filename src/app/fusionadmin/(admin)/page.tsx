@@ -1,5 +1,6 @@
 import { Bell, BriefcaseBusiness, Clock, Search, UsersRound } from "lucide-react";
 import { getFusionCrmWorkspace } from "@/lib/crm";
+import { getSalesOpsWorkspace } from "@/lib/sales-ops";
 import { EmptyState, formatCurrency, formatDate, PageHeader } from "./crm-ui";
 
 type PageProps = {
@@ -8,7 +9,10 @@ type PageProps = {
 
 export default async function FusionAdminDashboard({ searchParams }: PageProps) {
   const filters = (await searchParams) || {};
-  const crm = await getFusionCrmWorkspace(filters);
+  const [crm, salesOps] = await Promise.all([
+    getFusionCrmWorkspace(filters),
+    getSalesOpsWorkspace()
+  ]);
 
   return (
     <div className="admin-content">
@@ -32,6 +36,18 @@ export default async function FusionAdminDashboard({ searchParams }: PageProps) 
             <span>{item.label}</span>
           </article>
         ))}
+        <article className="admin-metric">
+          <strong>{salesOps.proposals.length}</strong>
+          <span>Proposals</span>
+        </article>
+        <article className="admin-metric">
+          <strong>{salesOps.appointments.length}</strong>
+          <span>Appointments</span>
+        </article>
+        <article className="admin-metric">
+          <strong>{salesOps.forms.filter((form) => form.is_published).length}</strong>
+          <span>Published forms</span>
+        </article>
       </section>
 
       <section className="admin-dashboard-grid">
@@ -74,6 +90,19 @@ export default async function FusionAdminDashboard({ searchParams }: PageProps) 
               <p key={item.id}><strong>{item.title}</strong><br /><span className="muted">{formatDate(item.created_at)}</span></p>
             ))}
             {!crm.notifications.length ? <EmptyState>No notifications yet.</EmptyState> : null}
+          </div>
+        </article>
+
+        <article className="admin-panel">
+          <div className="panel-heading">
+            <h2><BriefcaseBusiness size={20} /> Proposals</h2>
+            <span className="status-pill">{salesOps.proposals.length}</span>
+          </div>
+          <div className="stack-list">
+            {salesOps.proposals.slice(0, 5).map((proposal) => (
+              <p key={proposal.id}><strong>{proposal.proposal_title}</strong><br /><span className="muted">{proposal.status} · {formatCurrency(proposal.grand_total)}</span></p>
+            ))}
+            {!salesOps.proposals.length ? <EmptyState>No proposals yet.</EmptyState> : null}
           </div>
         </article>
 
