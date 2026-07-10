@@ -1,7 +1,7 @@
 import { MailPlus, ShieldCheck, UserRoundCog } from "lucide-react";
 import { inviteFusionTeamMember } from "@/app/fusionadmin/actions";
 import { getFusionAdminSettings } from "@/lib/crm";
-import { EmptyState, formatDate, PageHeader } from "../crm-ui";
+import { EmptyState, formatDate, FusionDataTable, PageHeader } from "../crm-ui";
 
 export default async function FusionTeamPage() {
   const admin = await getFusionAdminSettings();
@@ -47,33 +47,27 @@ export default async function FusionTeamPage() {
             <h2><UserRoundCog size={20} /> Current team</h2>
             <span className="status-pill">{admin.members.length}</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Title</th>
-                  <th>Status</th>
-                  <th>Added</th>
-                </tr>
-              </thead>
-              <tbody>
-                {admin.members.map((member) => (
-                  <tr key={member.id}>
-                    <td>{member.crm_profiles?.display_name || "Team member"}</td>
-                    <td>{member.crm_profiles?.email || member.user_id}</td>
-                    <td>{member.title || "Not set"}</td>
-                    <td><span className="status-pill">{member.status}</span></td>
-                    <td>{formatDate(member.created_at)}</td>
-                  </tr>
-                ))}
-                {!admin.members.length ? (
-                  <tr><td colSpan={5}><EmptyState>No teammates have been added yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="Current team"
+            columns={[
+              { header: "Name", priority: "primary" },
+              { header: "Email" },
+              { header: "Title" },
+              { header: "Status" },
+              { header: "Added" }
+            ]}
+            empty={!admin.members.length ? <EmptyState>No teammates have been added yet.</EmptyState> : null}
+          >
+            {admin.members.map((member) => (
+              <tr key={member.id}>
+                <td data-label="Name">{member.crm_profiles?.display_name || "Team member"}</td>
+                <td data-label="Email">{member.crm_profiles?.email || member.user_id}</td>
+                <td data-label="Title">{member.title || "Not set"}</td>
+                <td data-label="Status"><span className="status-pill">{member.status}</span></td>
+                <td data-label="Added">{formatDate(member.created_at)}</td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
       </section>
     </div>

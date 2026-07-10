@@ -1,7 +1,7 @@
 import { ClipboardList, FileText } from "lucide-react";
 import { createFusionNote, createFusionTask, updateFusionTask } from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
-import { EmptyState, formatDate, optionList, PageHeader } from "../crm-ui";
+import { EmptyState, formatDate, FusionDataTable, optionList, PageHeader } from "../crm-ui";
 
 export default async function FusionTasksPage() {
   const crm = await getFusionCrmWorkspace();
@@ -55,62 +55,56 @@ export default async function FusionTasksPage() {
             <h2><ClipboardList size={20} /> Task queue</h2>
             <span className="status-pill">{crm.tasks.length}</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Task</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Priority</th>
-                  <th>Due</th>
-                  <th>Save</th>
-                </tr>
-              </thead>
-              <tbody>
-                {crm.tasks.map((task) => (
-                  <tr key={task.id}>
-                    <td>
-                      <form id={`task-${task.id}`} action={updateFusionTask}>
-                        <input name="taskId" type="hidden" value={task.id} />
-                        <label className="sr-only" htmlFor={`title-${task.id}`}>Task title</label>
-                        <input id={`title-${task.id}`} name="title" defaultValue={task.title} required />
-                        <span className="muted">{task.owner} · {task.company || "No company"}</span>
-                      </form>
-                    </td>
-                    <td>
-                      <select form={`task-${task.id}`} name="taskType" defaultValue={task.task_type || "Follow-Up"}>
-                        {taskTypes.map((type) => <option key={type}>{type}</option>)}
-                        {!taskTypes.length ? <option>Follow-Up</option> : null}
-                      </select>
-                    </td>
-                    <td>
-                      <select form={`task-${task.id}`} name="status" defaultValue={task.status || "open"}>
-                        {statusOptions.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
-                      </select>
-                      {task.completed_at ? <span className="muted">Completed {formatDate(task.completed_at)}</span> : null}
-                    </td>
-                    <td>
-                      <select form={`task-${task.id}`} name="priority" defaultValue={task.priority || "normal"}>
-                        <option value="low">Low</option>
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input form={`task-${task.id}`} name="dueAt" type="datetime-local" defaultValue={toDateTimeLocal(task.due_at)} aria-label={`Due date for ${task.title}`} />
-                    </td>
-                    <td>
-                      <button form={`task-${task.id}`} className="secondary-button compact-button" type="submit">Save</button>
-                    </td>
-                  </tr>
-                ))}
-                {!crm.tasks.length ? (
-                  <tr><td colSpan={6}><EmptyState>No open tasks yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="Task queue"
+            columns={[
+              { header: "Task", priority: "primary" },
+              { header: "Type" },
+              { header: "Status" },
+              { header: "Priority" },
+              { header: "Due" },
+              { header: "Save", className: "table-action-column" }
+            ]}
+            empty={!crm.tasks.length ? <EmptyState>No open tasks yet.</EmptyState> : null}
+          >
+            {crm.tasks.map((task) => (
+              <tr key={task.id}>
+                <td data-label="Task">
+                  <form id={`task-${task.id}`} action={updateFusionTask}>
+                    <input name="taskId" type="hidden" value={task.id} />
+                    <label className="sr-only" htmlFor={`title-${task.id}`}>Task title</label>
+                    <input id={`title-${task.id}`} name="title" defaultValue={task.title} required />
+                    <span className="muted">{task.owner} · {task.company || "No company"}</span>
+                  </form>
+                </td>
+                <td data-label="Type">
+                  <select form={`task-${task.id}`} name="taskType" defaultValue={task.task_type || "Follow-Up"}>
+                    {taskTypes.map((type) => <option key={type}>{type}</option>)}
+                    {!taskTypes.length ? <option>Follow-Up</option> : null}
+                  </select>
+                </td>
+                <td data-label="Status">
+                  <select form={`task-${task.id}`} name="status" defaultValue={task.status || "open"}>
+                    {statusOptions.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
+                  </select>
+                  {task.completed_at ? <span className="muted">Completed {formatDate(task.completed_at)}</span> : null}
+                </td>
+                <td data-label="Priority">
+                  <select form={`task-${task.id}`} name="priority" defaultValue={task.priority || "normal"}>
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                  </select>
+                </td>
+                <td data-label="Due">
+                  <input form={`task-${task.id}`} name="dueAt" type="datetime-local" defaultValue={toDateTimeLocal(task.due_at)} aria-label={`Due date for ${task.title}`} />
+                </td>
+                <td data-label="Save">
+                  <button form={`task-${task.id}`} className="secondary-button compact-button" type="submit">Save</button>
+                </td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
 
         <article className="admin-panel panel-span-2">

@@ -1,7 +1,7 @@
 import { BriefcaseBusiness } from "lucide-react";
 import { createFusionDeal } from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
-import { EmptyState, formatCurrency, PageHeader } from "../crm-ui";
+import { EmptyState, formatCurrency, FusionDataTable, PageHeader } from "../crm-ui";
 
 export default async function FusionDealsPage() {
   const crm = await getFusionCrmWorkspace();
@@ -65,33 +65,27 @@ export default async function FusionDealsPage() {
             <h2>Deal list</h2>
             <span className="status-pill">{crm.deals.length}</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Deal</th>
-                  <th>Company</th>
-                  <th>Stage</th>
-                  <th>Value</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {crm.deals.map((deal) => (
-                  <tr key={deal.id}>
-                    <td>{deal.deal_title}<br /><span className="muted">{deal.service || "Website services"}</span></td>
-                    <td>{deal.crm_companies?.company_name || "No company"}</td>
-                    <td>{deal.crm_pipeline_stages?.name || "No stage"}</td>
-                    <td>{formatCurrency(deal.value)}</td>
-                    <td><span className="status-pill">{deal.status}</span></td>
-                  </tr>
-                ))}
-                {!crm.deals.length ? (
-                  <tr><td colSpan={5}><EmptyState>No deals yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="Deal list"
+            columns={[
+              { header: "Deal", priority: "primary" },
+              { header: "Company" },
+              { header: "Stage" },
+              { header: "Value" },
+              { header: "Status" }
+            ]}
+            empty={!crm.deals.length ? <EmptyState>No deals yet.</EmptyState> : null}
+          >
+            {crm.deals.map((deal) => (
+              <tr key={deal.id}>
+                <td data-label="Deal">{deal.deal_title}<br /><span className="muted">{deal.service || "Website services"}</span></td>
+                <td data-label="Company">{deal.crm_companies?.company_name || "No company"}</td>
+                <td data-label="Stage">{deal.crm_pipeline_stages?.name || "No stage"}</td>
+                <td data-label="Value">{formatCurrency(deal.value)}</td>
+                <td data-label="Status"><span className="status-pill">{deal.status}</span></td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
       </section>
     </div>

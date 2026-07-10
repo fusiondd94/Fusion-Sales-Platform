@@ -1,7 +1,7 @@
 import { Library, PlusCircle } from "lucide-react";
 import { createFusionService } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
-import { EmptyState, formatCurrency, PageHeader } from "../crm-ui";
+import { EmptyState, formatCurrency, FusionDataTable, PageHeader } from "../crm-ui";
 
 export default async function FusionServicesPage() {
   const salesOps = await getSalesOpsWorkspace();
@@ -20,33 +20,27 @@ export default async function FusionServicesPage() {
             <h2><Library size={20} /> Catalog</h2>
             <span className="status-pill">{salesOps.services.length} services</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Service</th>
-                  <th>Billing</th>
-                  <th>Price</th>
-                  <th>Cost</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salesOps.services.map((service) => (
-                  <tr key={service.id}>
-                    <td>{service.service_name}<br /><span className="muted">{service.sku} · {service.short_description || "No description"}</span></td>
-                    <td>{service.billing_type}<br /><span className="muted">{service.recurring_interval || service.pricing_model}</span></td>
-                    <td>{formatCurrency(service.base_price)}</td>
-                    <td>{formatCurrency(service.internal_estimated_cost)}</td>
-                    <td><span className="status-pill">{service.is_active ? "active" : "inactive"}</span></td>
-                  </tr>
-                ))}
-                {!salesOps.services.length ? (
-                  <tr><td colSpan={5}><EmptyState>No services yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="Service catalog"
+            columns={[
+              { header: "Service", priority: "primary" },
+              { header: "Billing" },
+              { header: "Price" },
+              { header: "Cost" },
+              { header: "Status" }
+            ]}
+            empty={!salesOps.services.length ? <EmptyState>No services yet.</EmptyState> : null}
+          >
+            {salesOps.services.map((service) => (
+              <tr key={service.id}>
+                <td data-label="Service">{service.service_name}<br /><span className="muted">{service.sku} · {service.short_description || "No description"}</span></td>
+                <td data-label="Billing">{service.billing_type}<br /><span className="muted">{service.recurring_interval || service.pricing_model}</span></td>
+                <td data-label="Price">{formatCurrency(service.base_price)}</td>
+                <td data-label="Cost">{formatCurrency(service.internal_estimated_cost)}</td>
+                <td data-label="Status"><span className="status-pill">{service.is_active ? "active" : "inactive"}</span></td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
 
         <article className="admin-panel">

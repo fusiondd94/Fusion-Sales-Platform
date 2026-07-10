@@ -1,7 +1,7 @@
 import { FileText, PlusCircle } from "lucide-react";
 import { createFusionProposal } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
-import { EmptyState, formatCurrency, formatDate, PageHeader } from "../crm-ui";
+import { EmptyState, formatCurrency, formatDate, FusionDataTable, PageHeader } from "../crm-ui";
 
 export default async function FusionProposalsPage() {
   const salesOps = await getSalesOpsWorkspace();
@@ -20,33 +20,27 @@ export default async function FusionProposalsPage() {
             <h2><FileText size={20} /> Proposal pipeline</h2>
             <span className="status-pill">{salesOps.proposals.length} proposals</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Proposal</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th>Recurring</th>
-                  <th>Expires</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salesOps.proposals.map((proposal) => (
-                  <tr key={proposal.id}>
-                    <td>{proposal.proposal_title}<br /><span className="muted">{proposal.proposal_number}</span></td>
-                    <td><span className="status-pill">{proposal.status}</span></td>
-                    <td>{formatCurrency(proposal.grand_total)}<br /><span className="muted">Profit {formatCurrency(proposal.estimated_gross_profit)}</span></td>
-                    <td>{formatCurrency(proposal.recurring_monthly_total)}/mo</td>
-                    <td>{formatDate(proposal.expiration_date)}</td>
-                  </tr>
-                ))}
-                {!salesOps.proposals.length ? (
-                  <tr><td colSpan={5}><EmptyState>No proposals yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="Proposal pipeline"
+            columns={[
+              { header: "Proposal", priority: "primary" },
+              { header: "Status" },
+              { header: "Total" },
+              { header: "Recurring" },
+              { header: "Expires" }
+            ]}
+            empty={!salesOps.proposals.length ? <EmptyState>No proposals yet.</EmptyState> : null}
+          >
+            {salesOps.proposals.map((proposal) => (
+              <tr key={proposal.id}>
+                <td data-label="Proposal">{proposal.proposal_title}<br /><span className="muted">{proposal.proposal_number}</span></td>
+                <td data-label="Status"><span className="status-pill">{proposal.status}</span></td>
+                <td data-label="Total">{formatCurrency(proposal.grand_total)}<br /><span className="muted">Profit {formatCurrency(proposal.estimated_gross_profit)}</span></td>
+                <td data-label="Recurring">{formatCurrency(proposal.recurring_monthly_total)}/mo</td>
+                <td data-label="Expires">{formatDate(proposal.expiration_date)}</td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
 
         <article className="admin-panel">

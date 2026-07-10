@@ -1,7 +1,7 @@
 import { Mail, PlusCircle } from "lucide-react";
 import { createFusionEmailTemplate } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
-import { EmptyState, PageHeader } from "../crm-ui";
+import { EmptyState, FusionDataTable, PageHeader } from "../crm-ui";
 
 export default async function FusionEmailTemplatesPage() {
   const salesOps = await getSalesOpsWorkspace();
@@ -20,33 +20,27 @@ export default async function FusionEmailTemplatesPage() {
             <h2><Mail size={20} /> Templates</h2>
             <span className="status-pill">{salesOps.emailTemplates.length} templates</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Template</th>
-                  <th>Subject</th>
-                  <th>Category</th>
-                  <th>Visibility</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salesOps.emailTemplates.map((template) => (
-                  <tr key={template.id}>
-                    <td>{template.template_name}</td>
-                    <td>{template.subject}</td>
-                    <td>{template.category}</td>
-                    <td>{template.visibility}</td>
-                    <td><span className="status-pill">{template.is_active ? "active" : "inactive"}</span></td>
-                  </tr>
-                ))}
-                {!salesOps.emailTemplates.length ? (
-                  <tr><td colSpan={5}><EmptyState>No templates yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="Email templates"
+            columns={[
+              { header: "Template", priority: "primary" },
+              { header: "Subject" },
+              { header: "Category" },
+              { header: "Visibility" },
+              { header: "Status" }
+            ]}
+            empty={!salesOps.emailTemplates.length ? <EmptyState>No templates yet.</EmptyState> : null}
+          >
+            {salesOps.emailTemplates.map((template) => (
+              <tr key={template.id}>
+                <td data-label="Template">{template.template_name}</td>
+                <td data-label="Subject">{template.subject}</td>
+                <td data-label="Category">{template.category}</td>
+                <td data-label="Visibility">{template.visibility}</td>
+                <td data-label="Status"><span className="status-pill">{template.is_active ? "active" : "inactive"}</span></td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
 
         <article className="admin-panel">

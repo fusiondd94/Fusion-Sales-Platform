@@ -1,7 +1,7 @@
 import { FormInput, PlusCircle } from "lucide-react";
 import { createFusionCrmForm } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
-import { EmptyState, PageHeader } from "../crm-ui";
+import { EmptyState, FusionDataTable, PageHeader } from "../crm-ui";
 
 export default async function FusionFormsPage() {
   const salesOps = await getSalesOpsWorkspace();
@@ -20,33 +20,27 @@ export default async function FusionFormsPage() {
             <h2><FormInput size={20} /> Forms</h2>
             <span className="status-pill">{salesOps.forms.length} forms</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Form</th>
-                  <th>Type</th>
-                  <th>Slug</th>
-                  <th>Published</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salesOps.forms.map((form) => (
-                  <tr key={form.id}>
-                    <td>{form.form_name}</td>
-                    <td>{form.form_type}</td>
-                    <td>{form.form_slug}</td>
-                    <td>{form.is_published ? "Published" : "Draft"}</td>
-                    <td><span className="status-pill">{form.is_active ? "active" : "inactive"}</span></td>
-                  </tr>
-                ))}
-                {!salesOps.forms.length ? (
-                  <tr><td colSpan={5}><EmptyState>No forms yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="CRM forms"
+            columns={[
+              { header: "Form", priority: "primary" },
+              { header: "Type" },
+              { header: "Slug" },
+              { header: "Published" },
+              { header: "Status" }
+            ]}
+            empty={!salesOps.forms.length ? <EmptyState>No forms yet.</EmptyState> : null}
+          >
+            {salesOps.forms.map((form) => (
+              <tr key={form.id}>
+                <td data-label="Form">{form.form_name}</td>
+                <td data-label="Type">{form.form_type}</td>
+                <td data-label="Slug">{form.form_slug}</td>
+                <td data-label="Published">{form.is_published ? "Published" : "Draft"}</td>
+                <td data-label="Status"><span className="status-pill">{form.is_active ? "active" : "inactive"}</span></td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
 
         <article className="admin-panel">

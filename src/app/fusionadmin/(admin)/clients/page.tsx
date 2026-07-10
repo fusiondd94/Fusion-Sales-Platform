@@ -2,7 +2,7 @@ import { Building2, Search, UserRoundPlus, UsersRound } from "lucide-react";
 import { createFusionContact, updateFusionClientProject, updateFusionContact, updateFusionLead } from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { getAdminPortalClients } from "@/lib/portal";
-import { EmptyState, formatCurrency, optionList, PageHeader } from "../crm-ui";
+import { EmptyState, formatCurrency, FusionDataTable, optionList, PageHeader } from "../crm-ui";
 
 type PageProps = {
   searchParams?: Promise<{ q?: string; status?: string; leadId?: string }>;
@@ -41,39 +41,33 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
             <h2><UsersRound size={20} /> Platform leads</h2>
             <span className="status-pill">{crm.leads.length} records</span>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Lead</th>
-                  <th>Contact</th>
-                  <th>Offer</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {crm.leads.map((lead) => (
-                  <tr id={`lead-${lead.id}`} key={lead.id}>
-                    <td>
-                      <a className="lead-edit-link" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>
-                        {lead.company}
-                      </a>
-                      <br />
-                      <span className="muted">{lead.lead_code} · {lead.website || "No website"}</span>
-                    </td>
-                    <td>{lead.customer_name}<br /><span className="muted">{lead.customer_email} · {lead.customer_phone}</span></td>
-                    <td>{lead.package_name}<br /><span className="muted">{formatCurrency(lead.total_today)} + ${lead.monthly_due}/mo</span></td>
-                    <td><span className="status-pill">{lead.status}</span></td>
-                    <td><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>Edit</a></td>
-                  </tr>
-                ))}
-                {!crm.leads.length ? (
-                  <tr><td colSpan={5}><EmptyState>No matching leads yet.</EmptyState></td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <FusionDataTable
+            aria-label="Platform leads"
+            columns={[
+              { header: "Lead", priority: "primary" },
+              { header: "Contact" },
+              { header: "Offer" },
+              { header: "Status" },
+              { header: "Action", className: "table-action-column" }
+            ]}
+            empty={!crm.leads.length ? <EmptyState>No matching leads yet.</EmptyState> : null}
+          >
+            {crm.leads.map((lead) => (
+              <tr id={`lead-${lead.id}`} key={lead.id}>
+                <td data-label="Lead">
+                  <a className="lead-edit-link" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>
+                    {lead.company}
+                  </a>
+                  <br />
+                  <span className="muted">{lead.lead_code} · {lead.website || "No website"}</span>
+                </td>
+                <td data-label="Contact">{lead.customer_name}<br /><span className="muted">{lead.customer_email} · {lead.customer_phone}</span></td>
+                <td data-label="Offer">{lead.package_name}<br /><span className="muted">{formatCurrency(lead.total_today)} + ${lead.monthly_due}/mo</span></td>
+                <td data-label="Status"><span className="status-pill">{lead.status}</span></td>
+                <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>Edit</a></td>
+              </tr>
+            ))}
+          </FusionDataTable>
         </article>
 
         {selectedLead ? (
