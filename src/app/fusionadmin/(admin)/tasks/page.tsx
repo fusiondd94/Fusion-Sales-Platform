@@ -1,11 +1,12 @@
 import { ClipboardList, FileText } from "lucide-react";
-import { createFusionNote, createFusionTask } from "@/app/fusionadmin/actions";
+import { createFusionNote, createFusionTask, updateFusionTask } from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { EmptyState, formatDate, optionList, PageHeader } from "../crm-ui";
 
 export default async function FusionTasksPage() {
   const crm = await getFusionCrmWorkspace();
   const taskTypes = optionList(crm.settings?.task_types);
+  const statusOptions = ["open", "in_progress", "done", "blocked"];
 
   return (
     <div className="admin-content">
@@ -59,24 +60,53 @@ export default async function FusionTasksPage() {
               <thead>
                 <tr>
                   <th>Task</th>
-                  <th>Owner</th>
-                  <th>Company</th>
+                  <th>Type</th>
+                  <th>Status</th>
                   <th>Priority</th>
                   <th>Due</th>
+                  <th>Save</th>
                 </tr>
               </thead>
               <tbody>
                 {crm.tasks.map((task) => (
                   <tr key={task.id}>
-                    <td>{task.title}<br /><span className="muted">{task.status}</span></td>
-                    <td>{task.owner}</td>
-                    <td>{task.company || "No company"}</td>
-                    <td><span className="status-pill">{task.priority}</span></td>
-                    <td>{formatDate(task.due_at)}</td>
+                    <td>
+                      <form id={`task-${task.id}`} action={updateFusionTask}>
+                        <input name="taskId" type="hidden" value={task.id} />
+                        <label className="sr-only" htmlFor={`title-${task.id}`}>Task title</label>
+                        <input id={`title-${task.id}`} name="title" defaultValue={task.title} required />
+                        <span className="muted">{task.owner} · {task.company || "No company"}</span>
+                      </form>
+                    </td>
+                    <td>
+                      <select form={`task-${task.id}`} name="taskType" defaultValue={task.task_type || "Follow-Up"}>
+                        {taskTypes.map((type) => <option key={type}>{type}</option>)}
+                        {!taskTypes.length ? <option>Follow-Up</option> : null}
+                      </select>
+                    </td>
+                    <td>
+                      <select form={`task-${task.id}`} name="status" defaultValue={task.status || "open"}>
+                        {statusOptions.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
+                      </select>
+                      {task.completed_at ? <span className="muted">Completed {formatDate(task.completed_at)}</span> : null}
+                    </td>
+                    <td>
+                      <select form={`task-${task.id}`} name="priority" defaultValue={task.priority || "normal"}>
+                        <option value="low">Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input form={`task-${task.id}`} name="dueAt" type="datetime-local" defaultValue={toDateTimeLocal(task.due_at)} aria-label={`Due date for ${task.title}`} />
+                    </td>
+                    <td>
+                      <button form={`task-${task.id}`} className="secondary-button compact-button" type="submit">Save</button>
+                    </td>
                   </tr>
                 ))}
                 {!crm.tasks.length ? (
-                  <tr><td colSpan={5}><EmptyState>No open tasks yet.</EmptyState></td></tr>
+                  <tr><td colSpan={6}><EmptyState>No open tasks yet.</EmptyState></td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -98,4 +128,9 @@ export default async function FusionTasksPage() {
       </section>
     </div>
   );
+}
+
+function toDateTimeLocal(value: string | null | undefined) {
+  if (!value) return "";
+  return new Date(value).toISOString().slice(0, 16);
 }

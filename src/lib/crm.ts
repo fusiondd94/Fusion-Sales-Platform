@@ -47,6 +47,8 @@ export type DashboardTask = {
   status: string;
   priority: string;
   due_at: string | null;
+  task_type?: string | null;
+  completed_at?: string | null;
   company?: string | null;
 };
 
@@ -65,6 +67,8 @@ export type CrmCompany = {
 export type CrmContact = {
   id: string;
   company_id: string | null;
+  first_name: string;
+  last_name: string | null;
   display_name: string;
   email: string | null;
   phone: string | null;
@@ -194,6 +198,13 @@ function displayNameFromEmail(email: string) {
   return email.split("@")[0] || email;
 }
 
+function splitDisplayName(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  const firstName = parts.shift() || "Unnamed";
+  const lastName = parts.length ? parts.join(" ") : null;
+  return { firstName, lastName, displayName: [firstName, lastName].filter(Boolean).join(" ") };
+}
+
 async function getDefaultOrganizationId(supabase: SupabaseClient<any>) {
   const { data, error } = await supabase
     .from("crm_organizations")
@@ -255,6 +266,8 @@ function demoDashboardRecords() {
       status: task.status,
       priority: "normal",
       due_at: null,
+      task_type: "Follow-Up",
+      completed_at: null,
       company: task.client
     }))
   };
@@ -349,8 +362,8 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
   ] = await Promise.all([
     supabase.from("crm_organizations").select("name, default_currency, default_time_zone").eq("id", organizationId).single(),
     leadQuery,
-    supabase.from("crm_tasks").select("id, title, owner, status, priority, due_at, crm_leads(company)").eq("organization_id", organizationId).is("deleted_at", null).order("due_at", { ascending: true, nullsFirst: false }).limit(50),
-    supabase.from("crm_contacts").select("id, company_id, display_name, email, phone, job_title, lifecycle_status, lead_source, next_follow_up_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
+    supabase.from("crm_tasks").select("id, title, owner, status, priority, due_at, task_type, completed_at, crm_leads(company)").eq("organization_id", organizationId).is("deleted_at", null).order("due_at", { ascending: true, nullsFirst: false }).limit(50),
+    supabase.from("crm_contacts").select("id, company_id, first_name, last_name, display_name, email, phone, job_title, lifecycle_status, lead_source, next_follow_up_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("crm_companies").select("id, company_name, industry, website, main_phone, general_email, lifecycle_status, lead_source, created_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("crm_deals").select("id, company_id, stage_id, deal_title, service, value, probability, expected_close_date, priority, status").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("crm_notes").select("id, entity_type, body, is_pinned, created_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(20),
@@ -776,6 +789,108 @@ export async function createCrmTask(input: {
 
   if (error || !data) return { ok: false, error: "Unable to create task." };
   await logActivity(supabase, organizationId, input.actorId, "task.created", "task", data.id, `Task created: ${input.title}`);
+  return { ok: true };
+}
+
+export async function updateCrmContact(input: {
+  actorId: string;
+  contactId: string;
+  displayName: string;
+  email?: string;
+  phone?: string;
+  jobTitle?: string;
+  companyName?: string;
+  lifecycleStatus?: string;
+  leadSource?: string;
+  nextFollowUpAt?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const names = splitDisplayName(input.displayName);
+  let companyId: string | null = null;
+  if (input.companyName?.trim()) {
+    const { data: company } = await supabase
+      .from("crm_companies")
+      .upsert({
+        organization_id: organizationId,
+        company_name: input.companyName.trim(),
+        updated_by: input.actorId,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "organization_id,company_name", ignoreDuplicates: false })
+      .select("id")
+      .single<{ id: string }>();
+    companyId = company?.id || null;
+  }
+
+  const { data, error } = await supabase
+    .from("crm_contacts")
+    .update({
+      company_id: companyId,
+      first_name: names.firstName,
+      last_name: names.lastName,
+      display_name: names.displayName,
+      email: input.email?.trim() || null,
+      normalized_email: input.email ? normalizeEmail(input.email) : null,
+      phone: input.phone?.trim() || null,
+      normalized_phone: input.phone ? normalizePhone(input.phone) : null,
+      job_title: input.jobTitle?.trim() || null,
+      lifecycle_status: input.lifecycleStatus?.trim() || "new",
+      lead_source: input.leadSource?.trim() || "Manual",
+      next_follow_up_at: input.nextFollowUpAt || null,
+      updated_by: input.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", input.contactId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update contact." };
+  await logActivity(supabase, organizationId, input.actorId, "contact.updated", "contact", input.contactId, `Contact updated: ${names.displayName}`);
+  return { ok: true };
+}
+
+export async function updateCrmTask(input: {
+  actorId: string;
+  taskId: string;
+  title: string;
+  taskType?: string;
+  priority?: string;
+  status?: string;
+  dueAt?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const allowedStatuses = new Set(["open", "in_progress", "done", "blocked"]);
+  const status = allowedStatuses.has(input.status || "") ? input.status || "open" : "open";
+  const completedAt = status === "done" ? new Date().toISOString() : null;
+
+  const { data, error } = await supabase
+    .from("crm_tasks")
+    .update({
+      title: input.title.trim(),
+      task_type: input.taskType?.trim() || "Follow-Up",
+      priority: input.priority || "normal",
+      status,
+      due_at: input.dueAt || null,
+      completed_at: completedAt,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", input.taskId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update task." };
+  await logActivity(supabase, organizationId, input.actorId, status === "done" ? "task.completed" : "task.updated", "task", input.taskId, `Task ${status === "done" ? "completed" : "updated"}: ${input.title}`);
   return { ok: true };
 }
 

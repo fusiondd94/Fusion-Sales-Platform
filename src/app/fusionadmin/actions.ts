@@ -10,7 +10,9 @@ import {
   createCrmTask,
   inviteCrmTeamMember,
   updateCrmBrandSettings,
-  updateCrmServicePackage
+  updateCrmContact,
+  updateCrmServicePackage,
+  updateCrmTask
 } from "@/lib/crm";
 import {
   createSalesAppointment,
@@ -105,6 +107,45 @@ export async function createFusionTask(formData: FormData) {
     title: String(formData.get("title") || ""),
     taskType: String(formData.get("taskType") || "Follow-Up"),
     priority: String(formData.get("priority") || "normal"),
+    dueAt: String(formData.get("dueAt") || "")
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/tasks");
+}
+
+export async function updateFusionContact(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await updateCrmContact({
+    actorId: user.id,
+    contactId: String(formData.get("contactId") || ""),
+    displayName: String(formData.get("displayName") || ""),
+    email: String(formData.get("email") || ""),
+    phone: String(formData.get("phone") || ""),
+    jobTitle: String(formData.get("jobTitle") || ""),
+    companyName: String(formData.get("companyName") || ""),
+    lifecycleStatus: String(formData.get("lifecycleStatus") || "new"),
+    leadSource: String(formData.get("leadSource") || "Manual"),
+    nextFollowUpAt: String(formData.get("nextFollowUpAt") || "")
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+}
+
+export async function updateFusionTask(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await updateCrmTask({
+    actorId: user.id,
+    taskId: String(formData.get("taskId") || ""),
+    title: String(formData.get("title") || ""),
+    taskType: String(formData.get("taskType") || "Follow-Up"),
+    priority: String(formData.get("priority") || "normal"),
+    status: String(formData.get("status") || "open"),
     dueAt: String(formData.get("dueAt") || "")
   });
 
