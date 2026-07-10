@@ -1,11 +1,11 @@
 import { Building2, Search, UserRoundPlus, UsersRound } from "lucide-react";
-import { createFusionContact, updateFusionClientProject, updateFusionContact } from "@/app/fusionadmin/actions";
+import { createFusionContact, updateFusionClientProject, updateFusionContact, updateFusionLead } from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { getAdminPortalClients } from "@/lib/portal";
 import { EmptyState, formatCurrency, optionList, PageHeader } from "../crm-ui";
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string; status?: string }>;
+  searchParams?: Promise<{ q?: string; status?: string; leadId?: string }>;
 };
 
 export default async function FusionClientsPage({ searchParams }: PageProps) {
@@ -16,7 +16,9 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
   ]);
   const leadSources = optionList(crm.settings?.lead_sources);
   const contactStatuses = Array.from(new Set(["new", "prospect", "qualified", "client", "inactive", ...(crm.settings?.lead_statuses || [])]));
+  const leadStatuses = Array.from(new Set(["captured", "checkout_started", "paid", "qualified", "proposal_sent", "won", "lost", "unqualified", ...(crm.settings?.lead_statuses || [])]));
   const projectStatuses = ["not_started", "in_progress", "review", "done", "on_hold"];
+  const selectedLead = crm.leads.find((lead) => lead.id === filters.leadId);
 
   return (
     <div className="admin-content">
@@ -47,24 +49,116 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   <th>Contact</th>
                   <th>Offer</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {crm.leads.map((lead) => (
-                  <tr key={lead.id}>
-                    <td>{lead.company}<br /><span className="muted">{lead.lead_code} · {lead.website || "No website"}</span></td>
+                  <tr id={`lead-${lead.id}`} key={lead.id}>
+                    <td>
+                      <a className="lead-edit-link" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>
+                        {lead.company}
+                      </a>
+                      <br />
+                      <span className="muted">{lead.lead_code} · {lead.website || "No website"}</span>
+                    </td>
                     <td>{lead.customer_name}<br /><span className="muted">{lead.customer_email} · {lead.customer_phone}</span></td>
                     <td>{lead.package_name}<br /><span className="muted">{formatCurrency(lead.total_today)} + ${lead.monthly_due}/mo</span></td>
                     <td><span className="status-pill">{lead.status}</span></td>
+                    <td><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>Edit</a></td>
                   </tr>
                 ))}
                 {!crm.leads.length ? (
-                  <tr><td colSpan={4}><EmptyState>No matching leads yet.</EmptyState></td></tr>
+                  <tr><td colSpan={5}><EmptyState>No matching leads yet.</EmptyState></td></tr>
                 ) : null}
               </tbody>
             </table>
           </div>
         </article>
+
+        {selectedLead ? (
+          <article className="admin-panel panel-span-2" id="lead-editor">
+            <div className="panel-heading">
+              <h2><UsersRound size={20} /> Edit lead</h2>
+              <span className="status-pill">{selectedLead.lead_code}</span>
+            </div>
+            <form className="record-edit-card lead-editor-card" action={updateFusionLead}>
+              <input name="leadId" type="hidden" value={selectedLead.id} />
+              <div className="record-edit-grid">
+                <label>
+                  Company
+                  <input name="company" defaultValue={selectedLead.company} required />
+                </label>
+                <label>
+                  Customer name
+                  <input name="customerName" defaultValue={selectedLead.customer_name} required />
+                </label>
+                <label>
+                  Email
+                  <input name="customerEmail" defaultValue={selectedLead.customer_email} required type="email" />
+                </label>
+                <label>
+                  Phone
+                  <input name="customerPhone" defaultValue={selectedLead.customer_phone || ""} />
+                </label>
+                <label>
+                  Website
+                  <input name="website" defaultValue={selectedLead.website || ""} />
+                </label>
+                <label>
+                  Industry
+                  <input name="industry" defaultValue={selectedLead.industry || ""} />
+                </label>
+                <label>
+                  Status
+                  <select name="status" defaultValue={selectedLead.status}>
+                    {leadStatuses.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
+                  </select>
+                </label>
+                <label>
+                  Package
+                  <input name="packageName" defaultValue={selectedLead.package_name || ""} />
+                </label>
+                <label>
+                  Setup due today
+                  <input name="totalToday" defaultValue={selectedLead.total_today} min="0" type="number" />
+                </label>
+                <label>
+                  Monthly due
+                  <input name="monthlyDue" defaultValue={selectedLead.monthly_due} min="0" type="number" />
+                </label>
+                <label>
+                  Discount %
+                  <input name="discountPercent" defaultValue={selectedLead.discount_percent} max="75" min="0" type="number" />
+                </label>
+                <label>
+                  Timeline
+                  <input name="timeline" defaultValue={selectedLead.timeline || ""} />
+                </label>
+                <label>
+                  Budget
+                  <input name="budget" defaultValue={selectedLead.budget || ""} />
+                </label>
+                <label>
+                  Objection
+                  <input name="objection" defaultValue={selectedLead.objection || ""} />
+                </label>
+                <label className="full-field">
+                  Business goal
+                  <textarea name="goal" defaultValue={selectedLead.goal || ""} />
+                </label>
+                <label className="full-field">
+                  Project notes
+                  <textarea name="projectNotes" defaultValue={selectedLead.project_notes || ""} />
+                </label>
+              </div>
+              <div className="record-edit-actions">
+                <a className="ghost-button compact-button" href="/fusionadmin/clients">Close</a>
+                <button className="primary-button compact-button" type="submit">Save lead</button>
+              </div>
+            </form>
+          </article>
+        ) : null}
 
         <article className="admin-panel">
           <h2><UserRoundPlus size={20} /> Add contact</h2>
@@ -170,6 +264,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                 <p className="muted">
                   {client.customer_name} · {client.customer_email} · {client.commentCount || 0} comments · {client.fileCount || 0} files
                 </p>
+                <p><a className="text-link" href={`/portal?clientId=${client.id}`}>Open client portal preview</a></p>
                 <div className="record-edit-grid">
                   <label>
                     Project name

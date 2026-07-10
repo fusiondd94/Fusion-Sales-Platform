@@ -2,8 +2,13 @@ import { redirect } from "next/navigation";
 import { getClientPortalWorkspace } from "@/lib/portal";
 import { PortalWorkspace } from "./PortalWorkspace";
 
-export default async function PortalPage() {
-  const workspace = await getClientPortalWorkspace();
+type PageProps = {
+  searchParams?: Promise<{ clientId?: string }>;
+};
+
+export default async function PortalPage({ searchParams }: PageProps) {
+  const params = (await searchParams) || {};
+  const workspace = await getClientPortalWorkspace(params.clientId);
 
   if (!workspace) {
     redirect("/portal/login");

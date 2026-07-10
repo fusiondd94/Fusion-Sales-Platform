@@ -1,4 +1,5 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { getFusionAdminUser } from "@/lib/auth";
 
 export type ClientProject = {
   id: string;
@@ -50,6 +51,12 @@ export type ClientPortalWorkspace = {
   project: ClientProject;
   comments: ClientProjectComment[];
   files: ClientProjectFile[];
+  isAdminPreview?: boolean;
+  availableClients?: Array<{
+    id: string;
+    customer_name: string;
+    company: string;
+  }>;
 };
 
 export type AdminClientPortalRecord = {
@@ -135,40 +142,47 @@ async function getSignedFileUrl(storagePath: string) {
   return data?.signedUrl || null;
 }
 
-export async function getClientPortalWorkspace(): Promise<ClientPortalWorkspace | null> {
-  const authClient = await createSupabaseServerClient();
-  const { data: authData, error: authError } = await authClient.auth.getUser();
-  const user = authData.user;
+async function getAvailablePortalClients() {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return [];
 
-  if (authError || !user?.email) return null;
+  const { data } = await supabase
+    .from("crm_clients")
+    .select("id, customer_name, company")
+    .order("created_at", { ascending: false })
+    .limit(100);
 
+  return data || [];
+}
+
+function adminPreviewProject(): ClientProject {
+  return {
+    id: "admin-preview-project",
+    project_name: "Admin Client Portal Preview",
+    project_status: "preview",
+    live_url: null,
+    preview_url: null,
+    current_phase: "Portal QA",
+    client_instructions: "Create or select a client record to test comments, file uploads, and live website review tools.",
+    updated_at: new Date().toISOString()
+  };
+}
+
+async function buildPortalWorkspace(input: {
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+  };
+  client: ClientPortalWorkspace["client"];
+  actorId?: string | null;
+  isAdminPreview?: boolean;
+  availableClients?: ClientPortalWorkspace["availableClients"];
+}) {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return null;
 
-  const email = user.email.toLowerCase();
-  const { data: client, error: clientError } = await supabase
-    .from("crm_clients")
-    .select("id, customer_name, customer_email, company, status, onboarding_status, portal_user_id")
-    .or(`portal_user_id.eq.${user.id},customer_email.eq.${email}`)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single<ClientPortalWorkspace["client"] & { portal_user_id?: string | null }>();
-
-  if (clientError || !client) return null;
-
-  if (!client.portal_user_id) {
-    await supabase
-      .from("crm_clients")
-      .update({
-        portal_user_id: user.id,
-        portal_status: "active",
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", client.id)
-      .is("portal_user_id", null);
-  }
-
-  const project = await ensureClientProject(client.id, user.id);
+  const project = await ensureClientProject(input.client.id, input.actorId || input.user.id);
   if (!project) return null;
 
   const [{ data: comments }, { data: files }] = await Promise.all([
@@ -196,9 +210,105 @@ export async function getClientPortalWorkspace(): Promise<ClientPortalWorkspace 
     signedUrl: await getSignedFileUrl(file.storage_path)
   })));
 
-  const metadata = user.user_metadata as { full_name?: string; name?: string } | null;
-
   return {
+    user: input.user,
+    client: input.client,
+    project,
+    comments: (comments || []) as ClientProjectComment[],
+    files: signedFiles,
+    isAdminPreview: input.isAdminPreview,
+    availableClients: input.availableClients
+  };
+}
+
+export async function getClientPortalWorkspace(clientId?: string): Promise<ClientPortalWorkspace | null> {
+  const authClient = await createSupabaseServerClient();
+  const { data: authData, error: authError } = await authClient.auth.getUser();
+  const user = authData.user;
+
+  if (authError || !user?.email) return null;
+
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return null;
+
+  const email = user.email.toLowerCase();
+  const metadata = user.user_metadata as { full_name?: string; name?: string } | null;
+  const admin = await getFusionAdminUser();
+  const isAdmin = Boolean(admin?.isAllowed && admin.id === user.id);
+
+  if (isAdmin) {
+    const availableClients = await getAvailablePortalClients();
+    const requestedClientId = clientId?.trim();
+    const fallbackClientId = availableClients[0]?.id;
+    const activeClientId = requestedClientId || fallbackClientId;
+
+    if (!activeClientId) {
+      return {
+        user: {
+          id: user.id,
+          email,
+          displayName: admin?.displayName || metadata?.full_name || metadata?.name || displayNameFromEmail(email)
+        },
+        client: {
+          id: "admin-preview-client",
+          customer_name: admin?.displayName || "Fusion Admin",
+          customer_email: email,
+          company: "Fusion Digital Dynamics LLC",
+          status: "internal_preview",
+          onboarding_status: "qa"
+        },
+        project: adminPreviewProject(),
+        comments: [],
+        files: [],
+        isAdminPreview: true,
+        availableClients
+      };
+    }
+
+    const { data: adminClient } = await supabase
+      .from("crm_clients")
+      .select("id, customer_name, customer_email, company, status, onboarding_status")
+      .eq("id", activeClientId)
+      .single<ClientPortalWorkspace["client"]>();
+
+    if (adminClient) {
+      return buildPortalWorkspace({
+        user: {
+          id: user.id,
+          email,
+          displayName: admin?.displayName || metadata?.full_name || metadata?.name || displayNameFromEmail(email)
+        },
+        client: adminClient,
+        actorId: user.id,
+        isAdminPreview: true,
+        availableClients
+      });
+    }
+  }
+
+  const { data: client, error: clientError } = await supabase
+    .from("crm_clients")
+    .select("id, customer_name, customer_email, company, status, onboarding_status, portal_user_id")
+    .or(`portal_user_id.eq.${user.id},customer_email.eq.${email}`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single<ClientPortalWorkspace["client"] & { portal_user_id?: string | null }>();
+
+  if (clientError || !client) return null;
+
+  if (!client.portal_user_id) {
+    await supabase
+      .from("crm_clients")
+      .update({
+        portal_user_id: user.id,
+        portal_status: "active",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", client.id)
+      .is("portal_user_id", null);
+  }
+
+  return buildPortalWorkspace({
     user: {
       id: user.id,
       email,
@@ -211,11 +321,8 @@ export async function getClientPortalWorkspace(): Promise<ClientPortalWorkspace 
       company: client.company,
       status: client.status,
       onboarding_status: client.onboarding_status || null
-    },
-    project,
-    comments: (comments || []) as ClientProjectComment[],
-    files: signedFiles
-  };
+    }
+  });
 }
 
 export async function getAdminPortalClients(): Promise<AdminClientPortalRecord[]> {
@@ -310,9 +417,11 @@ export async function createClientProjectComment(input: {
   pageUrl?: string;
   markerX?: number | null;
   markerY?: number | null;
+  clientId?: string;
 }) {
-  const workspace = await getClientPortalWorkspace();
+  const workspace = await getClientPortalWorkspace(input.clientId);
   if (!workspace) return { ok: false, error: "Sign in to comment on your project." };
+  if (workspace.project.id === "admin-preview-project") return { ok: false, error: "Select a client before adding comments." };
   const supabase = createSupabaseServiceClient();
   if (!supabase) return { ok: false, error: "Supabase is not configured." };
 
@@ -324,7 +433,7 @@ export async function createClientProjectComment(input: {
     client_id: workspace.client.id,
     author_user_id: workspace.user.id,
     author_name: workspace.user.displayName,
-    author_role: "client",
+    author_role: workspace.isAdminPreview ? "admin" : "client",
     body: safeBody,
     page_url: cleanUrl(input.pageUrl || workspace.project.preview_url || workspace.project.live_url || ""),
     marker_x: typeof input.markerX === "number" ? input.markerX : null,
@@ -338,9 +447,11 @@ export async function createClientProjectComment(input: {
 export async function uploadClientProjectFile(input: {
   file: File;
   description?: string;
+  clientId?: string;
 }) {
-  const workspace = await getClientPortalWorkspace();
+  const workspace = await getClientPortalWorkspace(input.clientId);
   if (!workspace) return { ok: false, error: "Sign in to upload files." };
+  if (workspace.project.id === "admin-preview-project") return { ok: false, error: "Select a client before uploading files." };
   const supabase = createSupabaseServiceClient();
   if (!supabase) return { ok: false, error: "Supabase is not configured." };
   if (!input.file || input.file.size <= 0) return { ok: false, error: "Choose a file to upload." };

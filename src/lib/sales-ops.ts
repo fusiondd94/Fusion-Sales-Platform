@@ -52,6 +52,7 @@ export type SalesOpsProposal = {
 
 export type SalesOpsAppointment = {
   id: string;
+  appointment_type_id: string | null;
   title: string;
   starts_at: string;
   ends_at: string;
@@ -223,6 +224,11 @@ const appointmentSchema = z.object({
   meetingUrl: z.string().trim().max(250).optional()
 });
 
+const updateAppointmentSchema = appointmentSchema.extend({
+  appointmentId: z.string().uuid(),
+  status: z.enum(["scheduled", "confirmed", "completed", "cancelled", "no_show"]).default("scheduled")
+});
+
 const emailTemplateSchema = z.object({
   actorId: z.string().uuid(),
   templateName: z.string().trim().min(2).max(140),
@@ -306,7 +312,7 @@ export async function getSalesOpsWorkspace() {
     supabase.from("crm_service_categories").select("id, name, slug").eq("organization_id", organizationId).is("deleted_at", null).order("display_order", { ascending: true }),
     supabase.from("crm_services").select("id, category_id, service_name, sku, slug, short_description, billing_type, pricing_model, base_price, minimum_price, maximum_price, internal_estimated_cost, default_quantity, is_taxable, recurring_interval, setup_fee, discount_eligible, is_active, is_featured, public_visibility").eq("organization_id", organizationId).is("deleted_at", null).order("display_order", { ascending: true }).limit(100),
     supabase.from("crm_proposals").select("id, proposal_number, proposal_title, status, currency, issue_date, expiration_date, subtotal, discount_total, tax_total, grand_total, recurring_monthly_total, estimated_gross_profit, estimated_gross_margin, created_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
-    supabase.from("crm_appointments").select("id, title, starts_at, ends_at, status, time_zone, location, meeting_url").eq("organization_id", organizationId).is("deleted_at", null).order("starts_at", { ascending: true }).limit(50),
+    supabase.from("crm_appointments").select("id, appointment_type_id, title, starts_at, ends_at, status, time_zone, location, meeting_url").eq("organization_id", organizationId).is("deleted_at", null).order("starts_at", { ascending: true }).limit(50),
     supabase.from("crm_appointment_types").select("id, name").eq("organization_id", organizationId).eq("is_active", true).order("name", { ascending: true }),
     supabase.from("crm_lead_sources").select("id, name, slug, is_paid, default_channel").eq("organization_id", organizationId).eq("is_active", true).order("display_order", { ascending: true }),
     supabase.from("crm_email_templates").select("id, template_name, subject, category, visibility, is_active").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
@@ -522,6 +528,58 @@ export async function createSalesAppointment(input: z.input<typeof appointmentSc
 
   if (error || !data) return { ok: false, error: "Unable to create appointment." };
   await logActivity(supabase, organizationId, value.actorId, "appointment.created", "appointment", data.id, `Appointment created: ${value.title}`);
+  return { ok: true };
+}
+
+export async function updateSalesAppointment(input: z.input<typeof updateAppointmentSchema>) {
+  const parsed = updateAppointmentSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Appointment information is not valid." };
+  const value = parsed.data;
+  const startsAt = new Date(value.startsAt);
+  const endsAt = new Date(value.endsAt);
+  if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
+    return { ok: false, error: "Appointment end time must be after start time." };
+  }
+
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data: conflicts } = await supabase
+    .from("crm_appointments")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("assigned_user_id", value.actorId)
+    .neq("id", value.appointmentId)
+    .is("deleted_at", null)
+    .lt("starts_at", endsAt.toISOString())
+    .gt("ends_at", startsAt.toISOString())
+    .limit(1);
+
+  if (conflicts?.length) return { ok: false, error: "This appointment overlaps with another appointment." };
+
+  const { data, error } = await supabase
+    .from("crm_appointments")
+    .update({
+      appointment_type_id: value.appointmentTypeId || null,
+      title: value.title,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      status: value.status,
+      location: value.location || null,
+      meeting_url: value.meetingUrl || null,
+      updated_by: value.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", value.appointmentId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update appointment." };
+  await logActivity(supabase, organizationId, value.actorId, "appointment.updated", "appointment", data.id, `Appointment updated: ${value.title}`);
   return { ok: true };
 }
 

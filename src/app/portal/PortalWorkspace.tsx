@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, FileUp, LogOut, MessageSquarePlus, MousePointer2, Send } from "lucide-react";
+import { Download, Eye, FileUp, LogOut, MessageSquarePlus, MousePointer2, Send } from "lucide-react";
 import { addProjectComment, signOutClientPortal, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
 
@@ -10,6 +10,8 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
   const openComments = useMemo(() => workspace.comments.filter((comment) => comment.status !== "resolved"), [workspace.comments]);
+  const selectedClientId = workspace.client.id.startsWith("admin-preview-") ? "" : workspace.client.id;
+  const canSubmitPortalWork = workspace.project.id !== "admin-preview-project";
 
   return (
     <main className="shell">
@@ -23,6 +25,27 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
             <button className="ghost-button" type="submit"><LogOut size={16} /> Sign out</button>
           </form>
         </nav>
+
+        {workspace.isAdminPreview ? (
+          <section className="portal-admin-preview">
+            <div>
+              <p className="eyebrow">Admin portal preview</p>
+              <h2><Eye size={19} /> Roam the client portal</h2>
+              <p className="muted">You are viewing the portal as an admin. Switch clients to test comments, uploads, preview links, and project status.</p>
+            </div>
+            <form className="portal-client-switcher" action="/portal">
+              <label>
+                Client
+                <select name="clientId" defaultValue={selectedClientId}>
+                  {workspace.availableClients?.map((client) => (
+                    <option key={client.id} value={client.id}>{client.company || client.customer_name}</option>
+                  ))}
+                </select>
+              </label>
+              <button className="secondary-button compact-button" type="submit">View client</button>
+            </form>
+          </section>
+        ) : null}
 
         <section className="portal-hero">
           <div>
@@ -84,11 +107,12 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
             )}
 
             <form className="quick-form portal-comment-form" action={addProjectComment}>
+              <input name="clientId" type="hidden" value={selectedClientId} />
               <input name="pageUrl" type="hidden" value={previewUrl} />
               <input name="markerX" type="hidden" value={marker?.x || ""} />
               <input name="markerY" type="hidden" value={marker?.y || ""} />
-              <textarea name="body" placeholder={marker ? "Describe the change for this selected spot." : "Leave a general project comment or select the comment tool and click the preview."} required />
-              <button className="primary-button" type="submit"><Send size={16} /> Send comment</button>
+              <textarea disabled={!canSubmitPortalWork} name="body" placeholder={marker ? "Describe the change for this selected spot." : "Leave a general project comment or select the comment tool and click the preview."} required />
+              <button className="primary-button" disabled={!canSubmitPortalWork} type="submit"><Send size={16} /> Send comment</button>
             </form>
           </article>
 
@@ -96,9 +120,10 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
             <article className="admin-panel">
               <h2><FileUp size={20} /> Upload project files</h2>
               <form className="quick-form" action={uploadProjectFile}>
-                <input name="file" type="file" required />
-                <textarea name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
-                <button className="secondary-button" type="submit"><FileUp size={16} /> Upload file</button>
+                <input name="clientId" type="hidden" value={selectedClientId} />
+                <input disabled={!canSubmitPortalWork} name="file" type="file" required />
+                <textarea disabled={!canSubmitPortalWork} name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
+                <button className="secondary-button" disabled={!canSubmitPortalWork} type="submit"><FileUp size={16} /> Upload file</button>
               </form>
             </article>
 

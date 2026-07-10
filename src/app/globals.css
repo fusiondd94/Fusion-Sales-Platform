@@ -654,6 +654,22 @@ h1 {
   overflow-x: auto;
 }
 
+.lead-edit-link {
+  color: #ffffff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.lead-edit-link:hover {
+  color: var(--gold);
+}
+
+.table-action-button {
+  display: inline-flex;
+  width: max-content;
+  text-decoration: none;
+}
+
 .admin-empty {
   margin: 0;
   color: var(--muted);
@@ -965,6 +981,7 @@ h1 {
 
 .record-edit-grid input,
 .record-edit-grid select,
+.record-edit-grid textarea,
 .table input,
 .table select {
   width: 100%;
@@ -974,6 +991,23 @@ h1 {
   color: var(--text);
   padding: 0.6rem;
   outline: none;
+}
+
+.record-edit-grid textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.lead-editor-card {
+  border-color: rgba(245, 184, 75, 0.28);
+  background: linear-gradient(135deg, rgba(245, 184, 75, 0.08), rgba(49, 215, 255, 0.06)), #0f1b2d;
+}
+
+.record-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .table td {
@@ -1029,6 +1063,45 @@ h1 {
   display: grid;
   grid-template-columns: 0.75fr 1.25fr;
   gap: 1rem;
+}
+
+.portal-admin-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.38fr);
+  gap: 1rem;
+  align-items: end;
+  border: 1px solid rgba(245, 184, 75, 0.32);
+  background: linear-gradient(135deg, rgba(245, 184, 75, 0.12), rgba(49, 215, 255, 0.08)), #0f1b2d;
+  padding: 1rem;
+}
+
+.portal-admin-preview h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.2rem 0 0.45rem;
+  color: #ffffff;
+}
+
+.portal-client-switcher {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.portal-client-switcher label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.portal-client-switcher select {
+  min-height: 2.75rem;
+  border: 1px solid rgba(175, 212, 240, 0.28);
+  background: #08111f;
+  color: var(--text);
+  padding: 0.65rem;
 }
 
 .portal-hero {
@@ -1166,6 +1239,84 @@ h1 {
 
 .portal-admin-comments span {
   color: var(--muted);
+}
+
+.calendar-board {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendar-weekdays span {
+  color: var(--muted-strong);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.calendar-grid {
+  border: 1px solid rgba(175, 212, 240, 0.2);
+}
+
+.calendar-day {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-height: 7.25rem;
+  border-right: 1px solid rgba(175, 212, 240, 0.14);
+  border-bottom: 1px solid rgba(175, 212, 240, 0.14);
+  background: #0b1526;
+  padding: 0.55rem;
+}
+
+.calendar-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.calendar-day.outside-month {
+  background: #07111f;
+  color: rgba(235, 244, 255, 0.4);
+}
+
+.calendar-day-number {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.calendar-event {
+  display: grid;
+  gap: 0.1rem;
+  border: 1px solid rgba(49, 215, 255, 0.28);
+  background: rgba(49, 215, 255, 0.1);
+  color: var(--text);
+  padding: 0.35rem;
+  text-decoration: none;
+}
+
+.calendar-event strong {
+  color: var(--cyan);
+  font-size: 0.72rem;
+}
+
+.calendar-event span {
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.calendar-empty-note {
+  margin-top: 0.75rem;
+}
+
+.appointment-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .text-link {
@@ -1393,6 +1544,7 @@ h1 {
   .hero,
   .sales-grid,
   .portal-grid,
+  .portal-admin-preview,
   .portal-hero,
   .portal-workspace-grid,
   .login-layout,
@@ -1419,6 +1571,19 @@ h1 {
 
   .record-edit-grid {
     grid-template-columns: 1fr;
+  }
+
+  .appointment-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    min-width: 680px;
+  }
+
+  .calendar-board {
+    overflow-x: auto;
   }
 
   .crm-panel-wide {

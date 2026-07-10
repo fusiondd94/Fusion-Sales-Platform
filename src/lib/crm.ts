@@ -32,6 +32,12 @@ export type DashboardLead = {
   customer_phone: string;
   company: string;
   website: string | null;
+  industry?: string | null;
+  goal?: string | null;
+  timeline?: string | null;
+  budget?: string | null;
+  objection?: string | null;
+  project_notes?: string | null;
   package_name: string;
   total_today: number;
   monthly_due: number;
@@ -244,7 +250,7 @@ async function logActivity(
 function demoDashboardRecords() {
   return {
     summary: pipelineSummary,
-    leads: demoClients.map((client) => ({
+    leads: demoClients.map((client): DashboardLead => ({
       id: client.id,
       lead_code: client.id,
       customer_name: client.name,
@@ -252,6 +258,12 @@ function demoDashboardRecords() {
       customer_phone: client.phone,
       company: client.company,
       website: client.website || null,
+      industry: null,
+      goal: null,
+      timeline: null,
+      budget: null,
+      objection: null,
+      project_notes: null,
       package_name: client.recommendation.packageName,
       total_today: client.recommendation.totalToday,
       monthly_due: client.recommendation.monthlyDue,
@@ -280,7 +292,7 @@ export async function getFusionDashboardRecords() {
   const [{ data: leads, error: leadsError }, { data: tasks, error: tasksError }] = await Promise.all([
     supabase
       .from("crm_leads")
-      .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, package_name, total_today, monthly_due, discount_percent, status, created_at")
+      .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, industry, goal, timeline, budget, objection, project_notes, package_name, total_today, monthly_due, discount_percent, status, created_at")
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
@@ -339,7 +351,7 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
   const search = params.q?.trim();
   const leadQuery = supabase
     .from("crm_leads")
-    .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, package_name, total_today, monthly_due, discount_percent, status, created_at")
+    .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, industry, goal, timeline, budget, objection, project_notes, package_name, total_today, monthly_due, discount_percent, status, created_at")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -851,6 +863,73 @@ export async function updateCrmContact(input: {
 
   if (error || !data) return { ok: false, error: "Unable to update contact." };
   await logActivity(supabase, organizationId, input.actorId, "contact.updated", "contact", input.contactId, `Contact updated: ${names.displayName}`);
+  return { ok: true };
+}
+
+export async function updateCrmLead(input: {
+  actorId: string;
+  leadId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  company: string;
+  website?: string;
+  industry?: string;
+  goal?: string;
+  timeline?: string;
+  budget?: string;
+  objection?: string;
+  projectNotes?: string;
+  packageName?: string;
+  totalToday?: number;
+  monthlyDue?: number;
+  discountPercent?: number;
+  status?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const customerName = input.customerName.trim();
+  const company = input.company.trim();
+  const customerEmail = input.customerEmail.trim();
+  if (!customerName || !company || !customerEmail) {
+    return { ok: false, error: "Lead name, company, and email are required." };
+  }
+
+  const allowedStatuses = new Set(["captured", "checkout_started", "paid", "qualified", "proposal_sent", "won", "lost", "unqualified"]);
+  const status = allowedStatuses.has(input.status || "") ? input.status || "captured" : "captured";
+  const website = input.website?.trim();
+
+  const { data, error } = await supabase
+    .from("crm_leads")
+    .update({
+      customer_name: customerName,
+      customer_email: customerEmail,
+      customer_phone: input.customerPhone?.trim() || null,
+      company,
+      website: website ? (/^https?:\/\//i.test(website) ? website : `https://${website}`) : null,
+      industry: input.industry?.trim() || null,
+      goal: input.goal?.trim() || null,
+      timeline: input.timeline?.trim() || null,
+      budget: input.budget?.trim() || null,
+      objection: input.objection?.trim() || null,
+      project_notes: input.projectNotes?.trim() || null,
+      package_name: input.packageName?.trim() || null,
+      total_today: Math.max(0, Math.round(input.totalToday || 0)),
+      monthly_due: Math.max(0, Math.round(input.monthlyDue || 0)),
+      discount_percent: Math.min(75, Math.max(0, Math.round(input.discountPercent || 0))),
+      status,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", input.leadId)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update lead." };
+  await logActivity(supabase, organizationId, input.actorId, "lead.updated", "lead", input.leadId, `Lead updated: ${company}`);
   return { ok: true };
 }
 

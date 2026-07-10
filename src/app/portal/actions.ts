@@ -34,7 +34,8 @@ export async function addProjectComment(formData: FormData) {
     body: String(formData.get("body") || ""),
     pageUrl: String(formData.get("pageUrl") || ""),
     markerX: Number(formData.get("markerX") || 0) || null,
-    markerY: Number(formData.get("markerY") || 0) || null
+    markerY: Number(formData.get("markerY") || 0) || null,
+    clientId: String(formData.get("clientId") || "")
   });
 
   revalidatePath("/portal");
@@ -46,7 +47,8 @@ export async function uploadProjectFile(formData: FormData) {
 
   await uploadClientProjectFile({
     file,
-    description: String(formData.get("description") || "")
+    description: String(formData.get("description") || ""),
+    clientId: String(formData.get("clientId") || "")
   });
 
   revalidatePath("/portal");
