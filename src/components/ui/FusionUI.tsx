@@ -347,3 +347,69 @@ export function LoadingState({
     </div>
   );
 }
+
+export function FormSection({
+  title,
+  description,
+  className,
+  children
+}: {
+  title?: string;
+  description?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset className={cn("fusion-form-section", className)}>
+      {title ? (
+        <legend>
+          <span>{title}</span>
+          {description ? <small>{description}</small> : null}
+        </legend>
+      ) : null}
+      <div className="fusion-form-section__grid">{children}</div>
+    </fieldset>
+  );
+}
+
+export function FormActions({
+  align = "end",
+  sticky = false,
+  className,
+  children
+}: {
+  align?: "start" | "end" | "between";
+  sticky?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "fusion-form-actions",
+        `fusion-form-actions--${align}`,
+        sticky && "fusion-form-actions--sticky",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function FormError({
+  message,
+  className
+}: {
+  message?: string | null;
+  className?: string;
+}) {
+  if (!message) return null;
+
+  return (
+    <p className={cn("fusion-form-error", className)} role="alert">
+      <AlertCircle aria-hidden="true" size={16} />
+      <span>{message}</span>
+    </p>
+  );
+}
