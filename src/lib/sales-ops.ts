@@ -66,6 +66,7 @@ export type SalesOpsEmailTemplate = {
   id: string;
   template_name: string;
   subject: string;
+  body: string;
   category: string;
   visibility: string;
   is_active: boolean;
@@ -76,6 +77,7 @@ export type SalesOpsCrmForm = {
   form_name: string;
   form_slug: string;
   form_type: string;
+  description: string | null;
   is_active: boolean;
   is_published: boolean;
   is_public: boolean;
@@ -315,8 +317,8 @@ export async function getSalesOpsWorkspace() {
     supabase.from("crm_appointments").select("id, appointment_type_id, title, starts_at, ends_at, status, time_zone, location, meeting_url").eq("organization_id", organizationId).is("deleted_at", null).order("starts_at", { ascending: true }).limit(50),
     supabase.from("crm_appointment_types").select("id, name").eq("organization_id", organizationId).eq("is_active", true).order("name", { ascending: true }),
     supabase.from("crm_lead_sources").select("id, name, slug, is_paid, default_channel").eq("organization_id", organizationId).eq("is_active", true).order("display_order", { ascending: true }),
-    supabase.from("crm_email_templates").select("id, template_name, subject, category, visibility, is_active").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
-    supabase.from("crm_forms").select("id, form_name, form_slug, form_type, is_active, is_published, is_public").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
+    supabase.from("crm_email_templates").select("id, template_name, subject, body, category, visibility, is_active").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
+    supabase.from("crm_forms").select("id, form_name, form_slug, form_type, description, is_active, is_published, is_public").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("crm_leads").select("id, status, total_today, created_at").eq("organization_id", organizationId).limit(1000),
     supabase.from("crm_deals").select("id, status, value, probability, one_time_value, weighted_one_time_value").eq("organization_id", organizationId).is("deleted_at", null).limit(1000)
   ]);
@@ -674,3 +676,129 @@ const ALLOWED_TEMPLATE_VARIABLES = [
   "organization_phone",
   "organization_website"
 ];
+
+const updateServiceSchema = serviceSchema.extend({
+  serviceId: z.string().uuid(),
+  isActive: z.boolean().default(true)
+});
+
+const updateEmailTemplateSchema = emailTemplateSchema.extend({
+  templateId: z.string().uuid(),
+  isActive: z.boolean().default(true)
+});
+
+const updateCrmFormSchema = crmFormSchema.extend({
+  formId: z.string().uuid(),
+  isActive: z.boolean().default(true)
+});
+
+export async function updateSalesService(input: z.input<typeof updateServiceSchema>) {
+  const parsed = updateServiceSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Service information is not valid." };
+  const value = parsed.data;
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data, error } = await supabase
+    .from("crm_services")
+    .update({
+      category_id: value.categoryId || null,
+      service_name: value.serviceName,
+      sku: value.sku.toUpperCase(),
+      slug: slugify(value.serviceName),
+      short_description: value.shortDescription || null,
+      billing_type: value.billingType,
+      pricing_model: value.pricingModel,
+      base_price: cents(value.basePrice),
+      minimum_price: value.minimumPrice ? cents(value.minimumPrice) : null,
+      maximum_price: value.maximumPrice ? cents(value.maximumPrice) : null,
+      internal_estimated_cost: cents(value.internalEstimatedCost || 0),
+      recurring_interval: value.recurringInterval || null,
+      is_featured: value.isFeatured,
+      public_visibility: value.publicVisibility,
+      is_active: value.isActive,
+      updated_by: value.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", value.serviceId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update service." };
+  await logActivity(supabase, organizationId, value.actorId, "service.updated", "service", value.serviceId, `Service updated: ${value.serviceName}`);
+  return { ok: true };
+}
+
+export async function updateSalesEmailTemplate(input: z.input<typeof updateEmailTemplateSchema>) {
+  const parsed = updateEmailTemplateSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Email template information is not valid." };
+  const value = parsed.data;
+  const unsupportedVariables = [...value.subject.matchAll(/{{\s*([^}\s]+)\s*}}/g), ...value.body.matchAll(/{{\s*([^}\s]+)\s*}}/g)]
+    .map((match) => match[1])
+    .filter((variable) => !ALLOWED_TEMPLATE_VARIABLES.includes(variable));
+  if (unsupportedVariables.length) return { ok: false, error: `Unsupported variables: ${unsupportedVariables.join(", ")}` };
+
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data, error } = await supabase
+    .from("crm_email_templates")
+    .update({
+      template_name: value.templateName,
+      subject: value.subject,
+      body: value.body.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ""),
+      plain_text_body: value.body.replace(/<[^>]+>/g, " "),
+      category: value.category,
+      visibility: value.visibility,
+      owner_id: value.visibility === "private" ? value.actorId : null,
+      is_active: value.isActive,
+      updated_by: value.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", value.templateId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update email template." };
+  await logActivity(supabase, organizationId, value.actorId, "email_template.updated", "email_template", value.templateId, `Email template updated: ${value.templateName}`);
+  return { ok: true };
+}
+
+export async function updateSalesCrmForm(input: z.input<typeof updateCrmFormSchema>) {
+  const parsed = updateCrmFormSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Form information is not valid." };
+  const value = parsed.data;
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data, error } = await supabase
+    .from("crm_forms")
+    .update({
+      form_name: value.formName,
+      form_type: value.formType,
+      description: value.description || null,
+      is_published: value.isPublished,
+      is_active: value.isActive,
+      updated_by: value.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", value.formId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update CRM form." };
+  await logActivity(supabase, organizationId, value.actorId, value.isPublished ? "form.published" : "form.updated", "form", value.formId, `CRM form updated: ${value.formName}`);
+  return { ok: true };
+}
