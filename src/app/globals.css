@@ -532,10 +532,10 @@ h1 {
 
 .admin-app {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr);
   min-height: 100vh;
-  background: #07111f;
-  color: var(--text);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text);
 }
 
 .admin-sidebar {
@@ -544,17 +544,20 @@ h1 {
   display: grid;
   grid-template-rows: auto 1fr auto;
   height: 100vh;
-  border-right: 1px solid rgba(175, 212, 240, 0.16);
-  background: #0b1626;
-  padding: 1.15rem;
+  border-right: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
+  padding: 1rem;
+  box-shadow: var(--fusion-shadow-sm);
+  overflow: hidden;
 }
 
 .admin-brand {
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  min-height: 4rem;
-  color: #ffffff;
+  min-height: 4.4rem;
+  border-bottom: 1px solid var(--fusion-border);
+  color: var(--fusion-text);
 }
 
 .admin-brand span:last-child {
@@ -563,41 +566,112 @@ h1 {
 }
 
 .admin-brand small {
-  color: var(--muted);
+  color: var(--fusion-text-muted);
   font-size: 0.78rem;
 }
 
 .admin-menu {
   display: grid;
   align-content: start;
-  gap: 0.35rem;
+  gap: 1rem;
+  min-height: 0;
   padding: 1rem 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
-.admin-menu a,
-.admin-sidebar-footer .ghost-button {
+.admin-menu-section {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-menu-section p {
+  margin: 0;
+  color: var(--fusion-text-subtle);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-menu-section div {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.admin-menu a {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  min-height: 2.8rem;
+  gap: 0.7rem;
+  min-height: 3rem;
   border: 1px solid transparent;
-  color: var(--muted-strong);
-  padding: 0.75rem;
-  font-weight: 800;
+  border-radius: var(--fusion-radius-sm);
+  color: var(--fusion-text-muted);
+  padding: 0.55rem 0.65rem;
+  font-weight: 850;
+  transition: background var(--fusion-transition), border-color var(--fusion-transition), color var(--fusion-transition), box-shadow var(--fusion-transition);
+}
+
+.admin-menu a svg {
+  flex: 0 0 auto;
+}
+
+.admin-menu a span {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.admin-menu a strong,
+.admin-menu a small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-menu a strong {
+  color: inherit;
+  font-size: 0.88rem;
+}
+
+.admin-menu a small {
+  color: var(--fusion-text-subtle);
+  font-size: 0.72rem;
+  font-weight: 750;
 }
 
 .admin-menu a:hover,
 .admin-menu a.active {
-  border-color: rgba(49, 215, 255, 0.32);
-  background: #12233a;
-  color: #ffffff;
+  border-color: color-mix(in srgb, var(--fusion-teal-900) 18%, white);
+  background: var(--fusion-teal-100);
+  color: var(--fusion-teal-900);
+  box-shadow: inset 3px 0 0 var(--fusion-teal-900);
+}
+
+.admin-menu a.active small {
+  color: var(--fusion-teal-800);
 }
 
 .admin-sidebar-footer {
   display: grid;
   gap: 0.55rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(175, 212, 240, 0.16);
+  border-top: 1px solid var(--fusion-border);
+}
+
+.admin-sidebar-footer .ghost-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 2.65rem;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text);
+  padding: 0.65rem 0.75rem;
+  font-weight: 850;
 }
 
 .admin-sidebar-footer form,
@@ -607,7 +681,7 @@ h1 {
 
 .admin-main {
   min-width: 0;
-  padding: 1.25rem;
+  padding: 1.25rem 1.35rem 2rem;
 }
 
 .admin-topbar,
@@ -620,27 +694,51 @@ h1 {
 
 .admin-topbar {
   min-height: 5rem;
-  border-bottom: 1px solid rgba(175, 212, 240, 0.14);
+  border-bottom: 1px solid var(--fusion-border);
   margin-bottom: 1.25rem;
 }
 
 .admin-topbar h1 {
-  margin: 0;
-  font-size: 1.25rem;
+  margin: 0.15rem 0;
+  color: var(--fusion-text);
+  font-size: 1.55rem;
+  line-height: 1.1;
+}
+
+.admin-topbar > div:first-child span {
+  color: var(--fusion-text-muted);
+  font-size: 0.9rem;
+  font-weight: 720;
 }
 
 .admin-user-card {
-  display: grid;
-  justify-items: end;
-  gap: 0.15rem;
-  border: 1px solid rgba(175, 212, 240, 0.2);
-  background: #0d1a2d;
-  padding: 0.7rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: min(100%, 15rem);
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  padding: 0.55rem 0.75rem;
+  box-shadow: var(--fusion-shadow-sm);
 }
 
 .admin-user-card span {
-  color: var(--muted);
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.admin-user-card small {
+  color: var(--fusion-text-muted);
   font-size: 0.78rem;
+}
+
+.admin-user-card strong {
+  overflow: hidden;
+  color: var(--fusion-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-content {
@@ -2039,11 +2137,19 @@ h1 {
     height: auto;
     gap: 0.75rem;
     border-right: 0;
-    border-bottom: 1px solid rgba(175, 212, 240, 0.16);
+    border-bottom: 1px solid var(--fusion-border);
+    overflow: visible;
   }
 
   .admin-menu {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .admin-menu-section div {
+    grid-template-columns: 1fr;
   }
 
   .admin-sidebar-footer,
@@ -2060,7 +2166,7 @@ h1 {
   }
 
   .admin-user-card {
-    justify-items: start;
+    align-self: stretch;
   }
 
   .admin-metrics,
@@ -2161,7 +2267,11 @@ h1 {
   }
 
   .admin-menu {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .admin-menu a small {
+    display: none;
   }
 
   .admin-menu a {
