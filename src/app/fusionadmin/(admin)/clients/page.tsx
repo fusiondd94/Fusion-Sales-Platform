@@ -1,11 +1,28 @@
 import { Building2, Search, UserRoundPlus, UsersRound } from "lucide-react";
-import { createFusionContact, updateFusionClientProject, updateFusionContact, updateFusionLead } from "@/app/fusionadmin/actions";
+import {
+  createFusionContact,
+  updateFusionClientProject,
+  updateFusionCompany,
+  updateFusionContact,
+  updateFusionLead
+} from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { getAdminPortalClients } from "@/lib/portal";
-import { EmptyState, formatCurrency, FusionDataTable, optionList, PageHeader } from "../crm-ui";
+import {
+  EmptyState,
+  formatCurrency,
+  FusionDataTable,
+  FusionField,
+  FusionInput,
+  FusionSelect,
+  FusionSubmitButton,
+  FusionTextarea,
+  optionList,
+  PageHeader
+} from "../crm-ui";
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string; status?: string; leadId?: string }>;
+  searchParams?: Promise<{ q?: string; status?: string; leadId?: string; companyId?: string; contactId?: string; clientId?: string }>;
 };
 
 export default async function FusionClientsPage({ searchParams }: PageProps) {
@@ -19,6 +36,9 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
   const leadStatuses = Array.from(new Set(["captured", "checkout_started", "paid", "qualified", "proposal_sent", "won", "lost", "unqualified", ...(crm.settings?.lead_statuses || [])]));
   const projectStatuses = ["not_started", "in_progress", "review", "done", "on_hold"];
   const selectedLead = crm.leads.find((lead) => lead.id === filters.leadId);
+  const selectedCompany = crm.companies.find((company) => company.id === filters.companyId);
+  const selectedContact = crm.contacts.find((contact) => contact.id === filters.contactId);
+  const selectedPortalClient = portalClients.find((client) => client.id === filters.clientId);
 
   return (
     <div className="admin-content">
@@ -55,7 +75,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
             {crm.leads.map((lead) => (
               <tr id={`lead-${lead.id}`} key={lead.id}>
                 <td data-label="Lead">
-                  <a className="lead-edit-link" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>
+                  <a className="lead-edit-link fusion-record-link" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>
                     {lead.company}
                   </a>
                   <br />
@@ -148,7 +168,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               </div>
               <div className="record-edit-actions">
                 <a className="ghost-button compact-button" href="/fusionadmin/clients">Close</a>
-                <button className="primary-button compact-button" type="submit">Save lead</button>
+                <FusionSubmitButton className="compact-button" pendingLabel="Saving lead...">Save lead</FusionSubmitButton>
               </div>
             </form>
           </article>
@@ -166,146 +186,221 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               <option>Manual</option>
               {leadSources.map((source) => <option key={source}>{source}</option>)}
             </select>
-            <button className="primary-button" type="submit">Create contact</button>
+            <FusionSubmitButton pendingLabel="Creating...">Create contact</FusionSubmitButton>
           </form>
         </article>
 
-        <article className="admin-panel">
+        <article className="admin-panel panel-span-2" id="company-editor">
           <div className="panel-heading">
             <h2><Building2 size={20} /> Companies</h2>
             <span className="status-pill">{crm.companies.length}</span>
           </div>
-          <div className="stack-list">
+          <FusionDataTable
+            aria-label="Companies"
+            columns={[
+              { header: "Company", priority: "primary" },
+              { header: "Industry" },
+              { header: "Status" },
+              { header: "Action", className: "table-action-column" }
+            ]}
+            empty={!crm.companies.length ? <EmptyState>Companies are created from contacts, deals, and paid leads.</EmptyState> : null}
+          >
             {crm.companies.map((company) => (
-              <p key={company.id}><strong>{company.company_name}</strong><br /><span className="muted">{company.industry || "Industry not set"} · {company.lifecycle_status}</span></p>
+              <tr key={company.id}>
+                <td data-label="Company">
+                  <a className="fusion-record-link" href={`/fusionadmin/clients?companyId=${company.id}#company-editor`}>{company.company_name}</a>
+                </td>
+                <td data-label="Industry">{company.industry || "Not set"}</td>
+                <td data-label="Status"><span className="status-pill">{company.lifecycle_status}</span></td>
+                <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?companyId=${company.id}#company-editor`}>Edit</a></td>
+              </tr>
             ))}
-            {!crm.companies.length ? <EmptyState>Companies are created from contacts, deals, and paid leads.</EmptyState> : null}
-          </div>
+          </FusionDataTable>
+
+          {selectedCompany ? (
+            <form action={updateFusionCompany} style={{ marginTop: "1rem" }}>
+              <input name="companyId" type="hidden" value={selectedCompany.id} />
+              <div className="fusion-form-section__grid">
+                <FusionField label="Company name" required>
+                  <FusionInput defaultValue={selectedCompany.company_name} name="companyName" required />
+                </FusionField>
+                <FusionField label="Industry">
+                  <FusionInput defaultValue={selectedCompany.industry || ""} name="industry" />
+                </FusionField>
+                <FusionField label="Website">
+                  <FusionInput defaultValue={selectedCompany.website || ""} name="website" />
+                </FusionField>
+                <FusionField label="Main phone">
+                  <FusionInput defaultValue={selectedCompany.main_phone || ""} name="mainPhone" />
+                </FusionField>
+                <FusionField label="General email">
+                  <FusionInput defaultValue={selectedCompany.general_email || ""} name="generalEmail" type="email" />
+                </FusionField>
+                <FusionField label="Status">
+                  <FusionSelect defaultValue={selectedCompany.lifecycle_status || "new"} name="lifecycleStatus">
+                    {contactStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                  </FusionSelect>
+                </FusionField>
+                <FusionField label="Lead source">
+                  <FusionSelect defaultValue={selectedCompany.lead_source || "Manual"} name="leadSource">
+                    <option>Manual</option>
+                    {leadSources.map((source) => <option key={source}>{source}</option>)}
+                  </FusionSelect>
+                </FusionField>
+              </div>
+              <div className="fusion-form-actions fusion-form-actions--end">
+                <a className="ghost-button compact-button" href="/fusionadmin/clients">Close</a>
+                <FusionSubmitButton className="compact-button" pendingLabel="Saving company...">Save company</FusionSubmitButton>
+              </div>
+            </form>
+          ) : null}
         </article>
 
-        <article className="admin-panel">
+        <article className="admin-panel panel-span-2" id="contact-editor">
           <div className="panel-heading">
             <h2><UsersRound size={20} /> Contacts</h2>
             <span className="status-pill">{crm.contacts.length}</span>
           </div>
-          <div className="stack-list">
+          <FusionDataTable
+            aria-label="Contacts"
+            columns={[
+              { header: "Contact", priority: "primary" },
+              { header: "Company" },
+              { header: "Status" },
+              { header: "Action", className: "table-action-column" }
+            ]}
+            empty={!crm.contacts.length ? <EmptyState>No contacts yet. Create the first one from the form.</EmptyState> : null}
+          >
             {crm.contacts.map((contact) => (
-              <form key={contact.id} className="record-edit-card" action={updateFusionContact}>
-                <input name="contactId" type="hidden" value={contact.id} />
-                <div className="record-edit-heading">
-                  <strong>{contact.display_name}</strong>
-                  <span className="status-pill">{contact.lifecycle_status}</span>
-                </div>
-                <div className="record-edit-grid">
-                  <label>
-                    Name
-                    <input name="displayName" defaultValue={contact.display_name} required />
-                  </label>
-                  <label>
-                    Email
-                    <input name="email" defaultValue={contact.email || ""} type="email" />
-                  </label>
-                  <label>
-                    Phone
-                    <input name="phone" defaultValue={contact.phone || ""} />
-                  </label>
-                  <label>
-                    Company
-                    <input name="companyName" defaultValue={contact.crm_companies?.company_name || ""} />
-                  </label>
-                  <label>
-                    Role
-                    <input name="jobTitle" defaultValue={contact.job_title || ""} />
-                  </label>
-                  <label>
-                    Status
-                    <select name="lifecycleStatus" defaultValue={contact.lifecycle_status || "new"}>
-                      {contactStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-                    </select>
-                  </label>
-                  <label>
-                    Lead source
-                    <select name="leadSource" defaultValue={contact.lead_source || "Manual"}>
-                      <option>Manual</option>
-                      {leadSources.map((source) => <option key={source}>{source}</option>)}
-                    </select>
-                  </label>
-                  <label>
-                    Next follow-up
-                    <input name="nextFollowUpAt" type="datetime-local" defaultValue={toDateTimeLocal(contact.next_follow_up_at)} />
-                  </label>
-                </div>
-                <button className="secondary-button compact-button" type="submit">Save contact</button>
-              </form>
+              <tr key={contact.id}>
+                <td data-label="Contact">
+                  <a className="fusion-record-link" href={`/fusionadmin/clients?contactId=${contact.id}#contact-editor`}>{contact.display_name}</a>
+                  <br />
+                  <span className="muted">{contact.email || "No email"} · {contact.phone || "No phone"}</span>
+                </td>
+                <td data-label="Company">{contact.crm_companies?.company_name || "No company"}</td>
+                <td data-label="Status"><span className="status-pill">{contact.lifecycle_status}</span></td>
+                <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?contactId=${contact.id}#contact-editor`}>Edit</a></td>
+              </tr>
             ))}
-            {!crm.contacts.length ? <EmptyState>No contacts yet. Create the first one from the form.</EmptyState> : null}
-          </div>
+          </FusionDataTable>
+
+          {selectedContact ? (
+            <form action={updateFusionContact} style={{ marginTop: "1rem" }}>
+              <input name="contactId" type="hidden" value={selectedContact.id} />
+              <div className="fusion-form-section__grid">
+                <FusionField label="Name" required>
+                  <FusionInput defaultValue={selectedContact.display_name} name="displayName" required />
+                </FusionField>
+                <FusionField label="Email">
+                  <FusionInput defaultValue={selectedContact.email || ""} name="email" type="email" />
+                </FusionField>
+                <FusionField label="Phone">
+                  <FusionInput defaultValue={selectedContact.phone || ""} name="phone" />
+                </FusionField>
+                <FusionField label="Company">
+                  <FusionInput defaultValue={selectedContact.crm_companies?.company_name || ""} name="companyName" />
+                </FusionField>
+                <FusionField label="Role">
+                  <FusionInput defaultValue={selectedContact.job_title || ""} name="jobTitle" />
+                </FusionField>
+                <FusionField label="Status">
+                  <FusionSelect defaultValue={selectedContact.lifecycle_status || "new"} name="lifecycleStatus">
+                    {contactStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                  </FusionSelect>
+                </FusionField>
+                <FusionField label="Lead source">
+                  <FusionSelect defaultValue={selectedContact.lead_source || "Manual"} name="leadSource">
+                    <option>Manual</option>
+                    {leadSources.map((source) => <option key={source}>{source}</option>)}
+                  </FusionSelect>
+                </FusionField>
+                <FusionField label="Next follow-up">
+                  <FusionInput name="nextFollowUpAt" type="datetime-local" defaultValue={toDateTimeLocal(selectedContact.next_follow_up_at)} />
+                </FusionField>
+              </div>
+              <div className="fusion-form-actions fusion-form-actions--end">
+                <a className="ghost-button compact-button" href="/fusionadmin/clients">Close</a>
+                <FusionSubmitButton className="compact-button" pendingLabel="Saving contact...">Save contact</FusionSubmitButton>
+              </div>
+            </form>
+          ) : null}
         </article>
 
-        <article className="admin-panel panel-span-2">
+        <article className="admin-panel panel-span-2" id="portal-editor">
           <div className="panel-heading">
             <h2><Building2 size={20} /> Client portal projects</h2>
             <span className="status-pill">{portalClients.length}</span>
           </div>
-          <div className="portal-admin-grid">
+          <FusionDataTable
+            aria-label="Client portal projects"
+            columns={[
+              { header: "Client", priority: "primary" },
+              { header: "Project status" },
+              { header: "Activity" },
+              { header: "Action", className: "table-action-column" }
+            ]}
+            empty={!portalClients.length ? <EmptyState>Paid client records will appear here after checkout creates the client profile.</EmptyState> : null}
+          >
             {portalClients.map((client) => (
-              <form key={client.id} className="record-edit-card" action={updateFusionClientProject}>
-                <input name="clientId" type="hidden" value={client.id} />
-                <div className="record-edit-heading">
-                  <strong>{client.company}</strong>
-                  <span className="status-pill">{client.project?.project_status || "in_progress"}</span>
-                </div>
-                <p className="muted">
-                  {client.customer_name} · {client.customer_email} · {client.commentCount || 0} comments · {client.fileCount || 0} files
-                </p>
-                <p><a className="text-link" href={`/portal?clientId=${client.id}`}>Open client portal preview</a></p>
-                <div className="record-edit-grid">
-                  <label>
-                    Project name
-                    <input name="projectName" defaultValue={client.project?.project_name || "Website Project"} />
-                  </label>
-                  <label>
-                    Project status
-                    <select name="projectStatus" defaultValue={client.project?.project_status || "in_progress"}>
-                      {projectStatuses.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
-                    </select>
-                  </label>
-                  <label>
-                    Current phase
-                    <input name="currentPhase" defaultValue={client.project?.current_phase || "Design Review"} />
-                  </label>
-                  <label>
-                    Preview URL for client
-                    <input name="previewUrl" defaultValue={client.project?.preview_url || ""} placeholder="https://preview-domain.com" />
-                  </label>
-                  <label>
-                    Final live URL
-                    <input name="liveUrl" defaultValue={client.project?.live_url || ""} placeholder="https://client-domain.com" />
-                  </label>
-                  <label>
-                    Portal access
-                    <input readOnly value={client.portal_user_id ? "Client account connected" : "Waiting for client login"} />
-                  </label>
-                  <label className="full-field">
-                    Client instructions
-                    <textarea name="clientInstructions" defaultValue={client.project?.client_instructions || ""} placeholder="Tell the client what to review or upload next." />
-                  </label>
-                </div>
-                {client.recentComments?.length ? (
-                  <div className="portal-admin-comments">
-                    {client.recentComments.map((comment) => (
-                      <p key={comment.id}>
-                        <strong>{comment.author_name}</strong>
-                        <span>{comment.body}</span>
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-                <button className="secondary-button compact-button" type="submit">Save portal project</button>
-              </form>
+              <tr key={client.id}>
+                <td data-label="Client">
+                  <a className="fusion-record-link" href={`/fusionadmin/clients?clientId=${client.id}#portal-editor`}>{client.company}</a>
+                  <br />
+                  <span className="muted">{client.customer_name} · {client.customer_email}</span>
+                </td>
+                <td data-label="Project status"><span className="status-pill">{client.project?.project_status || "in_progress"}</span></td>
+                <td data-label="Activity">{client.commentCount || 0} comments · {client.fileCount || 0} files</td>
+                <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?clientId=${client.id}#portal-editor`}>Edit</a></td>
+              </tr>
             ))}
-            {!portalClients.length ? <EmptyState>Paid client records will appear here after checkout creates the client profile.</EmptyState> : null}
-          </div>
+          </FusionDataTable>
+
+          {selectedPortalClient ? (
+            <form action={updateFusionClientProject} style={{ marginTop: "1rem" }}>
+              <input name="clientId" type="hidden" value={selectedPortalClient.id} />
+              <p><a className="text-link" href={`/portal?clientId=${selectedPortalClient.id}`}>Open client portal preview</a></p>
+              <div className="fusion-form-section__grid">
+                <FusionField label="Project name">
+                  <FusionInput defaultValue={selectedPortalClient.project?.project_name || "Website Project"} name="projectName" />
+                </FusionField>
+                <FusionField label="Project status">
+                  <FusionSelect defaultValue={selectedPortalClient.project?.project_status || "in_progress"} name="projectStatus">
+                    {projectStatuses.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
+                  </FusionSelect>
+                </FusionField>
+                <FusionField label="Current phase">
+                  <FusionInput defaultValue={selectedPortalClient.project?.current_phase || "Design Review"} name="currentPhase" />
+                </FusionField>
+                <FusionField label="Portal access">
+                  <FusionInput readOnly value={selectedPortalClient.portal_user_id ? "Client account connected" : "Waiting for client login"} />
+                </FusionField>
+                <FusionField label="Preview URL for client">
+                  <FusionInput defaultValue={selectedPortalClient.project?.preview_url || ""} name="previewUrl" placeholder="https://preview-domain.com" />
+                </FusionField>
+                <FusionField label="Final live URL">
+                  <FusionInput defaultValue={selectedPortalClient.project?.live_url || ""} name="liveUrl" placeholder="https://client-domain.com" />
+                </FusionField>
+                <FusionField className="fusion-field--full" label="Client instructions">
+                  <FusionTextarea defaultValue={selectedPortalClient.project?.client_instructions || ""} name="clientInstructions" placeholder="Tell the client what to review or upload next." />
+                </FusionField>
+              </div>
+              {selectedPortalClient.recentComments?.length ? (
+                <div className="portal-admin-comments">
+                  {selectedPortalClient.recentComments.map((comment) => (
+                    <p key={comment.id}>
+                      <strong>{comment.author_name}</strong>
+                      <span>{comment.body}</span>
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+              <div className="fusion-form-actions fusion-form-actions--end">
+                <a className="ghost-button compact-button" href="/fusionadmin/clients">Close</a>
+                <FusionSubmitButton className="compact-button" pendingLabel="Saving project...">Save portal project</FusionSubmitButton>
+              </div>
+            </form>
+          ) : null}
         </article>
       </section>
     </div>
