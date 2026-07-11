@@ -1,5 +1,5 @@
 import { FileText, PlusCircle } from "lucide-react";
-import { createFusionProposal } from "@/app/fusionadmin/actions";
+import { createFusionProposal, updateFusionProposalStatus } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
 import { EmptyState, formatCurrency, formatDate, FusionDataTable, FusionSubmitButton, PageHeader } from "../crm-ui";
 
@@ -34,7 +34,20 @@ export default async function FusionProposalsPage() {
             {salesOps.proposals.map((proposal) => (
               <tr key={proposal.id}>
                 <td data-label="Proposal">{proposal.proposal_title}<br /><span className="muted">{proposal.proposal_number}</span></td>
-                <td data-label="Status"><span className="status-pill">{proposal.status}</span></td>
+                <td data-label="Status">
+                  <span className="status-pill">{proposal.status}</span>
+                  <form action={updateFusionProposalStatus} className="inline-status-form">
+                    <input name="proposalId" type="hidden" value={proposal.id} />
+                    <select aria-label="Update proposal status" defaultValue={proposal.status} name="status">
+                      <option value="draft">Draft</option>
+                      <option value="sent">Sent</option>
+                      <option value="accepted">Accepted</option>
+                      <option value="declined">Declined</option>
+                      <option value="expired">Expired</option>
+                    </select>
+                    <button className="ghost-button compact-button" type="submit">Update</button>
+                  </form>
+                </td>
                 <td data-label="Total">{formatCurrency(proposal.grand_total)}<br /><span className="muted">Profit {formatCurrency(proposal.estimated_gross_profit)}</span></td>
                 <td data-label="Recurring">{formatCurrency(proposal.recurring_monthly_total)}/mo</td>
                 <td data-label="Expires">{formatDate(proposal.expiration_date)}</td>
