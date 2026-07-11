@@ -5,7 +5,7 @@ import {
   updateFusionServicePackage
 } from "@/app/fusionadmin/actions";
 import { getFusionAdminSettings } from "@/lib/crm";
-import { EmptyState, formatCurrency, PageHeader } from "../crm-ui";
+import { EmptyState, formatCurrency, FusionSubmitButton, PageHeader } from "../crm-ui";
 
 export default async function FusionSettingsPage() {
   const admin = await getFusionAdminSettings();
@@ -34,7 +34,7 @@ export default async function FusionSettingsPage() {
               <span>Accent color</span>
               <input defaultValue={admin.settings?.accent_color || "#f5b84b"} name="accentColor" type="color" />
             </label>
-            <button className="primary-button" type="submit">Save brand</button>
+            <FusionSubmitButton pendingLabel="Saving...">Save brand</FusionSubmitButton>
           </form>
         </article>
 
@@ -86,7 +86,7 @@ export default async function FusionSettingsPage() {
                   </label>
                 </div>
                 <p className="muted">{formatCurrency(item.setup_price)} setup · {formatCurrency(item.monthly_price)}/mo</p>
-                <button className="primary-button" type="submit">Save pricing</button>
+                <FusionSubmitButton pendingLabel="Saving...">Save pricing</FusionSubmitButton>
               </form>
             ))}
             {!admin.packages.length ? <EmptyState>Service packages will appear after the settings migration runs.</EmptyState> : null}
@@ -103,7 +103,7 @@ export default async function FusionSettingsPage() {
               <option value="">Select role</option>
               {admin.roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
             </select>
-            <button className="primary-button" type="submit">Invite user</button>
+            <FusionSubmitButton pendingLabel="Inviting...">Invite user</FusionSubmitButton>
           </form>
         </article>
 
@@ -114,7 +114,10 @@ export default async function FusionSettingsPage() {
           </div>
           <div className="stack-list">
             {admin.members.slice(0, 6).map((member) => (
-              <p key={member.id}><strong>{member.crm_profiles?.display_name || "Team member"}</strong><br /><span className="muted">{member.crm_profiles?.email || member.user_id} · {member.status}</span></p>
+              <p key={member.id}>
+                <a className="fusion-record-link" href={`/fusionadmin/team?memberId=${member.id}#member-editor`}>{member.crm_profiles?.display_name || "Team member"}</a>
+                <br /><span className="muted">{member.crm_profiles?.email || member.user_id} · {member.status}</span>
+              </p>
             ))}
             {!admin.members.length ? <EmptyState>No teammates have been added yet.</EmptyState> : null}
           </div>
