@@ -227,16 +227,7 @@ textarea:disabled {
   padding: 3rem 1.25rem 5rem;
 }
 
-.hero::before {
-  position: absolute;
-  inset: 4rem 1.25rem auto auto;
-  width: min(44vw, 34rem);
-  height: min(44vw, 34rem);
-  content: "";
-  border: 1px solid rgba(49, 215, 255, 0.2);
-  transform: rotate(18deg);
-  animation: floatFrame 8s ease-in-out infinite;
-}
+
 
 .eyebrow {
   color: var(--cyan);
@@ -317,22 +308,12 @@ h1 {
   overflow: hidden;
 }
 
-.hero-panel::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  pointer-events: none;
-  background:
-    linear-gradient(120deg, transparent 0 38%, rgba(255, 255, 255, 0.08) 46%, transparent 54% 100%);
-  transform: translateX(-100%);
-  animation: sheen 7s ease-in-out infinite;
-}
+
 
 .pulse-bar {
   height: 0.45rem;
   background: linear-gradient(90deg, var(--cyan), var(--gold), var(--green));
   background-size: 200% 100%;
-  animation: moveBar 4s linear infinite;
 }
 
 .panel-body {
@@ -2816,19 +2797,9 @@ h1 {
   width: 100%;
 }
 
-@keyframes moveBar {
-  from { background-position: 0 0; }
-  to { background-position: 200% 0; }
-}
-
 @keyframes floatFrame {
   0%, 100% { transform: translateY(0) rotate(18deg); }
   50% { transform: translateY(18px) rotate(22deg); }
-}
-
-@keyframes sheen {
-  0%, 48% { transform: translateX(-100%); }
-  68%, 100% { transform: translateX(100%); }
 }
 
 @keyframes fusionSkeleton {
@@ -3586,9 +3557,7 @@ h1 {
   color: var(--fusion-teal-900);
 }
 
-.shell-light .hero::before {
-  display: none;
-}
+
 
 .shell-light .hero-panel {
   background: #ffffff;
@@ -3596,13 +3565,10 @@ h1 {
   box-shadow: var(--fusion-shadow-lg);
 }
 
-.shell-light .hero-panel::after {
-  display: none;
-}
+
 
 .shell-light .pulse-bar {
   background: var(--fusion-teal-900);
-  animation: none;
 }
 
 .shell-light .metric {
