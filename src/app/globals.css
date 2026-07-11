@@ -3996,39 +3996,17 @@ h1 {
 }
 
 .email-template-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-  grid-template-areas:
-    "list list"
-    "edit preview"
-    "create create"
-    "tags tags";
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
-  align-items: start;
 }
 
-.email-template-list-panel {
-  grid-area: list;
-  min-width: 0;
-}
-
-.email-template-preview-panel {
-  grid-area: preview;
-  min-width: 0;
-}
-
-.email-template-edit-panel {
-  grid-area: edit;
-  min-width: 0;
-}
-
-.email-template-create-panel {
-  grid-area: create;
-  min-width: 0;
-}
-
+.email-template-list-panel,
+.email-template-preview-panel,
+.email-template-edit-panel,
+.email-template-create-panel,
 .merge-tag-panel {
-  grid-area: tags;
+  width: 100%;
   min-width: 0;
 }
 
@@ -4065,8 +4043,8 @@ h1 {
 
 .template-metadata-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.6rem 1rem;
   margin: 0 0 1rem;
 }
 
@@ -4130,8 +4108,9 @@ h1 {
 
 .template-preview-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 1rem;
+  align-items: start;
   margin-bottom: 1rem;
 }
 
@@ -4197,18 +4176,12 @@ h1 {
 }
 
 @media (max-width: 880px) {
-  .email-template-workspace {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "list"
-      "edit"
-      "preview"
-      "create"
-      "tags";
-  }
-
   .email-template-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .template-preview-grid {
+    grid-template-columns: 1fr;
   }
 }
 
