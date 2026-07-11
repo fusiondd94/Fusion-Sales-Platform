@@ -27,8 +27,18 @@ import {
   updateSalesAppointment,
   updateSalesCrmForm,
   updateSalesEmailTemplate,
+  updateSalesProposalStatus,
   updateSalesService
 } from "@/lib/sales-ops";
+import {
+  AutomationAction,
+  AutomationCondition,
+  AutomationTriggerType,
+  createAutomation,
+  deleteAutomation,
+  toggleAutomation,
+  updateAutomation
+} from "@/lib/automations";
 import { updateClientProject } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -506,4 +516,119 @@ export async function updateFusionCrmForm(formData: FormData) {
   revalidatePath("/fusionadmin");
   revalidatePath("/fusionadmin/forms");
   revalidatePath("/fusionadmin/reports");
+}
+
+export async function createFusionAutomation(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const conditions = parseAutomationConditions(formData);
+  const actions = parseAutomationActions(formData);
+
+  await createAutomation({
+    actorId: user.id,
+    name: String(formData.get("name") || ""),
+    description: String(formData.get("description") || ""),
+    triggerType: String(formData.get("triggerType") || "lead.captured") as AutomationTriggerType,
+    conditions,
+    actions,
+    isActive: formData.get("isActive") === "on"
+  });
+
+  revalidatePath("/fusionadmin/automations");
+}
+
+export async function updateFusionAutomation(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const conditions = parseAutomationConditions(formData);
+  const actions = parseAutomationActions(formData);
+
+  await updateAutomation({
+    actorId: user.id,
+    automationId: String(formData.get("automationId") || ""),
+    name: String(formData.get("name") || ""),
+    description: String(formData.get("description") || ""),
+    triggerType: String(formData.get("triggerType") || "lead.captured") as AutomationTriggerType,
+    conditions,
+    actions,
+    isActive: formData.get("isActive") === "on"
+  });
+
+  revalidatePath("/fusionadmin/automations");
+}
+
+export async function toggleFusionAutomation(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await toggleAutomation({
+    actorId: user.id,
+    automationId: String(formData.get("automationId") || ""),
+    isActive: formData.get("isActive") === "on"
+  });
+
+  revalidatePath("/fusionadmin/automations");
+}
+
+export async function deleteFusionAutomation(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await deleteAutomation({
+    actorId: user.id,
+    automationId: String(formData.get("automationId") || "")
+  });
+
+  revalidatePath("/fusionadmin/automations");
+}
+
+export async function updateFusionProposalStatus(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await updateSalesProposalStatus({
+    actorId: user.id,
+    proposalId: String(formData.get("proposalId") || ""),
+    status: enumValue(formData.get("status"), ["draft", "sent", "accepted", "declined", "expired"] as const, "draft")
+  });
+
+  revalidatePath("/fusionadmin/proposals");
+  revalidatePath("/fusionadmin/automations");
+}
+
+function parseAutomationConditions(formData: FormData): AutomationCondition[] {
+  const fields = formData.getAll("conditionField").map(String);
+  const operators = formData.getAll("conditionOperator").map(String);
+  const values = formData.getAll("conditionValue").map(String);
+
+  const conditions: AutomationCondition[] = [];
+  fields.forEach((field, index) => {
+    if (!field.trim()) return;
+    conditions.push({
+      field: field.trim(),
+      operator: (operators[index] || "is_set") as AutomationCondition["operator"],
+      value: values[index] || undefined
+    });
+  });
+  return conditions;
+}
+
+function parseAutomationActions(formData: FormData): AutomationAction[] {
+  const types = formData.getAll("actionType").map(String);
+  const configsRaw = formData.getAll("actionConfig").map(String);
+
+  const actions: AutomationAction[] = [];
+  types.forEach((type, index) => {
+    if (!type.trim()) return;
+    let config: Record<string, string | number | boolean | null | undefined> = {};
+    try {
+      config = configsRaw[index] ? JSON.parse(configsRaw[index]) : {};
+    } catch {
+      config = {};
+    }
+    actions.push({ type: type.trim() as AutomationAction["type"], config });
+  });
+  return actions;
 }
