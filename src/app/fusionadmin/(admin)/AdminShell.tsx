@@ -12,7 +12,6 @@ import {
   FormInput,
   Library,
   LayoutDashboard,
-  LogOut,
   Mail,
   MonitorUp,
   Settings,
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import { signOutFusionAdmin } from "@/app/fusionadmin/actions";
 import { FusionAvatar } from "@/app/fusionadmin/(admin)/crm-ui";
+import { SignOutButton } from "@/components/ui";
 import type { FusionAdminUser } from "@/lib/auth";
 
 const navSections = [
@@ -113,11 +113,7 @@ export function AdminShell({ children, user }: { children: ReactNode; user: Fusi
           <Link href="/" className="ghost-button">
             <BarChart3 size={16} /> Sales site
           </Link>
-          <form action={signOutFusionAdmin}>
-            <button className="ghost-button" type="submit">
-              <LogOut size={16} /> Sign out
-            </button>
-          </form>
+          <SignOutButton action={signOutFusionAdmin} />
         </div>
       </aside>
       <section className="admin-main">
