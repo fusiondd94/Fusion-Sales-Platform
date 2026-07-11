@@ -719,6 +719,7 @@ export async function createCrmDeal(input: {
   service?: string;
   value?: number;
   stageId?: string;
+  status?: string;
   expectedCloseDate?: string;
 }) {
   const supabase = getServiceClient();
@@ -1190,12 +1191,15 @@ export async function updateCrmDeal(input: {
     probability = stage?.probability;
   }
 
+  const allowedDealStatuses = new Set(["open", "won", "lost"]);
+  const status = allowedDealStatuses.has(input.status || "") ? input.status || "open" : "open";
   const updatePayload: Record<string, unknown> = {
     company_id: companyId,
     stage_id: stageId,
     deal_title: dealTitle,
     service: input.service?.trim() || null,
     value: Math.max(0, Number(input.value || 0)),
+    status,
     expected_close_date: input.expectedCloseDate || null,
     updated_by: input.actorId,
     updated_at: new Date().toISOString()
