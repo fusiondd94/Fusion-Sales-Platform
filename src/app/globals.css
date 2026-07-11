@@ -3726,6 +3726,11 @@ h1 {
   color: var(--fusion-gold-100);
 }
 
+.shell-light .cta-band h2,
+.shell-light .cta-band h3 {
+  color: #ffffff;
+}
+
 .shell-light .cta-band p {
   color: rgba(255, 255, 255, 0.78);
 }
