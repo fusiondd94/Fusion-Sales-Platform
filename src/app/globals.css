@@ -3342,23 +3342,7 @@ h1 {
   z-index: 0;
 }
 
-.hero-aurora {
-  position: absolute;
-  z-index: -1;
-  inset: -20% -10% auto -10%;
-  height: 42rem;
-  pointer-events: none;
-  background:
-    radial-gradient(38rem 26rem at 18% 20%, rgba(49, 215, 255, 0.22), transparent 60%),
-    radial-gradient(30rem 22rem at 82% 8%, rgba(245, 184, 75, 0.18), transparent 60%),
-    radial-gradient(26rem 20rem at 55% 60%, rgba(57, 217, 138, 0.1), transparent 65%);
-  filter: blur(10px);
-  animation: auroraDrift 18s ease-in-out infinite alternate;
-}
 
-@keyframes auroraDrift {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  100% { transform: translate3d(2%, -3%, 0) scale(1.05); }
 }
 
 .offer-tile {
@@ -3527,4 +3511,258 @@ h1 {
   .cta-band {
     padding: 3rem 1.5rem;
   }
+}
+
+/* === Front page: light Apple-style theme (scoped to .shell-light) === */
+
+.shell.shell-light {
+  background: #ffffff;
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light h1,
+.shell-light h2,
+.shell-light h3 {
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .eyebrow {
+  color: var(--fusion-teal-700);
+}
+
+.shell-light .muted {
+  color: var(--fusion-text-muted);
+}
+
+.shell-light .hero-copy {
+  color: var(--fusion-text-muted);
+}
+
+.shell-light .nav {
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid var(--fusion-border);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.shell-light .brand-mark {
+  background: var(--fusion-teal-900);
+  border-color: var(--fusion-teal-900);
+  box-shadow: none;
+}
+
+.shell-light .nav-links {
+  color: var(--fusion-text-muted);
+}
+
+.shell-light .nav-links a:hover {
+  color: var(--fusion-teal-900);
+}
+
+.shell-light .nav-user {
+  border-color: var(--fusion-border);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .primary-button,
+.shell-light .nav-cta {
+  background: var(--fusion-teal-900);
+  color: #ffffff;
+  border: 0;
+  box-shadow: none;
+}
+
+.shell-light .primary-button:hover,
+.shell-light .nav-cta:hover {
+  background: var(--fusion-teal-800);
+}
+
+.shell-light .secondary-button {
+  background: #ffffff;
+  border: 1px solid var(--fusion-border-strong);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .secondary-button:hover {
+  border-color: var(--fusion-teal-900);
+  color: var(--fusion-teal-900);
+}
+
+.shell-light .hero::before {
+  display: none;
+}
+
+.shell-light .hero-panel {
+  background: #ffffff;
+  border: 1px solid var(--fusion-border);
+  box-shadow: var(--fusion-shadow-lg);
+}
+
+.shell-light .hero-panel::after {
+  display: none;
+}
+
+.shell-light .pulse-bar {
+  background: var(--fusion-teal-900);
+  animation: none;
+}
+
+.shell-light .metric {
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .metric svg {
+  color: var(--fusion-teal-800);
+}
+
+.shell-light .offer-tile {
+  background: #ffffff;
+  border: 1px solid var(--fusion-border);
+  box-shadow: var(--fusion-shadow-sm);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .offer-tile svg {
+  color: var(--fusion-teal-800);
+}
+
+.shell-light .offer-tile:hover {
+  border-color: var(--fusion-teal-700);
+  box-shadow: var(--fusion-shadow-md);
+}
+
+.shell-light .process-step {
+  background: #ffffff;
+  border: 1px solid var(--fusion-border);
+}
+
+.shell-light .process-step::before {
+  border-color: var(--fusion-teal-700);
+  background: var(--fusion-teal-100);
+  color: var(--fusion-teal-900);
+}
+
+.shell-light .flow-panel,
+.shell-light .result-panel {
+  background: #ffffff;
+  border: 1px solid var(--fusion-border);
+  box-shadow: var(--fusion-shadow-md);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .progress {
+  background: var(--fusion-gray-100);
+}
+
+.shell-light .progress span {
+  background: var(--fusion-teal-900);
+}
+
+.shell-light .option-button {
+  background: var(--fusion-surface-muted);
+  border-color: var(--fusion-border);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .option-button.active {
+  border-color: var(--fusion-teal-900);
+  background: var(--fusion-teal-100);
+  box-shadow: inset 0 0 0 1px var(--fusion-teal-700);
+}
+
+.shell-light .form-grid label {
+  color: var(--fusion-charcoal-800);
+}
+
+.shell-light .form-grid input,
+.shell-light .form-grid textarea {
+  background: #ffffff;
+  border-color: var(--fusion-border-strong);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .form-grid input::placeholder,
+.shell-light .form-grid textarea::placeholder {
+  color: var(--fusion-text-subtle);
+}
+
+.shell-light .form-grid input:focus,
+.shell-light .form-grid textarea:focus {
+  border-color: var(--fusion-teal-700);
+}
+
+.shell-light .form-error {
+  border-color: rgba(180, 35, 24, 0.3);
+  background: var(--fusion-danger-soft);
+  color: var(--fusion-danger);
+}
+
+.shell-light .result-price strong {
+  color: var(--fusion-teal-900);
+}
+
+.shell-light .discount {
+  background: var(--fusion-gold-100);
+  color: var(--fusion-gold-700);
+}
+
+.shell-light .inclusion-list li {
+  color: var(--fusion-charcoal-800);
+}
+
+.shell-light .status-pill {
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-charcoal-900);
+}
+
+.shell-light .cta-band {
+  background: var(--fusion-teal-900);
+  border: 0;
+  color: #ffffff;
+}
+
+.shell-light .cta-band .eyebrow {
+  color: var(--fusion-gold-100);
+}
+
+.shell-light .cta-band p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.shell-light .cta-band .primary-button {
+  background: #ffffff;
+  color: var(--fusion-teal-900);
+}
+
+.shell-light .cta-band .primary-button:hover {
+  background: var(--fusion-gold-100);
+}
+
+.shell-light .site-footer {
+  border-top: 1px solid var(--fusion-border);
+}
+
+.shell-light .footer-col h4 {
+  color: var(--fusion-text-subtle);
+}
+
+.shell-light .footer-col a {
+  color: var(--fusion-charcoal-800);
+}
+
+.shell-light .footer-col a:hover {
+  color: var(--fusion-teal-900);
+}
+
+.shell-light .footer-bottom {
+  border-top: 1px solid var(--fusion-border);
+  color: var(--fusion-text-muted);
+}
+
+.shell-light .footer-brand p {
+  color: var(--fusion-text-muted);
 }
