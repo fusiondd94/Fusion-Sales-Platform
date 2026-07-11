@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { runAutomations } from "@/lib/automations";
 
 type JsonObject = Record<string, string | number | boolean | null>;
 
@@ -804,5 +805,54 @@ export async function updateSalesCrmForm(input: z.input<typeof updateCrmFormSche
 
   if (error || !data) return { ok: false, error: "Unable to update CRM form." };
   await logActivity(supabase, organizationId, value.actorId, value.isPublished ? "form.published" : "form.updated", "form", value.formId, `CRM form updated: ${value.formName}`);
+  return { ok: true };
+}
+
+const proposalStatusSchema = z.object({
+  actorId: z.string().uuid(),
+  proposalId: z.string().uuid(),
+  status: z.enum(["draft", "sent", "accepted", "declined", "expired"])
+});
+
+export async function updateSalesProposalStatus(input: z.input<typeof proposalStatusSchema>) {
+  const parsed = proposalStatusSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Proposal status is not valid." };
+  const value = parsed.data;
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data, error } = await supabase
+    .from("crm_proposals")
+    .update({
+      status: value.status,
+      updated_by: value.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", value.proposalId)
+    .is("deleted_at", null)
+    .select("id, proposal_number, proposal_title, grand_total")
+    .single<{ id: string; proposal_number: string; proposal_title: string; grand_total: number }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update proposal status." };
+  await logActivity(supabase, organizationId, value.actorId, "proposal.status_changed", "proposal", data.id, `Proposal ${value.status}: ${data.proposal_title}`);
+
+  if (value.status === "sent" || value.status === "accepted") {
+    await runAutomations({
+      trigger: value.status === "sent" ? "proposal.sent" : "proposal.signed",
+      entityType: "proposal",
+      entityId: data.id,
+      organizationId,
+      actorId: value.actorId,
+      proposal: {
+        title: data.proposal_title,
+        number: data.proposal_number,
+        total: data.grand_total
+      }
+    });
+  }
+
   return { ok: true };
 }
