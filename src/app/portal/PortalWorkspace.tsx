@@ -14,7 +14,7 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
   const canSubmitPortalWork = workspace.project.id !== "admin-preview-project";
 
   return (
-    <main className="shell">
+    <main className="shell shell-light">
       <div className="admin-shell crm-shell">
         <nav className="nav admin-nav">
           <a className="brand" href="/">
