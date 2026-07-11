@@ -25,7 +25,7 @@ export default async function Home() {
   const adminUser = await getFusionAdminUser();
 
   return (
-    <main className="shell">
+    <main className="shell shell-light">
       <nav className="nav">
         <a className="brand" href="#">
           <span className="brand-mark">FDD</span>
@@ -42,7 +42,6 @@ export default async function Home() {
       </nav>
 
       <section className="hero">
-        <div className="hero-aurora" aria-hidden="true" />
         <Reveal as="div">
           <p className="eyebrow">Fusion Digital Dynamics</p>
           <h1>A website that works as hard as you do.</h1>
