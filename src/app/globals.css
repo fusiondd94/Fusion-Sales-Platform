@@ -3749,3 +3749,213 @@ h1 {
 .shell-light .text-link {
   color: var(--fusion-teal-700);
 }
+
+/* Automations page (self-service rule builder) */
+.automation-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.automation-card {
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface-muted);
+  padding: 0;
+  overflow: hidden;
+}
+
+.automation-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.automation-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.automation-card > summary strong {
+  display: block;
+  color: var(--fusion-text);
+}
+
+.automation-card > summary small {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.automation-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.status-pill-muted {
+  background: var(--fusion-gray-100);
+  color: var(--fusion-text-muted);
+}
+
+.status-pill-error {
+  background: #fdeceb;
+  color: #b3261e;
+}
+
+.automation-card-body {
+  border-top: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.automation-card-footer {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.automation-runs {
+  border-top: 1px solid var(--fusion-border);
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.automation-runs p {
+  margin: 0;
+}
+
+.automation-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.automation-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--fusion-text-muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.automation-form input,
+.automation-form select,
+.automation-form textarea {
+  width: 100%;
+  min-height: 2.6rem;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
+  padding: 0.6rem 0.7rem;
+  font-weight: 500;
+  outline: none;
+}
+
+.automation-form textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.automation-trigger-hint {
+  margin: -0.4rem 0 0;
+  font-size: 0.82rem;
+}
+
+.automation-fieldset {
+  border: 1px dashed var(--fusion-border-strong);
+  border-radius: var(--fusion-radius-md);
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.automation-fieldset legend {
+  padding: 0 0.4rem;
+  color: var(--fusion-text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.automation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.automation-action-block {
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface-muted);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.automation-action-block .automation-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.automation-action-config {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.icon-remove-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface);
+  color: var(--fusion-text-muted);
+  cursor: pointer;
+}
+
+.icon-remove-button:hover {
+  border-color: #f3b5ae;
+  color: #b3261e;
+}
+
+.automation-toggle-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700 !important;
+}
+
+.automation-toggle-row input {
+  width: auto;
+  min-height: auto;
+}
+
+@media (max-width: 720px) {
+  .automation-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inline-status-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.inline-status-form select {
+  min-height: 2.2rem;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+}
