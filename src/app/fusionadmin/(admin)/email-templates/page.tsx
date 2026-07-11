@@ -1,10 +1,36 @@
 import { Mail, PlusCircle } from "lucide-react";
-import { createFusionEmailTemplate } from "@/app/fusionadmin/actions";
+import { createFusionEmailTemplate, updateFusionEmailTemplate } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
-import { EmptyState, FusionDataTable, PageHeader } from "../crm-ui";
+import {
+  EmptyState,
+  FusionDataTable,
+  FusionField,
+  FusionInput,
+  FusionSelect,
+  FusionSubmitButton,
+  FusionSwitch,
+  FusionTextarea,
+  PageHeader
+} from "../crm-ui";
 
-export default async function FusionEmailTemplatesPage() {
+type PageProps = {
+  searchParams?: Promise<{ templateId?: string }>;
+};
+
+const CATEGORY_OPTIONS = [
+  "Lead Follow-Up",
+  "Discovery Call",
+  "Proposal Sent",
+  "Proposal Reminder",
+  "Appointment Confirmation",
+  "Welcome",
+  "General Sales"
+];
+
+export default async function FusionEmailTemplatesPage({ searchParams }: PageProps) {
+  const filters = (await searchParams) || {};
   const salesOps = await getSalesOpsWorkspace();
+  const selectedTemplate = salesOps.emailTemplates.find((template) => template.id === filters.templateId);
 
   return (
     <div className="admin-content">
@@ -15,7 +41,7 @@ export default async function FusionEmailTemplatesPage() {
       />
 
       <section className="admin-two-column">
-        <article className="admin-panel panel-span-2">
+        <article className="admin-panel panel-span-2" id="template-editor">
           <div className="panel-heading">
             <h2><Mail size={20} /> Templates</h2>
             <span className="status-pill">{salesOps.emailTemplates.length} templates</span>
@@ -27,20 +53,55 @@ export default async function FusionEmailTemplatesPage() {
               { header: "Subject" },
               { header: "Category" },
               { header: "Visibility" },
-              { header: "Status" }
+              { header: "Status" },
+              { header: "Action", className: "table-action-column" }
             ]}
             empty={!salesOps.emailTemplates.length ? <EmptyState>No templates yet.</EmptyState> : null}
           >
             {salesOps.emailTemplates.map((template) => (
               <tr key={template.id}>
-                <td data-label="Template">{template.template_name}</td>
+                <td data-label="Template"><a className="fusion-record-link" href={`/fusionadmin/email-templates?templateId=${template.id}#template-editor`}>{template.template_name}</a></td>
                 <td data-label="Subject">{template.subject}</td>
                 <td data-label="Category">{template.category}</td>
                 <td data-label="Visibility">{template.visibility}</td>
                 <td data-label="Status"><span className="status-pill">{template.is_active ? "active" : "inactive"}</span></td>
+                <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/email-templates?templateId=${template.id}#template-editor`}>Edit</a></td>
               </tr>
             ))}
           </FusionDataTable>
+
+          {selectedTemplate ? (
+            <form action={updateFusionEmailTemplate} style={{ marginTop: "1rem" }}>
+              <input name="templateId" type="hidden" value={selectedTemplate.id} />
+              <div className="fusion-form-section__grid">
+                <FusionField label="Template name" required>
+                  <FusionInput defaultValue={selectedTemplate.template_name} name="templateName" required />
+                </FusionField>
+                <FusionField label="Subject" required>
+                  <FusionInput defaultValue={selectedTemplate.subject} name="subject" required />
+                </FusionField>
+                <FusionField label="Category">
+                  <FusionSelect defaultValue={selectedTemplate.category} name="category">
+                    {CATEGORY_OPTIONS.map((option) => <option key={option}>{option}</option>)}
+                  </FusionSelect>
+                </FusionField>
+                <FusionField label="Visibility">
+                  <FusionSelect defaultValue={selectedTemplate.visibility} name="visibility">
+                    <option value="shared">Shared</option>
+                    <option value="private">Private</option>
+                  </FusionSelect>
+                </FusionField>
+                <FusionField className="fusion-field--full" hint="Allowed variables include {{contact_first_name}}, {{company_name}}, {{proposal_link}}, and {{organization_name}}." label="Body" required>
+                  <FusionTextarea defaultValue={selectedTemplate.body} name="body" required rows={8} />
+                </FusionField>
+              </div>
+              <FusionSwitch defaultChecked={selectedTemplate.is_active} label="Active" name="isActive" />
+              <div className="fusion-form-actions fusion-form-actions--end">
+                <a className="ghost-button compact-button" href="/fusionadmin/email-templates">Close</a>
+                <FusionSubmitButton className="compact-button" pendingLabel="Saving template...">Save template</FusionSubmitButton>
+              </div>
+            </form>
+          ) : null}
         </article>
 
         <article className="admin-panel">
@@ -62,7 +123,7 @@ export default async function FusionEmailTemplatesPage() {
               <option value="private">Private</option>
             </select>
             <textarea name="body" placeholder="Body. Allowed variables include {{contact_first_name}}, {{company_name}}, {{proposal_link}}, and {{organization_name}}." required />
-            <button className="primary-button" type="submit">Create template</button>
+            <FusionSubmitButton pendingLabel="Creating...">Create template</FusionSubmitButton>
           </form>
         </article>
       </section>
