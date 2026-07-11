@@ -67,9 +67,13 @@ export type SalesOpsEmailTemplate = {
   template_name: string;
   subject: string;
   body: string;
+  plain_text_body: string | null;
   category: string;
   visibility: string;
+  supported_variables: string[] | null;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 export type SalesOpsCrmForm = {
@@ -317,7 +321,7 @@ export async function getSalesOpsWorkspace() {
     supabase.from("crm_appointments").select("id, appointment_type_id, title, starts_at, ends_at, status, time_zone, location, meeting_url").eq("organization_id", organizationId).is("deleted_at", null).order("starts_at", { ascending: true }).limit(50),
     supabase.from("crm_appointment_types").select("id, name").eq("organization_id", organizationId).eq("is_active", true).order("name", { ascending: true }),
     supabase.from("crm_lead_sources").select("id, name, slug, is_paid, default_channel").eq("organization_id", organizationId).eq("is_active", true).order("display_order", { ascending: true }),
-    supabase.from("crm_email_templates").select("id, template_name, subject, body, category, visibility, is_active").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
+    supabase.from("crm_email_templates").select("id, template_name, subject, body, plain_text_body, category, visibility, supported_variables, is_active, created_at, updated_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("crm_forms").select("id, form_name, form_slug, form_type, description, is_active, is_published, is_public").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("crm_leads").select("id, status, total_today, created_at").eq("organization_id", organizationId).limit(1000),
     supabase.from("crm_deals").select("id, status, value, probability, one_time_value, weighted_one_time_value").eq("organization_id", organizationId).is("deleted_at", null).limit(1000)
@@ -657,7 +661,7 @@ export async function createSalesCrmForm(input: z.input<typeof crmFormSchema>) {
   return { ok: true };
 }
 
-const ALLOWED_TEMPLATE_VARIABLES = [
+export const ALLOWED_TEMPLATE_VARIABLES = [
   "contact_first_name",
   "contact_last_name",
   "contact_full_name",

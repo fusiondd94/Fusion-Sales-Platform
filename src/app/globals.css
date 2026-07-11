@@ -2040,6 +2040,221 @@ h1 {
   padding: 0;
 }
 
+.email-template-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.email-template-search {
+  grid-template-columns: auto minmax(12rem, 1fr) minmax(10rem, 0.72fr) auto;
+}
+
+.email-template-search select {
+  min-height: 2.45rem;
+  border: 0;
+  border-left: 1px solid var(--fusion-border);
+  background: transparent;
+  color: var(--fusion-text);
+  padding: 0 0.75rem;
+  outline: none;
+}
+
+.email-template-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.email-template-summary div {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
+  padding: 1rem;
+  box-shadow: var(--fusion-shadow-sm);
+}
+
+.email-template-summary strong {
+  color: var(--fusion-teal-900);
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.email-template-summary span {
+  color: var(--fusion-text-muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.email-template-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.email-template-list-panel,
+.email-template-edit-panel,
+.email-template-create-panel {
+  grid-column: 1;
+}
+
+.email-template-preview-panel,
+.merge-tag-panel {
+  grid-column: 2;
+}
+
+.email-template-preview-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+.template-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.9rem;
+}
+
+.template-metadata-grid p {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text);
+  padding: 0.7rem;
+}
+
+.template-metadata-grid span,
+.sender-card span {
+  color: var(--fusion-text-muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.template-metadata-grid strong,
+.sender-card strong {
+  color: var(--fusion-text);
+  font-size: 0.92rem;
+}
+
+.sender-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--fusion-gold-600) 32%, white);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-gold-100);
+  color: var(--fusion-gold-700);
+  padding: 0.85rem;
+}
+
+.sender-card div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.preview-device-tabs {
+  display: grid;
+  grid-template-columns: 1fr 7.4rem;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.preview-device-tabs span {
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text-muted);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.template-preview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7.4rem;
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.template-preview-frame {
+  width: 100%;
+  border: 1px solid var(--fusion-border-strong);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface-muted);
+  box-shadow: var(--fusion-shadow-sm);
+}
+
+.template-preview-frame-desktop {
+  height: 24rem;
+}
+
+.template-preview-frame-mobile {
+  height: 24rem;
+}
+
+.template-supported-tags {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.template-supported-tags h3,
+.merge-tag-group h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--fusion-text);
+  font-size: 0.92rem;
+}
+
+.template-builder-form textarea {
+  min-height: 12rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.55;
+}
+
+.template-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.template-chip-list code {
+  border: 1px solid color-mix(in srgb, var(--fusion-teal-900) 20%, white);
+  border-radius: 999px;
+  background: var(--fusion-teal-100);
+  color: var(--fusion-teal-900);
+  padding: 0.32rem 0.5rem;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.merge-tag-groups {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.merge-tag-group {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface-muted);
+  padding: 0.8rem;
+}
+
 .portal-grid {
   display: grid;
   grid-template-columns: 0.75fr 1.25fr;
@@ -2534,12 +2749,29 @@ h1 {
   .dashboard-brief,
   .admin-dashboard-grid,
   .admin-two-column,
+  .email-template-workspace,
   .pricing-admin-grid {
     grid-template-columns: 1fr;
   }
 
   .panel-span-2 {
     grid-column: auto;
+  }
+
+  .email-template-list-panel,
+  .email-template-edit-panel,
+  .email-template-create-panel,
+  .email-template-preview-panel,
+  .merge-tag-panel {
+    grid-column: auto;
+  }
+
+  .email-template-preview-panel {
+    position: static;
+  }
+
+  .email-template-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero,
@@ -2663,8 +2895,26 @@ h1 {
   }
 
   .admin-search,
+  .email-template-search,
   .form-grid.two {
     grid-template-columns: 1fr;
+  }
+
+  .email-template-search select {
+    border: 1px solid var(--fusion-border);
+    border-radius: var(--fusion-radius-sm);
+    background: var(--fusion-surface);
+  }
+
+  .template-metadata-grid,
+  .template-preview-grid,
+  .preview-device-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .template-preview-frame-mobile {
+    width: min(100%, 22rem);
+    margin-inline: auto;
   }
 
   .option-grid,
