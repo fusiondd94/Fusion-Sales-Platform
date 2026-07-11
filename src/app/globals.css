@@ -3999,9 +3999,10 @@ h1 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
   grid-template-areas:
-    "list preview"
+    "list list"
     "edit preview"
-    "create tags";
+    "create create"
+    "tags tags";
   gap: 1.25rem;
   align-items: start;
 }
@@ -4064,8 +4065,8 @@ h1 {
 
 .template-metadata-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.6rem 1rem;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
   margin: 0 0 1rem;
 }
 
@@ -4129,19 +4130,27 @@ h1 {
 
 .template-preview-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 220px);
+  grid-template-columns: 1fr;
   gap: 0.85rem;
-  align-items: start;
   margin-bottom: 1rem;
 }
 
 .template-preview-frame {
   display: block;
   width: 100%;
-  height: 420px;
   border: 1px solid var(--fusion-border);
   border-radius: var(--fusion-radius-md);
   background: var(--fusion-surface);
+}
+
+.template-preview-frame-desktop {
+  height: 340px;
+}
+
+.template-preview-frame-mobile {
+  max-width: 240px;
+  height: 460px;
+  margin: 0 auto;
 }
 
 .template-supported-tags h3 {
@@ -4192,14 +4201,10 @@ h1 {
     grid-template-columns: 1fr;
     grid-template-areas:
       "list"
-      "preview"
       "edit"
+      "preview"
       "create"
       "tags";
-  }
-
-  .template-preview-grid {
-    grid-template-columns: 1fr;
   }
 
   .email-template-summary {
