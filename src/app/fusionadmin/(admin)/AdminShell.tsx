@@ -16,7 +16,8 @@ import {
   MonitorUp,
   Settings,
   UsersRound,
-  UserRoundCog
+  UserRoundCog,
+  Zap
 } from "lucide-react";
 import { signOutFusionAdmin } from "@/app/fusionadmin/actions";
 import { FusionAvatar } from "@/app/fusionadmin/(admin)/crm-ui";
@@ -57,6 +58,12 @@ const navSections = [
     label: "Insights",
     items: [
       { href: "/fusionadmin/reports", label: "Reports", icon: BarChart3, description: "Performance" }
+    ]
+  },
+  {
+    label: "Automation",
+    items: [
+      { href: "/fusionadmin/automations", label: "Automations", icon: Zap, description: "Rules and triggers" }
     ]
   },
   {
