@@ -1,7 +1,7 @@
 import { ClipboardList, FileText } from "lucide-react";
 import { createFusionNote, createFusionTask, updateFusionTask } from "@/app/fusionadmin/actions";
 import { getFusionCrmWorkspace } from "@/lib/crm";
-import { EmptyState, formatDate, FusionDataTable, optionList, PageHeader } from "../crm-ui";
+import { EmptyState, formatDate, FusionDataTable, FusionSubmitButton, optionList, PageHeader } from "../crm-ui";
 
 export default async function FusionTasksPage() {
   const crm = await getFusionCrmWorkspace();
@@ -31,7 +31,7 @@ export default async function FusionTasksPage() {
               <option value="low">Low</option>
             </select>
             <input name="dueAt" type="datetime-local" />
-            <button className="primary-button" type="submit">Add task</button>
+            <FusionSubmitButton pendingLabel="Adding...">Add task</FusionSubmitButton>
           </form>
         </article>
 
@@ -46,7 +46,7 @@ export default async function FusionTasksPage() {
               <option value="company">Company</option>
             </select>
             <textarea name="body" placeholder="Internal CRM note" required />
-            <button className="primary-button" type="submit">Add note</button>
+            <FusionSubmitButton pendingLabel="Adding...">Add note</FusionSubmitButton>
           </form>
         </article>
 
