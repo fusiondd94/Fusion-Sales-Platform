@@ -24,7 +24,7 @@ export default async function FusionTeamPage({ searchParams }: PageProps) {
       <section className="admin-two-column">
         <article className="admin-panel">
           <h2><MailPlus size={20} /> Invite teammate</h2>
-          <form className="quick-form" action={inviteFusionTeamMember}>
+          <form className="quick-form" action={inviteFusionTeamMember} data-track-unsaved="true">
             <input name="displayName" placeholder="Full name" />
             <input name="email" placeholder="Email address" type="email" required />
             <input name="title" placeholder="Title or responsibility" />
@@ -79,7 +79,7 @@ export default async function FusionTeamPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedMember ? (
-            <form action={updateFusionTeamMember} style={{ marginTop: "1rem" }}>
+            <form action={updateFusionTeamMember} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="memberId" type="hidden" value={selectedMember.id} />
               <div className="fusion-form-section__grid">
                 <FusionField label="Name">

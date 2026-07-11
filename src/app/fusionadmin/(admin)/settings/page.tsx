@@ -21,7 +21,7 @@ export default async function FusionSettingsPage() {
       <section className="admin-two-column">
         <article className="admin-panel">
           <h2><Palette size={20} /> Brand settings</h2>
-          <form className="quick-form" action={updateFusionBrandSettings}>
+          <form className="quick-form" action={updateFusionBrandSettings} data-track-unsaved="true">
             <label>
               <span>Logo URL</span>
               <input defaultValue={admin.settings?.logo_url || ""} name="logoUrl" placeholder="https://..." type="url" />
@@ -58,7 +58,7 @@ export default async function FusionSettingsPage() {
           </div>
           <div className="pricing-admin-grid">
             {admin.packages.map((item) => (
-              <form className="price-editor" action={updateFusionServicePackage} key={item.id}>
+              <form className="price-editor" action={updateFusionServicePackage} data-track-unsaved="true" key={item.id}>
                 <input name="packageId" type="hidden" value={item.id} />
                 <div className="price-editor-heading">
                   <strong>{item.package_key}</strong>
@@ -95,7 +95,7 @@ export default async function FusionSettingsPage() {
 
         <article className="admin-panel">
           <h2><UsersRound size={20} /> Add user</h2>
-          <form className="quick-form" action={inviteFusionTeamMember}>
+          <form className="quick-form" action={inviteFusionTeamMember} data-track-unsaved="true">
             <input name="displayName" placeholder="Full name" />
             <input name="email" placeholder="Email address" type="email" required />
             <input name="title" placeholder="Title or responsibility" />

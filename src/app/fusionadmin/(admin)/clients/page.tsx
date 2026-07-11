@@ -96,7 +96,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               <h2><UsersRound size={20} /> Edit lead</h2>
               <span className="status-pill">{selectedLead.lead_code}</span>
             </div>
-            <form className="record-edit-card lead-editor-card" action={updateFusionLead}>
+            <form className="record-edit-card lead-editor-card" action={updateFusionLead} data-track-unsaved="true">
               <input name="leadId" type="hidden" value={selectedLead.id} />
               <div className="record-edit-grid">
                 <label>
@@ -176,7 +176,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
 
         <article className="admin-panel">
           <h2><UserRoundPlus size={20} /> Add contact</h2>
-          <form className="quick-form" action={createFusionContact}>
+          <form className="quick-form" action={createFusionContact} data-track-unsaved="true">
             <input name="firstName" placeholder="First name" required />
             <input name="lastName" placeholder="Last name" />
             <input name="email" placeholder="Email" type="email" />
@@ -218,7 +218,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedCompany ? (
-            <form action={updateFusionCompany} style={{ marginTop: "1rem" }}>
+            <form action={updateFusionCompany} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="companyId" type="hidden" value={selectedCompany.id} />
               <div className="fusion-form-section__grid">
                 <FusionField label="Company name" required>
@@ -286,7 +286,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedContact ? (
-            <form action={updateFusionContact} style={{ marginTop: "1rem" }}>
+            <form action={updateFusionContact} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="contactId" type="hidden" value={selectedContact.id} />
               <div className="fusion-form-section__grid">
                 <FusionField label="Name" required>
@@ -357,7 +357,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedPortalClient ? (
-            <form action={updateFusionClientProject} style={{ marginTop: "1rem" }}>
+            <form action={updateFusionClientProject} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="clientId" type="hidden" value={selectedPortalClient.id} />
               <p><a className="text-link" href={`/portal?clientId=${selectedPortalClient.id}`}>Open client portal preview</a></p>
               <div className="fusion-form-section__grid">

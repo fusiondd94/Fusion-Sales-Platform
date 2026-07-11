@@ -999,7 +999,12 @@ h1 {
 
 .admin-empty {
   margin: 0;
-  color: var(--muted);
+  border: 1px dashed color-mix(in srgb, var(--fusion-border-strong) 72%, transparent);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text-muted);
+  padding: 1rem;
+  line-height: 1.55;
 }
 
 .compact-board {
@@ -1926,6 +1931,7 @@ h1 {
   justify-items: start;
   gap: var(--fusion-space-2);
   padding: var(--fusion-space-5);
+  line-height: 1.55;
 }
 
 .fusion-state--empty {
@@ -1941,6 +1947,111 @@ h1 {
 .fusion-state--loading {
   place-items: center;
   text-align: center;
+}
+
+.state-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(49, 215, 255, 0.16), transparent 26rem),
+    linear-gradient(135deg, #07101d 0%, #0c1728 54%, #101923 100%);
+  padding: 1.25rem;
+}
+
+.state-shell .fusion-state {
+  width: min(100%, 42rem);
+  border-color: color-mix(in srgb, var(--fusion-teal-900) 18%, white);
+  background: var(--fusion-surface);
+  box-shadow: var(--fusion-shadow-lg);
+}
+
+.state-shell .fusion-button {
+  text-decoration: none;
+}
+
+.fusion-toast-region {
+  position: fixed;
+  z-index: var(--fusion-z-toast);
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  width: min(92vw, 24rem);
+  gap: 0.65rem;
+  pointer-events: none;
+}
+
+.fusion-toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
+  padding: 0.85rem;
+  box-shadow: var(--fusion-shadow-lg);
+  pointer-events: auto;
+}
+
+.fusion-toast > span {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.fusion-toast strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.9rem;
+}
+
+.fusion-toast p {
+  margin: 0;
+  color: var(--fusion-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.fusion-toast--warning {
+  border-color: color-mix(in srgb, var(--fusion-warning) 34%, white);
+}
+
+.fusion-toast--warning > span {
+  background: var(--fusion-warning-soft);
+  color: var(--fusion-warning);
+}
+
+.fusion-toast--success {
+  border-color: color-mix(in srgb, var(--fusion-success) 34%, white);
+}
+
+.fusion-toast--success > span {
+  background: var(--fusion-success-soft);
+  color: var(--fusion-success);
+}
+
+.admin-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-loading-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-loading-title {
+  width: 42%;
+  min-height: 1.35rem;
+}
+
+.admin-loading-row {
+  width: 68%;
 }
 
 .fusion-data-table-wrap {
@@ -2748,6 +2859,7 @@ h1 {
   .admin-metrics,
   .dashboard-brief,
   .admin-dashboard-grid,
+  .admin-loading-grid,
   .admin-two-column,
   .email-template-workspace,
   .pricing-admin-grid {

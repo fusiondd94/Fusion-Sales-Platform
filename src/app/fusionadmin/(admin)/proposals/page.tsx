@@ -45,7 +45,7 @@ export default async function FusionProposalsPage() {
 
         <article className="admin-panel">
           <h2><PlusCircle size={20} /> Create proposal</h2>
-          <form className="quick-form" action={createFusionProposal}>
+          <form className="quick-form" action={createFusionProposal} data-track-unsaved="true">
             <input name="proposalTitle" placeholder="Proposal title" required />
             <select name="serviceId" required defaultValue="">
               <option value="">Select service</option>

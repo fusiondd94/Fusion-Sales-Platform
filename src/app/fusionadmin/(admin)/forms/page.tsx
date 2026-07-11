@@ -71,7 +71,7 @@ export default async function FusionFormsPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedForm ? (
-            <form action={updateFusionCrmForm} style={{ marginTop: "1rem" }}>
+            <form action={updateFusionCrmForm} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="formId" type="hidden" value={selectedForm.id} />
               <div className="fusion-form-section__grid">
                 <FusionField label="Form name" required>
@@ -100,7 +100,7 @@ export default async function FusionFormsPage({ searchParams }: PageProps) {
 
         <article className="admin-panel">
           <h2><PlusCircle size={20} /> Create form</h2>
-          <form className="quick-form" action={createFusionCrmForm}>
+          <form className="quick-form" action={createFusionCrmForm} data-track-unsaved="true">
             <input name="formName" placeholder="Form name" required />
             <select name="formType" defaultValue="Lead Inquiry">
               {FORM_TYPE_OPTIONS.map((option) => <option key={option}>{option}</option>)}

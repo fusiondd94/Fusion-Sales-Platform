@@ -234,7 +234,7 @@ export default async function FusionEmailTemplatesPage({ searchParams }: PagePro
               <h2><Edit3 size={20} /> Edit template</h2>
               <span className="status-pill">{selectedTemplate.category}</span>
             </div>
-            <form action={updateFusionEmailTemplate}>
+            <form action={updateFusionEmailTemplate} data-track-unsaved="true">
               <input name="templateId" type="hidden" value={selectedTemplate.id} />
               <div className="fusion-form-section__grid">
                 <FusionField label="Template name" required>
@@ -272,7 +272,7 @@ export default async function FusionEmailTemplatesPage({ searchParams }: PagePro
             <h2><PlusCircle size={20} /> Create template</h2>
             <span className="status-pill">shared ready</span>
           </div>
-          <form className="quick-form template-builder-form" action={createFusionEmailTemplate}>
+          <form className="quick-form template-builder-form" action={createFusionEmailTemplate} data-track-unsaved="true">
             <label>
               Template name
               <input name="templateName" placeholder="Proposal decision follow-up" required />

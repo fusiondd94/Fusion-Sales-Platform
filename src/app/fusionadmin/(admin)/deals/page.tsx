@@ -63,7 +63,7 @@ export default async function FusionDealsPage({ searchParams }: PageProps) {
 
         <article className="admin-panel">
           <h2><BriefcaseBusiness size={20} /> Add deal</h2>
-          <form className="quick-form" action={createFusionDeal}>
+          <form className="quick-form" action={createFusionDeal} data-track-unsaved="true">
             <input name="dealTitle" placeholder="Deal title" required />
             <input name="companyName" placeholder="Company" />
             <input name="service" placeholder="Service interest" />
@@ -109,7 +109,7 @@ export default async function FusionDealsPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedDeal ? (
-            <form action={updateFusionDeal} style={{ marginTop: "1rem" }}>
+            <form action={updateFusionDeal} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="dealId" type="hidden" value={selectedDeal.id} />
               <div className="fusion-form-section__grid">
                 <FusionField label="Deal title" required>

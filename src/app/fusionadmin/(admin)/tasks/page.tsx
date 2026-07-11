@@ -19,7 +19,7 @@ export default async function FusionTasksPage() {
       <section className="admin-two-column">
         <article className="admin-panel">
           <h2><ClipboardList size={20} /> Add task</h2>
-          <form className="quick-form" action={createFusionTask}>
+          <form className="quick-form" action={createFusionTask} data-track-unsaved="true">
             <input name="title" placeholder="Task title" required />
             <select name="taskType">
               {taskTypes.map((type) => <option key={type}>{type}</option>)}
@@ -37,7 +37,7 @@ export default async function FusionTasksPage() {
 
         <article className="admin-panel">
           <h2><FileText size={20} /> Add note</h2>
-          <form className="quick-form" action={createFusionNote}>
+          <form className="quick-form" action={createFusionNote} data-track-unsaved="true">
             <select name="entityType" defaultValue="general">
               <option value="general">General</option>
               <option value="lead">Lead</option>
@@ -70,7 +70,7 @@ export default async function FusionTasksPage() {
             {crm.tasks.map((task) => (
               <tr key={task.id}>
                 <td data-label="Task">
-                  <form id={`task-${task.id}`} action={updateFusionTask}>
+                  <form id={`task-${task.id}`} action={updateFusionTask} data-track-unsaved="true">
                     <input name="taskId" type="hidden" value={task.id} />
                     <label className="sr-only" htmlFor={`title-${task.id}`}>Task title</label>
                     <input id={`title-${task.id}`} name="title" defaultValue={task.title} required />

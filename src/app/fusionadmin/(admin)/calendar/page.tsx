@@ -94,7 +94,7 @@ export default async function FusionCalendarPage() {
           </div>
           <div className="appointment-edit-grid">
             {salesOps.appointments.map((appointment) => (
-              <form className="record-edit-card" action={updateFusionAppointment} id={`appointment-${appointment.id}`} key={appointment.id}>
+              <form className="record-edit-card" action={updateFusionAppointment} data-track-unsaved="true" id={`appointment-${appointment.id}`} key={appointment.id}>
                 <input name="appointmentId" type="hidden" value={appointment.id} />
                 <div className="record-edit-heading">
                   <strong>{appointment.title}</strong>
@@ -144,7 +144,7 @@ export default async function FusionCalendarPage() {
 
         <article className="admin-panel">
           <h2><PlusCircle size={20} /> Schedule appointment</h2>
-          <form className="quick-form" action={createFusionAppointment}>
+          <form className="quick-form" action={createFusionAppointment} data-track-unsaved="true">
             <input name="title" placeholder="Appointment title" required />
             <select name="appointmentTypeId" defaultValue="">
               <option value="">Appointment type</option>

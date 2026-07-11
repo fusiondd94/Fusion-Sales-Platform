@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { signOutFusionAdmin } from "@/app/fusionadmin/actions";
 import { FusionAvatar } from "@/app/fusionadmin/(admin)/crm-ui";
-import { SignOutButton } from "@/components/ui";
+import { AdminFeedbackBoundary, SignOutButton } from "@/components/ui";
 import type { FusionAdminUser } from "@/lib/auth";
 
 const navSections = [
@@ -131,7 +131,7 @@ export function AdminShell({ children, user }: { children: ReactNode; user: Fusi
             </span>
           </div>
         </header>
-        {children}
+        <AdminFeedbackBoundary>{children}</AdminFeedbackBoundary>
       </section>
     </main>
   );

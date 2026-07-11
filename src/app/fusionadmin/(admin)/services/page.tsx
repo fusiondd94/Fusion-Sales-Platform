@@ -65,7 +65,7 @@ export default async function FusionServicesPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedService ? (
-            <form action={updateFusionService} style={{ marginTop: "1rem" }}>
+            <form action={updateFusionService} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="serviceId" type="hidden" value={selectedService.id} />
               <div className="fusion-form-section__grid">
                 <FusionField label="Service name" required>
@@ -133,7 +133,7 @@ export default async function FusionServicesPage({ searchParams }: PageProps) {
 
         <article className="admin-panel">
           <h2><PlusCircle size={20} /> Add service</h2>
-          <form className="quick-form" action={createFusionService}>
+          <form className="quick-form" action={createFusionService} data-track-unsaved="true">
             <input name="serviceName" placeholder="Service name" required />
             <input name="sku" placeholder="SKU" required />
             <select name="categoryId" defaultValue="">
