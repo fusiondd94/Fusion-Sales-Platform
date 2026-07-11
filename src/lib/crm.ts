@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { CustomerInfo } from "@/lib/customer";
 import { Answers } from "@/lib/offers";
 import { demoClients, demoTasks, pipelineSummary } from "@/lib/records";
+import { runAutomations } from "@/lib/automations";
 
 type SalesRecommendation = {
   packageKey: string;
@@ -658,6 +659,24 @@ export async function captureLead(payload: SalesPayload) {
     due_at: new Date(Date.now() + 1000 * 60 * 30).toISOString()
   });
 
+  if (organizationId) {
+    await runAutomations({
+      trigger: "lead.captured",
+      entityType: "lead",
+      entityId: data.id,
+      organizationId,
+      contact: {
+        name: payload.customer.name,
+        email: payload.customer.email,
+        phone: payload.customer.phone
+      },
+      company: {
+        name: payload.customer.company,
+        website: payload.customer.website || null
+      }
+    });
+  }
+
   return { leadId: data.lead_code, persisted: true };
 }
 
@@ -948,6 +967,14 @@ export async function updateCrmTask(input: {
   const organizationId = await getDefaultOrganizationId(supabase);
   if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
 
+  const { data: existingTask } = await supabase
+    .from("crm_tasks")
+    .select("status")
+    .eq("organization_id", organizationId)
+    .eq("id", input.taskId)
+    .single<{ status: string }>();
+  const previousStatus = existingTask?.status || null;
+
   const allowedStatuses = new Set(["open", "in_progress", "done", "blocked"]);
   const status = allowedStatuses.has(input.status || "") ? input.status || "open" : "open";
   const completedAt = status === "done" ? new Date().toISOString() : null;
@@ -971,6 +998,17 @@ export async function updateCrmTask(input: {
 
   if (error || !data) return { ok: false, error: "Unable to update task." };
   await logActivity(supabase, organizationId, input.actorId, status === "done" ? "task.completed" : "task.updated", "task", input.taskId, `Task ${status === "done" ? "completed" : "updated"}: ${input.title}`);
+
+  if (status === "done" && previousStatus !== "done") {
+    await runAutomations({
+      trigger: "task.completed",
+      entityType: "task",
+      entityId: input.taskId,
+      organizationId,
+      actorId: input.actorId,
+      task: { title: input.title.trim(), dueAt: input.dueAt || null, owner: null }
+    });
+  }
   return { ok: true };
 }
 
@@ -1101,6 +1139,18 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session) {
       due_at: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
     }
   ]);
+
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (organizationId) {
+    await runAutomations({
+      trigger: "payment.received",
+      entityType: "lead",
+      entityId: lead.id,
+      organizationId,
+      contact: { name: lead.customer_name, email: lead.customer_email },
+      company: { name: lead.company }
+    });
+  }
 }
 
 export async function updateCrmCompany(input: {
@@ -1165,6 +1215,23 @@ export async function updateCrmDeal(input: {
   const dealTitle = input.dealTitle.trim();
   if (!dealTitle) return { ok: false, error: "Deal title is required." };
 
+  const { data: existingDeal } = await supabase
+    .from("crm_deals")
+    .select("stage_id")
+    .eq("organization_id", organizationId)
+    .eq("id", input.dealId)
+    .single<{ stage_id: string | null }>();
+  const previousStageId = existingDeal?.stage_id || null;
+  let previousStageName: string | null = null;
+  if (previousStageId) {
+    const { data: prevStage } = await supabase
+      .from("crm_pipeline_stages")
+      .select("name")
+      .eq("id", previousStageId)
+      .single<{ name: string }>();
+    previousStageName = prevStage?.name || null;
+  }
+
   let companyId: string | null = null;
   if (input.companyName?.trim()) {
     const { data: company } = await supabase
@@ -1182,14 +1249,16 @@ export async function updateCrmDeal(input: {
 
   const stageId = input.stageId || null;
   let probability: number | undefined;
+  let stageName: string | null = null;
   if (stageId) {
     const { data: stage } = await supabase
       .from("crm_pipeline_stages")
-      .select("probability")
+      .select("probability, name")
       .eq("organization_id", organizationId)
       .eq("id", stageId)
-      .single<{ probability: number }>();
+      .single<{ probability: number; name: string }>();
     probability = stage?.probability;
+    stageName = stage?.name || null;
   }
 
   const allowedDealStatuses = new Set(["open", "won", "lost"]);
@@ -1218,6 +1287,24 @@ export async function updateCrmDeal(input: {
 
   if (error || !data) return { ok: false, error: "Unable to update deal." };
   await logActivity(supabase, organizationId, input.actorId, "deal.updated", "deal", input.dealId, `Deal updated: ${dealTitle}`);
+
+  if (stageId && stageId !== previousStageId) {
+    await runAutomations({
+      trigger: "deal.stage_changed",
+      entityType: "deal",
+      entityId: input.dealId,
+      organizationId,
+      actorId: input.actorId,
+      deal: {
+        title: dealTitle,
+        value: Math.max(0, Number(input.value || 0)),
+        stageId,
+        stageName,
+        previousStageName
+      },
+      company: input.companyName?.trim() ? { name: input.companyName.trim() } : undefined
+    });
+  }
   return { ok: true };
 }
 
