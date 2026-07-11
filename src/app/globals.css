@@ -744,19 +744,23 @@ h1 {
 
 .admin-page-header {
   align-items: end;
-  border: 1px solid rgba(175, 212, 240, 0.16);
-  background: #0d1a2d;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  box-shadow: var(--fusion-shadow-sm);
   padding: 1.1rem;
 }
 
 .admin-page-header h2 {
   margin: 0 0 0.35rem;
   font-size: 1.7rem;
+  color: var(--fusion-text);
 }
 
 .admin-page-header .muted {
   max-width: 760px;
   margin: 0;
+  color: var(--fusion-text-muted);
 }
 
 .admin-page-action {
