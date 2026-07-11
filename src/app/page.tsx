@@ -1,5 +1,6 @@
 import { ArrowRight, BarChart3, Globe2, LockKeyhole, Mail, Megaphone, Server, ShoppingCart, Wand2 } from "lucide-react";
 import { ClosingSignals, SalesFlow } from "@/components/SalesFlow";
+import { Reveal } from "@/components/Reveal";
 import { getFusionAdminUser } from "@/lib/auth";
 
 const offers = [
@@ -11,6 +12,13 @@ const offers = [
   { icon: Megaphone, title: "Marketing", text: "Lead capture, analytics, and campaign-ready pages." },
   { icon: Wand2, title: "Website Design", text: "Elegant websites designed to convert and scale." },
   { icon: BarChart3, title: "Follow-up Workflow", text: "Every paid intake becomes a managed client workflow." }
+];
+
+const process = [
+  { title: "Tell us about your business", text: "A short, guided questionnaire — no forms to dig through, no jargon." },
+  { title: "Get a tailored plan instantly", text: "Pricing and package recommendations update live as you answer." },
+  { title: "Check out securely", text: "Stripe-secured checkout captures payment and your client record in one step." },
+  { title: "Launch and grow, managed", text: "Your client portal opens right after purchase for onboarding and updates." }
 ];
 
 export default async function Home() {
@@ -34,61 +42,131 @@ export default async function Home() {
       </nav>
 
       <section className="hero">
-        <div>
-          <p className="eyebrow">Website sales platform</p>
-          <h1>Sell the site, the stack, and the next step.</h1>
+        <div className="hero-aurora" aria-hidden="true" />
+        <Reveal as="div">
+          <p className="eyebrow">Fusion Digital Dynamics</p>
+          <h1>A website that works as hard as you do.</h1>
           <p className="hero-copy">
-            A guided Fusion Digital Dynamics experience that diagnoses the business, frames the right website package,
-            bundles domain, hosting, SSL, security, marketing, and email, then moves the client into checkout and onboarding.
+            Domain, hosting, security, professional email, and marketing — designed, launched, and managed
+            as one elegant package. Answer a few questions and get a tailored plan in minutes.
           </p>
           <div className="hero-actions">
-            <a className="primary-button" href="#sales-flow">Build my offer <ArrowRight size={17} /></a>
-            <a className="secondary-button" href="#offers">View services</a>
+            <a className="primary-button" href="#sales-flow">Build my plan <ArrowRight size={17} /></a>
+            <a className="secondary-button" href="#offers">Explore services</a>
           </div>
-        </div>
-        <aside className="hero-panel" aria-label="Sales engine summary">
+        </Reveal>
+        <Reveal as="aside" className="hero-panel" delayMs={140}>
           <div className="pulse-bar" />
           <div className="panel-body">
-            <p className="eyebrow">Algorithm posture</p>
-            <h2>Persistent, polished, margin-aware.</h2>
+            <p className="eyebrow">Why Fusion</p>
+            <h2>Built to launch, built to last.</h2>
             <p className="muted">
-              The close strengthens as the buyer reveals friction. Discounts are protected until the deal needs a save.
+              One team designs the site, secures the stack, and stays on for the long run — so growth never
+              waits on a plugin update or an expired certificate.
             </p>
             <ClosingSignals />
           </div>
-        </aside>
+        </Reveal>
       </section>
 
       <section className="section" id="offers">
-        <div className="section-heading">
+        <Reveal as="div" className="section-heading">
           <div>
             <p className="eyebrow">Fusion offer stack</p>
             <h2>Everything a client needs to launch, trust, and grow online.</h2>
           </div>
-        </div>
+        </Reveal>
         <div className="offer-grid">
-          {offers.map((offer) => {
+          {offers.map((offer, index) => {
             const Icon = offer.icon;
             return (
-              <article className="offer-tile" key={offer.title}>
+              <Reveal as="article" className="offer-tile" delayMs={index * 70} key={offer.title}>
                 <Icon size={22} />
                 <h3>{offer.title}</h3>
                 <p className="muted">{offer.text}</p>
-              </article>
+              </Reveal>
             );
           })}
         </div>
       </section>
 
-      <section className="section">
-        <div className="section-heading">
+      <section className="section process-band">
+        <Reveal as="div" className="section-heading">
           <div>
-            <p className="eyebrow">Interactive closer</p>
-            <h2>The questionnaire adapts the recommendation while the client is still engaged.</h2>
+            <p className="eyebrow">How it works</p>
+            <h2>From first click to launched site, without the back-and-forth.</h2>
           </div>
+        </Reveal>
+        <div className="process-steps">
+          {process.map((step, index) => (
+            <Reveal as="div" className="process-step" delayMs={index * 90} key={step.title}>
+              <h3>{step.title}</h3>
+              <p className="muted">{step.text}</p>
+            </Reveal>
+          ))}
         </div>
+      </section>
+
+      <section className="section">
+        <Reveal as="div" className="section-heading">
+          <div>
+            <p className="eyebrow">Get your plan</p>
+            <h2>Answer a few questions. Get a tailored plan and price, today.</h2>
+          </div>
+        </Reveal>
         <SalesFlow />
       </section>
+
+      <section className="cta-band">
+        <Reveal as="div">
+          <p className="eyebrow">Ready when you are</p>
+          <h2>Let&apos;s build something elegant.</h2>
+          <p className="muted">No pressure, no obligation — just a clear plan and a price, built around your business.</p>
+          <a className="primary-button" href="#sales-flow">Start now <ArrowRight size={17} /></a>
+        </Reveal>
+      </section>
+
+      <footer className="site-footer">
+        <div className="footer-grid">
+          <div className="footer-brand">
+            <a className="brand" href="#">
+              <span className="brand-mark">FDD</span>
+              <span>Fusion Digital Dynamics</span>
+            </a>
+            <p className="muted">
+              A guided website sales and growth platform — domain to launch to long-term management, in one
+              elegant package.
+            </p>
+          </div>
+          <div className="footer-col">
+            <h4>Services</h4>
+            <ul>
+              <li><a href="#offers">Website Design</a></li>
+              <li><a href="#offers">Hosting &amp; Security</a></li>
+              <li><a href="#offers">Marketing</a></li>
+            </ul>
+          </div>
+          <div className="footer-col">
+            <h4>Get Started</h4>
+            <ul>
+              <li><a href="#sales-flow">Build my plan</a></li>
+              <li><a href="/portal">Client portal</a></li>
+              {adminUser?.isAllowed ? <li><a href="/fusionadmin">CRM</a></li> : null}
+            </ul>
+          </div>
+          <div className="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#offers">Services</a></li>
+              <li><a href="#sales-flow">Sales flow</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} Fusion Digital Dynamics LLC. All rights reserved.</span>
+          <span className="muted">Payments secured by Stripe.</span>
+        </div>
+      </footer>
     </main>
   );
 }
