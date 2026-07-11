@@ -100,6 +100,7 @@ export async function createFusionDeal(formData: FormData) {
     service: String(formData.get("service") || ""),
     value: Number(formData.get("value") || 0),
     stageId: String(formData.get("stageId") || ""),
+    status: String(formData.get("status") || "open"),
     expectedCloseDate: String(formData.get("expectedCloseDate") || "")
   });
 
