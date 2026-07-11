@@ -1101,3 +1101,157 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session) {
     }
   ]);
 }
+
+export async function updateCrmCompany(input: {
+  actorId: string;
+  companyId: string;
+  companyName: string;
+  industry?: string;
+  website?: string;
+  mainPhone?: string;
+  generalEmail?: string;
+  lifecycleStatus?: string;
+  leadSource?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const companyName = input.companyName.trim();
+  if (!companyName) return { ok: false, error: "Company name is required." };
+
+  const { data, error } = await supabase
+    .from("crm_companies")
+    .update({
+      company_name: companyName,
+      industry: input.industry?.trim() || null,
+      website: input.website?.trim() || null,
+      main_phone: input.mainPhone?.trim() || null,
+      general_email: input.generalEmail?.trim() || null,
+      lifecycle_status: input.lifecycleStatus?.trim() || "new",
+      lead_source: input.leadSource?.trim() || "Manual",
+      updated_by: input.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", input.companyId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update company." };
+  await logActivity(supabase, organizationId, input.actorId, "company.updated", "company", input.companyId, `Company updated: ${companyName}`);
+  return { ok: true };
+}
+
+export async function updateCrmDeal(input: {
+  actorId: string;
+  dealId: string;
+  dealTitle: string;
+  companyName?: string;
+  service?: string;
+  value?: number;
+  stageId?: string;
+  expectedCloseDate?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const dealTitle = input.dealTitle.trim();
+  if (!dealTitle) return { ok: false, error: "Deal title is required." };
+
+  let companyId: string | null = null;
+  if (input.companyName?.trim()) {
+    const { data: company } = await supabase
+      .from("crm_companies")
+      .upsert({
+        organization_id: organizationId,
+        company_name: input.companyName.trim(),
+        updated_by: input.actorId,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "organization_id,company_name", ignoreDuplicates: false })
+      .select("id")
+      .single<{ id: string }>();
+    companyId = company?.id || null;
+  }
+
+  const stageId = input.stageId || null;
+  let probability: number | undefined;
+  if (stageId) {
+    const { data: stage } = await supabase
+      .from("crm_pipeline_stages")
+      .select("probability")
+      .eq("organization_id", organizationId)
+      .eq("id", stageId)
+      .single<{ probability: number }>();
+    probability = stage?.probability;
+  }
+
+  const updatePayload: Record<string, unknown> = {
+    company_id: companyId,
+    stage_id: stageId,
+    deal_title: dealTitle,
+    service: input.service?.trim() || null,
+    value: Math.max(0, Number(input.value || 0)),
+    expected_close_date: input.expectedCloseDate || null,
+    updated_by: input.actorId,
+    updated_at: new Date().toISOString()
+  };
+  if (probability !== undefined) updatePayload.probability = probability;
+
+  const { data, error } = await supabase
+    .from("crm_deals")
+    .update(updatePayload)
+    .eq("organization_id", organizationId)
+    .eq("id", input.dealId)
+    .is("deleted_at", null)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update deal." };
+  await logActivity(supabase, organizationId, input.actorId, "deal.updated", "deal", input.dealId, `Deal updated: ${dealTitle}`);
+  return { ok: true };
+}
+
+export async function updateCrmTeamMember(input: {
+  actorId: string;
+  memberId: string;
+  title?: string;
+  status?: string;
+  roleId?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const allowedStatuses = new Set(["active", "inactive", "invited"]);
+  const status = allowedStatuses.has(input.status || "") ? input.status || "active" : "active";
+
+  const { data, error } = await supabase
+    .from("crm_organization_members")
+    .update({
+      title: input.title?.trim() || null,
+      status,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", input.memberId)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to update team member." };
+
+  if (input.roleId) {
+    await supabase.from("crm_member_roles").upsert({
+      member_id: input.memberId,
+      role_id: input.roleId
+    });
+  }
+
+  await logActivity(supabase, organizationId, input.actorId, "team.updated", "team_member", input.memberId, "Team member updated");
+  return { ok: true };
+}
