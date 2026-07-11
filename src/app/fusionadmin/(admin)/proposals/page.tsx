@@ -1,7 +1,7 @@
 import { FileText, PlusCircle } from "lucide-react";
 import { createFusionProposal } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
-import { EmptyState, formatCurrency, formatDate, FusionDataTable, PageHeader } from "../crm-ui";
+import { EmptyState, formatCurrency, formatDate, FusionDataTable, FusionSubmitButton, PageHeader } from "../crm-ui";
 
 export default async function FusionProposalsPage() {
   const salesOps = await getSalesOpsWorkspace();
@@ -61,7 +61,7 @@ export default async function FusionProposalsPage() {
             </select>
             <input min="0" name="discountValue" placeholder="Discount value" type="number" defaultValue={0} />
             <input name="expirationDate" type="date" />
-            <button className="primary-button" type="submit">Create proposal</button>
+            <FusionSubmitButton pendingLabel="Creating...">Create proposal</FusionSubmitButton>
           </form>
         </article>
       </section>
