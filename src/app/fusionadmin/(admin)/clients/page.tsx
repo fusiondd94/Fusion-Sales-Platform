@@ -49,7 +49,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
         action={
           <form className="admin-search" action="/fusionadmin/clients">
             <Search size={17} />
-            <input defaultValue={filters.q || ""} name="q" placeholder="Search clients" />
+            <input aria-label="Search clients" defaultValue={filters.q || ""} name="q" placeholder="Search clients" />
             <button type="submit">Search</button>
           </form>
         }
@@ -177,12 +177,12 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
         <article className="admin-panel">
           <h2><UserRoundPlus size={20} /> Add contact</h2>
           <form className="quick-form" action={createFusionContact} data-track-unsaved="true">
-            <input name="firstName" placeholder="First name" required />
-            <input name="lastName" placeholder="Last name" />
-            <input name="email" placeholder="Email" type="email" />
-            <input name="phone" placeholder="Phone" />
-            <input name="companyName" placeholder="Company" />
-            <select name="leadSource" defaultValue="Manual">
+            <input aria-label="First name" name="firstName" placeholder="First name" required />
+            <input aria-label="Last name" name="lastName" placeholder="Last name" />
+            <input aria-label="Email" name="email" placeholder="Email" type="email" />
+            <input aria-label="Phone" name="phone" placeholder="Phone" />
+            <input aria-label="Company" name="companyName" placeholder="Company" />
+            <select aria-label="Lead source" name="leadSource" defaultValue="Manual">
               <option>Manual</option>
               {leadSources.map((source) => <option key={source}>{source}</option>)}
             </select>

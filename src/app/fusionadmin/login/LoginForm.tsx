@@ -16,11 +16,11 @@ export function FusionAdminLoginForm() {
       <h1>Sign in to manage the platform.</h1>
       <label>
         <span>Email</span>
-        <input autoComplete="email" name="email" placeholder="admin@fddynamics.com" type="email" />
+        <input autoComplete="email" name="email" placeholder="admin@fddynamics.com" required type="email" />
       </label>
       <label>
         <span>Password</span>
-        <input autoComplete="current-password" name="password" placeholder="Password" type="password" />
+        <input autoComplete="current-password" name="password" placeholder="Password" required type="password" />
       </label>
       {state.error ? <p className="form-error">{state.error}</p> : null}
       <button className="primary-button" disabled={isPending} type="submit">
@@ -29,4 +29,3 @@ export function FusionAdminLoginForm() {
     </form>
   );
 }
-

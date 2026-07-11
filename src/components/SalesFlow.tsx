@@ -93,27 +93,27 @@ export function SalesFlow() {
             <div className="form-grid">
               <label>
                 Full name
-                <input value={customer.name} onChange={(event) => updateCustomer("name", event.target.value)} placeholder="Your name" />
+                <input aria-label="Full name" value={customer.name} onChange={(event) => updateCustomer("name", event.target.value)} placeholder="Your name" />
               </label>
               <label>
                 Business email
-                <input value={customer.email} onChange={(event) => updateCustomer("email", event.target.value)} placeholder="you@business.com" />
+                <input aria-label="Business email" value={customer.email} onChange={(event) => updateCustomer("email", event.target.value)} placeholder="you@business.com" />
               </label>
               <label>
                 Phone
-                <input value={customer.phone} onChange={(event) => updateCustomer("phone", event.target.value)} placeholder="Best callback number" />
+                <input aria-label="Phone" value={customer.phone} onChange={(event) => updateCustomer("phone", event.target.value)} placeholder="Best callback number" />
               </label>
               <label>
                 Business name
-                <input value={customer.company} onChange={(event) => updateCustomer("company", event.target.value)} placeholder="Company LLC" />
+                <input aria-label="Business name" value={customer.company} onChange={(event) => updateCustomer("company", event.target.value)} placeholder="Company LLC" />
               </label>
               <label className="full-field">
                 Current website or domain
-                <input value={customer.website} onChange={(event) => updateCustomer("website", event.target.value)} placeholder="example.com or not yet purchased" />
+                <input aria-label="Current website or domain" value={customer.website} onChange={(event) => updateCustomer("website", event.target.value)} placeholder="example.com or not yet purchased" />
               </label>
               <label className="full-field">
                 Anything Fusion should know?
-                <textarea value={customer.projectNotes} onChange={(event) => updateCustomer("projectNotes", event.target.value)} placeholder="Tell us about your offer, market, competitors, or deadline." />
+                <textarea aria-label="Project notes" value={customer.projectNotes} onChange={(event) => updateCustomer("projectNotes", event.target.value)} placeholder="Tell us about your offer, market, competitors, or deadline." />
               </label>
             </div>
           </>
@@ -125,6 +125,7 @@ export function SalesFlow() {
             <div className="option-grid">
               {question.options.map((option) => (
                 <button
+                  aria-pressed={isActive(option.value)}
                   className={`option-button ${isActive(option.value) ? "active" : ""}`}
                   key={option.value}
                   onClick={() => select(option.value)}

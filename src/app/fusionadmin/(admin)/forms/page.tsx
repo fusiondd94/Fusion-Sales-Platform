@@ -101,11 +101,11 @@ export default async function FusionFormsPage({ searchParams }: PageProps) {
         <article className="admin-panel">
           <h2><PlusCircle size={20} /> Create form</h2>
           <form className="quick-form" action={createFusionCrmForm} data-track-unsaved="true">
-            <input name="formName" placeholder="Form name" required />
-            <select name="formType" defaultValue="Lead Inquiry">
+            <input aria-label="Form name" name="formName" placeholder="Form name" required />
+            <select aria-label="Form type" name="formType" defaultValue="Lead Inquiry">
               {FORM_TYPE_OPTIONS.map((option) => <option key={option}>{option}</option>)}
             </select>
-            <textarea name="description" placeholder="Description" />
+            <textarea aria-label="Description" name="description" placeholder="Description" />
             <label className="toggle-row"><input name="isPublished" type="checkbox" /> <span>Publish form</span></label>
             <FusionSubmitButton pendingLabel="Creating...">Create form</FusionSubmitButton>
           </form>

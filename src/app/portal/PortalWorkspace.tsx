@@ -111,7 +111,7 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
               <input name="pageUrl" type="hidden" value={previewUrl} />
               <input name="markerX" type="hidden" value={marker?.x || ""} />
               <input name="markerY" type="hidden" value={marker?.y || ""} />
-              <textarea disabled={!canSubmitPortalWork} name="body" placeholder={marker ? "Describe the change for this selected spot." : "Leave a general project comment or select the comment tool and click the preview."} required />
+              <textarea aria-label="Project comment" disabled={!canSubmitPortalWork} name="body" placeholder={marker ? "Describe the change for this selected spot." : "Leave a general project comment or select the comment tool and click the preview."} required />
               <button className="primary-button" disabled={!canSubmitPortalWork} type="submit"><Send size={16} /> Send comment</button>
             </form>
           </article>
@@ -121,8 +121,11 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
               <h2><FileUp size={20} /> Upload project files</h2>
               <form className="quick-form" action={uploadProjectFile}>
                 <input name="clientId" type="hidden" value={selectedClientId} />
-                <input disabled={!canSubmitPortalWork} name="file" type="file" required />
-                <textarea disabled={!canSubmitPortalWork} name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
+                <label>
+                  Project file
+                  <input disabled={!canSubmitPortalWork} name="file" type="file" required />
+                </label>
+                <textarea aria-label="File description" disabled={!canSubmitPortalWork} name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
                 <button className="secondary-button" disabled={!canSubmitPortalWork} type="submit"><FileUp size={16} /> Upload file</button>
               </form>
             </article>

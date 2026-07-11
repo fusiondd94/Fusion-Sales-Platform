@@ -46,21 +46,21 @@ export default async function FusionProposalsPage() {
         <article className="admin-panel">
           <h2><PlusCircle size={20} /> Create proposal</h2>
           <form className="quick-form" action={createFusionProposal} data-track-unsaved="true">
-            <input name="proposalTitle" placeholder="Proposal title" required />
-            <select name="serviceId" required defaultValue="">
+            <input aria-label="Proposal title" name="proposalTitle" placeholder="Proposal title" required />
+            <select aria-label="Proposal service" name="serviceId" required defaultValue="">
               <option value="">Select service</option>
               {salesOps.services.map((service) => (
                 <option key={service.id} value={service.id}>{service.service_name} - {formatCurrency(service.base_price)}</option>
               ))}
             </select>
-            <input min="1" name="quantity" placeholder="Quantity" type="number" defaultValue={1} />
-            <select name="discountType" defaultValue="none">
+            <input aria-label="Quantity" min="1" name="quantity" placeholder="Quantity" type="number" defaultValue={1} />
+            <select aria-label="Discount type" name="discountType" defaultValue="none">
               <option value="none">No discount</option>
               <option value="fixed">Fixed discount</option>
               <option value="percent">Percent discount</option>
             </select>
-            <input min="0" name="discountValue" placeholder="Discount value" type="number" defaultValue={0} />
-            <input name="expirationDate" type="date" />
+            <input aria-label="Discount value" min="0" name="discountValue" placeholder="Discount value" type="number" defaultValue={0} />
+            <input aria-label="Expiration date" name="expirationDate" type="date" />
             <FusionSubmitButton pendingLabel="Creating...">Create proposal</FusionSubmitButton>
           </form>
         </article>

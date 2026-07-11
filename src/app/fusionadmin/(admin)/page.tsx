@@ -36,7 +36,7 @@ export default async function FusionAdminDashboard({ searchParams }: PageProps) 
         action={
           <form className="admin-search" action="/fusionadmin">
             <Search size={17} />
-            <input defaultValue={filters.q || ""} name="q" placeholder="Search leads or companies" />
+            <input aria-label="Search leads or companies" defaultValue={filters.q || ""} name="q" placeholder="Search leads or companies" />
             <button type="submit">Search</button>
           </form>
         }

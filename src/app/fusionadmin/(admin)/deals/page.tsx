@@ -64,14 +64,14 @@ export default async function FusionDealsPage({ searchParams }: PageProps) {
         <article className="admin-panel">
           <h2><BriefcaseBusiness size={20} /> Add deal</h2>
           <form className="quick-form" action={createFusionDeal} data-track-unsaved="true">
-            <input name="dealTitle" placeholder="Deal title" required />
-            <input name="companyName" placeholder="Company" />
-            <input name="service" placeholder="Service interest" />
-            <input min="0" name="value" placeholder="Deal value" type="number" />
-            <select name="stageId">
+            <input aria-label="Deal title" name="dealTitle" placeholder="Deal title" required />
+            <input aria-label="Company" name="companyName" placeholder="Company" />
+            <input aria-label="Service interest" name="service" placeholder="Service interest" />
+            <input aria-label="Deal value" min="0" name="value" placeholder="Deal value" type="number" />
+            <select aria-label="Deal stage" name="stageId">
               {crm.stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
             </select>
-            <input name="expectedCloseDate" type="date" />
+            <input aria-label="Expected close date" name="expectedCloseDate" type="date" />
             <FusionSubmitButton pendingLabel="Creating...">Create deal</FusionSubmitButton>
           </form>
         </article>

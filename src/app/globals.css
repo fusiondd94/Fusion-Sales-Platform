@@ -102,6 +102,7 @@ input,
 select,
 textarea {
   font: inherit;
+  max-width: 100%;
 }
 
 :focus-visible {
@@ -174,6 +175,12 @@ textarea:disabled {
   gap: 1rem;
   color: #cdd9e8;
   font-size: 0.92rem;
+}
+
+.nav-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
 }
 
 .nav-user,
@@ -266,18 +273,26 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
+  max-width: 100%;
   min-height: 3rem;
   padding: 0.85rem 1.1rem;
+  justify-content: center;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .ghost-button {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  max-width: 100%;
   min-height: 2.5rem;
   padding: 0.65rem 0.85rem;
   background: #132238;
   color: var(--text);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .secondary-button {
@@ -1177,6 +1192,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -1608,11 +1624,15 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: var(--fusion-space-2);
+  max-width: 100%;
   min-height: var(--fusion-control-height-md);
   border: 1px solid transparent;
   border-radius: var(--fusion-radius-sm);
   cursor: pointer;
   font-weight: 850;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-align: center;
   text-decoration: none;
   transition:
     background var(--fusion-transition),
@@ -2076,6 +2096,7 @@ h1 {
   border-bottom: 1px solid var(--fusion-border);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 
 .fusion-data-table th {
@@ -2119,6 +2140,7 @@ h1 {
   border-radius: var(--fusion-radius-sm);
   background: var(--fusion-surface-muted);
   color: var(--fusion-teal-900);
+  white-space: nowrap;
 }
 
 .fusion-data-table .muted {
@@ -2516,6 +2538,10 @@ h1 {
 .portal-comment-form {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
+}
+
+.portal-comment-form .primary-button {
+  min-height: 4.5rem;
 }
 
 .portal-comment-form textarea {
@@ -2969,6 +2995,10 @@ h1 {
   .portal-comment-form {
     grid-template-columns: 1fr;
   }
+
+  .portal-comment-form .primary-button {
+    min-height: 3rem;
+  }
 }
 
 @media (max-width: 560px) {
@@ -3034,6 +3064,19 @@ h1 {
   .offer-grid,
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .ghost-button,
+  .fusion-button {
+    width: 100%;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 1rem;
   }
 
   h1 {
@@ -3435,7 +3478,10 @@ h1 {
 }
 
 .footer-col a {
+  display: inline-flex;
+  align-items: center;
   color: var(--muted-strong);
+  min-height: 2rem;
 }
 
 .footer-col a:hover {

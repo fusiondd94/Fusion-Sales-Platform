@@ -20,17 +20,17 @@ export default async function FusionTasksPage() {
         <article className="admin-panel">
           <h2><ClipboardList size={20} /> Add task</h2>
           <form className="quick-form" action={createFusionTask} data-track-unsaved="true">
-            <input name="title" placeholder="Task title" required />
-            <select name="taskType">
+            <input aria-label="Task title" name="title" placeholder="Task title" required />
+            <select aria-label="Task type" name="taskType">
               {taskTypes.map((type) => <option key={type}>{type}</option>)}
               {!taskTypes.length ? <option>Follow-Up</option> : null}
             </select>
-            <select name="priority" defaultValue="normal">
+            <select aria-label="Priority" name="priority" defaultValue="normal">
               <option value="normal">Normal</option>
               <option value="high">High</option>
               <option value="low">Low</option>
             </select>
-            <input name="dueAt" type="datetime-local" />
+            <input aria-label="Due date" name="dueAt" type="datetime-local" />
             <FusionSubmitButton pendingLabel="Adding...">Add task</FusionSubmitButton>
           </form>
         </article>
@@ -38,14 +38,14 @@ export default async function FusionTasksPage() {
         <article className="admin-panel">
           <h2><FileText size={20} /> Add note</h2>
           <form className="quick-form" action={createFusionNote} data-track-unsaved="true">
-            <select name="entityType" defaultValue="general">
+            <select aria-label="Note type" name="entityType" defaultValue="general">
               <option value="general">General</option>
               <option value="lead">Lead</option>
               <option value="deal">Deal</option>
               <option value="contact">Contact</option>
               <option value="company">Company</option>
             </select>
-            <textarea name="body" placeholder="Internal CRM note" required />
+            <textarea aria-label="Internal CRM note" name="body" placeholder="Internal CRM note" required />
             <FusionSubmitButton pendingLabel="Adding...">Add note</FusionSubmitButton>
           </form>
         </article>

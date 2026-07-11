@@ -25,10 +25,10 @@ export default async function FusionTeamPage({ searchParams }: PageProps) {
         <article className="admin-panel">
           <h2><MailPlus size={20} /> Invite teammate</h2>
           <form className="quick-form" action={inviteFusionTeamMember} data-track-unsaved="true">
-            <input name="displayName" placeholder="Full name" />
-            <input name="email" placeholder="Email address" type="email" required />
-            <input name="title" placeholder="Title or responsibility" />
-            <select name="roleId" defaultValue="">
+            <input aria-label="Full name" name="displayName" placeholder="Full name" />
+            <input aria-label="Email address" name="email" placeholder="Email address" type="email" required />
+            <input aria-label="Title or responsibility" name="title" placeholder="Title or responsibility" />
+            <select aria-label="Role" name="roleId" defaultValue="">
               <option value="">Select role</option>
               {admin.roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
             </select>

@@ -134,20 +134,20 @@ export default async function FusionServicesPage({ searchParams }: PageProps) {
         <article className="admin-panel">
           <h2><PlusCircle size={20} /> Add service</h2>
           <form className="quick-form" action={createFusionService} data-track-unsaved="true">
-            <input name="serviceName" placeholder="Service name" required />
-            <input name="sku" placeholder="SKU" required />
-            <select name="categoryId" defaultValue="">
+            <input aria-label="Service name" name="serviceName" placeholder="Service name" required />
+            <input aria-label="SKU" name="sku" placeholder="SKU" required />
+            <select aria-label="Service category" name="categoryId" defaultValue="">
               <option value="">Category</option>
               {salesOps.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </select>
-            <textarea name="shortDescription" placeholder="Short description" />
-            <select name="billingType" defaultValue="one_time">
+            <textarea aria-label="Short description" name="shortDescription" placeholder="Short description" />
+            <select aria-label="Billing type" name="billingType" defaultValue="one_time">
               <option value="one_time">One-time</option>
               <option value="recurring">Recurring</option>
               <option value="usage_based">Usage-based</option>
               <option value="custom_quote">Custom quote</option>
             </select>
-            <select name="pricingModel" defaultValue="fixed_price">
+            <select aria-label="Pricing model" name="pricingModel" defaultValue="fixed_price">
               <option value="fixed_price">Fixed price</option>
               <option value="starting_at">Starting at</option>
               <option value="price_range">Price range</option>
@@ -155,9 +155,9 @@ export default async function FusionServicesPage({ searchParams }: PageProps) {
               <option value="hourly">Hourly</option>
               <option value="custom_quote">Custom quote</option>
             </select>
-            <input min="0" name="basePrice" placeholder="Base price" type="number" />
-            <input min="0" name="internalEstimatedCost" placeholder="Internal estimated cost" type="number" />
-            <select name="recurringInterval" defaultValue="">
+            <input aria-label="Base price" min="0" name="basePrice" placeholder="Base price" type="number" />
+            <input aria-label="Internal estimated cost" min="0" name="internalEstimatedCost" placeholder="Internal estimated cost" type="number" />
+            <select aria-label="Recurring interval" name="recurringInterval" defaultValue="">
               <option value="">No interval</option>
               <option value="monthly">Monthly</option>
               <option value="quarterly">Quarterly</option>

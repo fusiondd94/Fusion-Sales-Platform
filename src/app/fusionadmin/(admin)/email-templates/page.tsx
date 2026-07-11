@@ -110,7 +110,7 @@ export default async function FusionEmailTemplatesPage({ searchParams }: PagePro
         action={
           <form className="admin-search email-template-search" action="/fusionadmin/email-templates">
             <Search size={17} />
-            <input defaultValue={filters.q || ""} name="q" placeholder="Search templates" />
+            <input aria-label="Search templates" defaultValue={filters.q || ""} name="q" placeholder="Search templates" />
             <select defaultValue={filters.category || ""} name="category" aria-label="Template category">
               <option value="">All categories</option>
               {categories.map((category) => <option key={category} value={category}>{category}</option>)}
