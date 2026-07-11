@@ -15,7 +15,7 @@ export function Reveal({
   className?: string;
   delayMs?: number;
 }) {
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
