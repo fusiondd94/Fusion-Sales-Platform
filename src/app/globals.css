@@ -185,9 +185,9 @@ textarea:disabled {
 
 .nav-user,
 .admin-user {
-  border: 1px solid rgba(175, 212, 240, 0.24);
-  background: #132238;
-  color: var(--muted-strong);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text-muted);
   padding: 0.55rem 0.75rem;
   font-size: 0.86rem;
 }
@@ -328,9 +328,9 @@ h1 {
 }
 
 .metric {
-  border: 1px solid var(--line);
+  border: 1px solid var(--fusion-border);
   padding: 1rem;
-  background: #172941;
+  background: var(--fusion-surface-muted);
 }
 
 .metric strong {
@@ -370,9 +370,9 @@ h1 {
 .flow-panel,
 .result-panel,
 .admin-panel {
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, #152640 0%, #101d30 100%);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
+  box-shadow: var(--fusion-shadow-sm);
 }
 
 .offer-tile {
@@ -784,8 +784,8 @@ h1 {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.55rem;
-  border: 1px solid rgba(175, 212, 240, 0.25);
-  background: #07111f;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 0.45rem;
 }
 
@@ -912,8 +912,8 @@ h1 {
 .admin-metric {
   display: grid;
   gap: 0.25rem;
-  border: 1px solid rgba(175, 212, 240, 0.16);
-  background: #0d1a2d;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 1rem;
 }
 
@@ -1016,8 +1016,8 @@ h1 {
 .price-editor {
   display: grid;
   gap: 0.75rem;
-  border: 1px solid rgba(175, 212, 240, 0.18);
-  background: #0f1b2d;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 0.9rem;
 }
 
@@ -1045,7 +1045,7 @@ h1 {
 .quick-form label {
   display: grid;
   gap: 0.4rem;
-  color: var(--muted-strong);
+  color: var(--fusion-text-muted);
   font-size: 0.88rem;
   font-weight: 800;
 }
@@ -1054,9 +1054,9 @@ h1 {
 .price-editor textarea {
   width: 100%;
   min-height: 2.75rem;
-  border: 1px solid rgba(175, 212, 240, 0.32);
-  background: #07111f;
-  color: var(--text);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
   padding: 0.7rem;
   outline: none;
 }
@@ -1110,8 +1110,8 @@ h1 {
 .crm-search {
   display: grid;
   gap: 0.8rem;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, #152640 0%, #101d30 100%);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 1rem;
 }
 
@@ -1119,7 +1119,7 @@ h1 {
 .quick-form label {
   display: grid;
   gap: 0.4rem;
-  color: var(--muted-strong);
+  color: var(--fusion-text-muted);
   font-size: 0.88rem;
   font-weight: 800;
 }
@@ -1128,8 +1128,8 @@ h1 {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  border: 1px solid rgba(175, 212, 240, 0.32);
-  background: #0c1728;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
   padding: 0 0.75rem;
 }
 
@@ -1140,9 +1140,9 @@ h1 {
 .quick-form textarea {
   width: 100%;
   min-height: 2.75rem;
-  border: 1px solid rgba(175, 212, 240, 0.32);
-  background: #0c1728;
-  color: var(--text);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
   padding: 0.7rem;
   outline: none;
 }
@@ -1200,14 +1200,14 @@ h1 {
 
 .pipeline-stage {
   min-height: 12rem;
-  border: 1px solid rgba(175, 212, 240, 0.22);
-  background: #0e1a2b;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 0.85rem;
 }
 
 .stage-heading strong,
 .deal-card strong {
-  color: #ffffff;
+  color: var(--fusion-text);
 }
 
 .stage-heading span {
@@ -1219,13 +1219,13 @@ h1 {
   display: grid;
   gap: 0.35rem;
   margin-top: 0.65rem;
-  border: 1px solid rgba(175, 212, 240, 0.24);
-  background: #162840;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
   padding: 0.75rem;
 }
 
 .deal-card span {
-  color: var(--muted);
+  color: var(--fusion-text-muted);
 }
 
 .deal-card b {
@@ -1370,8 +1370,8 @@ h1 {
 .timeline-list p,
 .settings-list p {
   margin: 0;
-  border: 1px solid rgba(175, 212, 240, 0.2);
-  background: #0f1b2d;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
   padding: 0.75rem;
 }
 
@@ -1401,8 +1401,8 @@ h1 {
 .record-edit-card {
   display: grid;
   gap: 0.8rem;
-  border: 1px solid rgba(175, 212, 240, 0.2);
-  background: #0f1b2d;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 0.85rem;
 }
 
@@ -1438,9 +1438,9 @@ h1 {
 .table select {
   width: 100%;
   min-height: 2.45rem;
-  border: 1px solid rgba(175, 212, 240, 0.28);
-  background: #08111f;
-  color: var(--text);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
   padding: 0.6rem;
   outline: none;
 }
@@ -1452,7 +1452,7 @@ h1 {
 
 .lead-editor-card {
   border-color: rgba(245, 184, 75, 0.28);
-  background: linear-gradient(135deg, rgba(245, 184, 75, 0.08), rgba(49, 215, 255, 0.06)), #0f1b2d;
+  background: linear-gradient(135deg, rgba(245, 184, 75, 0.08), rgba(49, 215, 255, 0.06)), var(--fusion-surface);
 }
 
 .record-edit-actions {
@@ -2381,7 +2381,7 @@ h1 {
   gap: 1rem;
   align-items: end;
   border: 1px solid rgba(245, 184, 75, 0.32);
-  background: linear-gradient(135deg, rgba(245, 184, 75, 0.12), rgba(49, 215, 255, 0.08)), #0f1b2d;
+  background: linear-gradient(135deg, rgba(245, 184, 75, 0.12), rgba(49, 215, 255, 0.08)), var(--fusion-surface);
   padding: 1rem;
 }
 
@@ -2390,7 +2390,7 @@ h1 {
   align-items: center;
   gap: 0.45rem;
   margin: 0.2rem 0 0.45rem;
-  color: #ffffff;
+  color: var(--fusion-text);
 }
 
 .portal-client-switcher {
@@ -2401,16 +2401,16 @@ h1 {
 .portal-client-switcher label {
   display: grid;
   gap: 0.35rem;
-  color: var(--muted-strong);
+  color: var(--fusion-text-muted);
   font-size: 0.82rem;
   font-weight: 800;
 }
 
 .portal-client-switcher select {
   min-height: 2.75rem;
-  border: 1px solid rgba(175, 212, 240, 0.28);
-  background: #08111f;
-  color: var(--text);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
+  color: var(--fusion-text);
   padding: 0.65rem;
 }
 
@@ -2431,8 +2431,8 @@ h1 {
   display: grid;
   min-width: 11rem;
   gap: 0.25rem;
-  border: 1px solid var(--line);
-  background: #132238;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 1rem;
   text-align: right;
   text-transform: capitalize;
@@ -2460,8 +2460,8 @@ h1 {
   position: relative;
   min-height: 640px;
   overflow: hidden;
-  border: 1px solid rgba(175, 212, 240, 0.28);
-  background: #07111f;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
 }
 
 .preview-frame iframe {
@@ -2511,8 +2511,8 @@ h1 {
   display: grid;
   min-height: 420px;
   align-content: center;
-  border: 1px solid rgba(175, 212, 240, 0.28);
-  background: #0c1728;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
   padding: 2rem;
 }
 
@@ -2546,13 +2546,13 @@ h1 {
   display: grid;
   gap: 0.2rem;
   margin: 0;
-  border: 1px solid rgba(175, 212, 240, 0.16);
-  background: #08111f;
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
   padding: 0.6rem;
 }
 
 .portal-admin-comments span {
-  color: var(--muted);
+  color: var(--fusion-text-muted);
 }
 
 .calendar-board {
@@ -2567,7 +2567,7 @@ h1 {
 }
 
 .calendar-weekdays span {
-  color: var(--muted-strong);
+  color: var(--fusion-text-muted);
   font-size: 0.75rem;
   font-weight: 900;
   text-transform: uppercase;
@@ -2582,9 +2582,9 @@ h1 {
   align-content: start;
   gap: 0.35rem;
   min-height: 7.25rem;
-  border-right: 1px solid rgba(175, 212, 240, 0.14);
-  border-bottom: 1px solid rgba(175, 212, 240, 0.14);
-  background: #0b1526;
+  border-right: 1px solid var(--fusion-border);
+  border-bottom: 1px solid var(--fusion-border);
+  background: var(--fusion-surface);
   padding: 0.55rem;
 }
 
@@ -2593,12 +2593,12 @@ h1 {
 }
 
 .calendar-day.outside-month {
-  background: #07111f;
-  color: rgba(235, 244, 255, 0.4);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text-subtle);
 }
 
 .calendar-day-number {
-  color: #ffffff;
+  color: var(--fusion-text);
   font-weight: 900;
 }
 
@@ -2606,8 +2606,8 @@ h1 {
   display: grid;
   gap: 0.1rem;
   border: 1px solid rgba(49, 215, 255, 0.28);
-  background: rgba(49, 215, 255, 0.1);
-  color: var(--text);
+  background: rgba(49, 215, 255, 0.12);
+  color: var(--fusion-teal-900);
   padding: 0.35rem;
   text-decoration: none;
 }
@@ -3733,4 +3733,19 @@ h1 {
 
 .shell-light .footer-brand p {
   color: var(--fusion-text-muted);
+}
+
+
+/* Admin-page text contrast fixes (Phase: light background rollout) */
+.admin-app .muted {
+  color: var(--fusion-text-muted);
+}
+.admin-app .eyebrow {
+  color: var(--fusion-teal-700);
+}
+.admin-app .text-link {
+  color: var(--fusion-teal-700);
+}
+.shell-light .text-link {
+  color: var(--fusion-teal-700);
 }
