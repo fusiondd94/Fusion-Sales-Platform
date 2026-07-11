@@ -1,10 +1,17 @@
 import { MailPlus, ShieldCheck, UserRoundCog } from "lucide-react";
-import { inviteFusionTeamMember } from "@/app/fusionadmin/actions";
+import { inviteFusionTeamMember, updateFusionTeamMember } from "@/app/fusionadmin/actions";
 import { getFusionAdminSettings } from "@/lib/crm";
-import { EmptyState, formatDate, FusionDataTable, PageHeader } from "../crm-ui";
+import { EmptyState, formatDate, FusionDataTable, FusionField, FusionInput, FusionSelect, FusionSubmitButton, PageHeader } from "../crm-ui";
 
-export default async function FusionTeamPage() {
+type PageProps = {
+  searchParams?: Promise<{ memberId?: string }>;
+};
+
+export default async function FusionTeamPage({ searchParams }: PageProps) {
+  const filters = (await searchParams) || {};
   const admin = await getFusionAdminSettings();
+  const selectedMember = admin.members.find((member) => member.id === filters.memberId);
+  const statusOptions = ["active", "inactive", "invited"];
 
   return (
     <div className="admin-content">
@@ -25,7 +32,7 @@ export default async function FusionTeamPage() {
               <option value="">Select role</option>
               {admin.roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
             </select>
-            <button className="primary-button" type="submit">Send invite</button>
+            <FusionSubmitButton pendingLabel="Sending...">Send invite</FusionSubmitButton>
           </form>
         </article>
 
@@ -42,7 +49,7 @@ export default async function FusionTeamPage() {
           </div>
         </article>
 
-        <article className="admin-panel panel-span-2">
+        <article className="admin-panel panel-span-2" id="member-editor">
           <div className="panel-heading">
             <h2><UserRoundCog size={20} /> Current team</h2>
             <span className="status-pill">{admin.members.length}</span>
@@ -54,20 +61,51 @@ export default async function FusionTeamPage() {
               { header: "Email" },
               { header: "Title" },
               { header: "Status" },
-              { header: "Added" }
+              { header: "Added" },
+              { header: "Action", className: "table-action-column" }
             ]}
             empty={!admin.members.length ? <EmptyState>No teammates have been added yet.</EmptyState> : null}
           >
             {admin.members.map((member) => (
               <tr key={member.id}>
-                <td data-label="Name">{member.crm_profiles?.display_name || "Team member"}</td>
+                <td data-label="Name"><a className="fusion-record-link" href={`/fusionadmin/team?memberId=${member.id}#member-editor`}>{member.crm_profiles?.display_name || "Team member"}</a></td>
                 <td data-label="Email">{member.crm_profiles?.email || member.user_id}</td>
                 <td data-label="Title">{member.title || "Not set"}</td>
                 <td data-label="Status"><span className="status-pill">{member.status}</span></td>
                 <td data-label="Added">{formatDate(member.created_at)}</td>
+                <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/team?memberId=${member.id}#member-editor`}>Edit</a></td>
               </tr>
             ))}
           </FusionDataTable>
+
+          {selectedMember ? (
+            <form action={updateFusionTeamMember} style={{ marginTop: "1rem" }}>
+              <input name="memberId" type="hidden" value={selectedMember.id} />
+              <div className="fusion-form-section__grid">
+                <FusionField label="Name">
+                  <FusionInput disabled value={selectedMember.crm_profiles?.display_name || "Team member"} />
+                </FusionField>
+                <FusionField label="Title or responsibility">
+                  <FusionInput defaultValue={selectedMember.title || ""} name="title" />
+                </FusionField>
+                <FusionField label="Status">
+                  <FusionSelect defaultValue={selectedMember.status || "active"} name="status">
+                    {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
+                  </FusionSelect>
+                </FusionField>
+                <FusionField hint="Leave unselected to keep the current role." label="Role">
+                  <FusionSelect defaultValue="" name="roleId">
+                    <option value="">Keep current role</option>
+                    {admin.roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+                  </FusionSelect>
+                </FusionField>
+              </div>
+              <div className="fusion-form-actions fusion-form-actions--end">
+                <a className="ghost-button compact-button" href="/fusionadmin/team">Close</a>
+                <FusionSubmitButton className="compact-button" pendingLabel="Saving...">Save teammate</FusionSubmitButton>
+              </div>
+            </form>
+          ) : null}
         </article>
       </section>
     </div>
