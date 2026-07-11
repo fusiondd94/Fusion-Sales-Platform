@@ -1154,6 +1154,7 @@ export async function updateCrmDeal(input: {
   service?: string;
   value?: number;
   stageId?: string;
+  status?: string;
   expectedCloseDate?: string;
 }) {
   const supabase = getServiceClient();
