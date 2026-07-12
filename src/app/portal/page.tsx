@@ -3,7 +3,7 @@ import { getClientPortalWorkspace } from "@/lib/portal";
 import { PortalWorkspace } from "./PortalWorkspace";
 
 type PageProps = {
-  searchParams?: Promise<{ clientId?: string }>;
+  searchParams?: Promise<{ clientId?: string; highlightComment?: string }>;
 };
 
 export default async function PortalPage({ searchParams }: PageProps) {
@@ -14,5 +14,5 @@ export default async function PortalPage({ searchParams }: PageProps) {
     redirect("/portal/login");
   }
 
-  return <PortalWorkspace workspace={workspace} />;
+  return <PortalWorkspace highlightCommentId={params.highlightComment} workspace={workspace} />;
 }
