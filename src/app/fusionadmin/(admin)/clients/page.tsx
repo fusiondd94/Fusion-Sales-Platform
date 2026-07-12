@@ -1,8 +1,9 @@
-import { Building2, Search, Trash2, UserRoundPlus, UsersRound } from "lucide-react";
+import { Building2, CheckCircle2, Search, Trash2, UserRoundPlus, UsersRound } from "lucide-react";
 import {
   createFusionClient,
   createFusionContact,
   deleteFusionProjectComment,
+  resolveFusionProjectComment,
   updateFusionClientProject,
   updateFusionCompany,
   updateFusionContact,
@@ -442,7 +443,13 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                         </span>
                         <div className="portal-admin-comment__actions">
                           <a className="text-link" href={`/portal?clientId=${selectedPortalClient.id}&highlightComment=${comment.id}`} rel="noreferrer" target="_blank">Locate on preview</a>
-                          <form action={deleteFusionProjectComment}>
+{comment.status !== "resolved" ? (
+                            <form action={resolveFusionProjectComment}>
+                              <input name="commentId" type="hidden" value={comment.id} />
+                              <button className="text-link" type="submit"><CheckCircle2 size={13} /> Mark resolved</button>
+                            </form>
+                          ) : null}
+                                                    <form action={deleteFusionProjectComment}>
                             <input name="commentId" type="hidden" value={comment.id} />
                             <button className="text-link text-link--danger" type="submit"><Trash2 size={13} /> Delete</button>
                           </form>
