@@ -14,6 +14,7 @@ export type ClientProject = {
 
 export type ClientProjectComment = {
   id: string;
+  author_user_id: string | null;
   author_name: string;
   author_role: string;
   body: string;
@@ -188,7 +189,7 @@ async function buildPortalWorkspace(input: {
   const [{ data: comments }, { data: files }] = await Promise.all([
     supabase
       .from("crm_project_comments")
-      .select("id, author_name, author_role, body, page_url, marker_x, marker_y, status, created_at")
+      .select("id, author_user_id, author_name, author_role, body, page_url, marker_x, marker_y, status, created_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -343,7 +344,7 @@ export async function getAdminPortalClients(): Promise<AdminClientPortalRecord[]
     ? await Promise.all([
         supabase
           .from("crm_project_comments")
-          .select("id, project_id, author_name, author_role, body, page_url, marker_x, marker_y, status, created_at")
+          .select("id, project_id, author_user_id, author_name, author_role, body, page_url, marker_x, marker_y, status, created_at")
           .in("project_id", projectIds)
           .order("created_at", { ascending: false })
           .limit(200),
@@ -479,5 +480,35 @@ export async function uploadClientProjectFile(input: {
   });
 
   if (error) return { ok: false, error: "File uploaded, but the portal record could not be saved." };
+  return { ok: true };
+}
+
+export async function deleteProjectComment(input: {
+  actorId: string;
+  commentId: string;
+  requireOwnership?: boolean;
+}) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.commentId) return { ok: false, error: "Comment id is required." };
+
+  if (input.requireOwnership) {
+    const { data: existing } = await supabase
+      .from("crm_project_comments")
+      .select("id, author_user_id")
+      .eq("id", input.commentId)
+      .single<{ id: string; author_user_id: string | null }>();
+
+    if (!existing || existing.author_user_id !== input.actorId) {
+      return { ok: false, error: "You can only delete your own comments." };
+    }
+  }
+
+  const { error } = await supabase
+    .from("crm_project_comments")
+    .delete()
+    .eq("id", input.commentId);
+
+  if (error) return { ok: false, error: "Unable to delete comment." };
   return { ok: true };
 }
