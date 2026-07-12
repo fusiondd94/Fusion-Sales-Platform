@@ -1,20 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Download, Eye, FileUp, LogOut, MessageSquarePlus, MousePointer2, Send } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Download, Eye, FileUp, LogOut, MessageSquarePlus, MousePointer2, Send, X } from "lucide-react";
 import { addProjectComment, signOutClientPortal, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
+
+const DEFAULT_FRAME_HEIGHT = 1400;
+
+function clampPercent(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
 
 export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspace }) {
   const [commentMode, setCommentMode] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
+  const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
   const openComments = useMemo(() => workspace.comments.filter((comment) => comment.status !== "resolved"), [workspace.comments]);
   const selectedClientId = workspace.client.id.startsWith("admin-preview-") ? "" : workspace.client.id;
   const canSubmitPortalWork = workspace.project.id !== "admin-preview-project";
 
+  function handleFrameLoad() {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      const height = doc ? Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0) : 0;
+      if (height && height > 300) {
+        setFrameHeight(height + 24);
+      }
+    } catch {
+      // Cross-origin preview: can't read its content height, keep the generous default
+      // so the page (not the iframe) does the scrolling and pins stay put.
+    }
+  }
+
   return (
-    <main className="shell shell-light">
+    <main className="shell">
       <div className="admin-shell crm-shell">
         <nav className="nav admin-nav">
           <a className="brand" href="/">
@@ -66,13 +87,17 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
               <h2><MousePointer2 size={20} /> Website review</h2>
               <button
                 className={commentMode ? "primary-button compact-button" : "secondary-button compact-button"}
-                onClick={() => setCommentMode((value) => !value)}
+                onClick={() => {
+                  setCommentMode((value) => !value);
+                  setMarker(null);
+                }}
                 type="button"
               >
                 <MessageSquarePlus size={16} /> Comment tool
               </button>
             </div>
             {workspace.project.client_instructions ? <p className="muted">{workspace.project.client_instructions}</p> : null}
+            {commentMode ? <p className="muted comment-mode-hint">Click anywhere on the preview to drop a comment pin at that exact spot.</p> : null}
             {previewUrl ? (
               <div
                 className={commentMode ? "preview-frame comment-mode" : "preview-frame"}
@@ -85,7 +110,13 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
                   });
                 }}
               >
-                <iframe src={previewUrl} title={`${workspace.project.project_name} preview`} />
+                <iframe
+                  onLoad={handleFrameLoad}
+                  ref={iframeRef}
+                  src={previewUrl}
+                  style={{ height: frameHeight }}
+                  title={`${workspace.project.project_name} preview`}
+                />
                 <div className="comment-layer" aria-hidden={!commentMode}>
                   {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null).map((comment) => (
                     <span
@@ -96,6 +127,40 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
                     />
                   ))}
                   {marker ? <span className="comment-pin draft" style={{ left: `${marker.x}%`, top: `${marker.y}%` }} /> : null}
+                  {marker ? (
+                    <div
+                      className="comment-popup"
+                      onClick={(event) => event.stopPropagation()}
+                      style={{ left: `${clampPercent(marker.x, 4, 78)}%`, top: `${clampPercent(marker.y, 4, 82)}%` }}
+                    >
+                      <div className="comment-popup__head">
+                        <span>New comment</span>
+                        <button
+                          aria-label="Cancel comment"
+                          className="comment-popup__close"
+                          onClick={() => setMarker(null)}
+                          type="button"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <form action={addProjectComment} className="quick-form" onSubmit={() => setMarker(null)}>
+                        <input name="clientId" type="hidden" value={selectedClientId} />
+                        <input name="pageUrl" type="hidden" value={previewUrl} />
+                        <input name="markerX" type="hidden" value={marker.x} />
+                        <input name="markerY" type="hidden" value={marker.y} />
+                        <textarea
+                          aria-label="Project comment"
+                          autoFocus
+                          disabled={!canSubmitPortalWork}
+                          name="body"
+                          placeholder="Describe the change for this spot."
+                          required
+                        />
+                        <button className="primary-button compact-button" disabled={!canSubmitPortalWork} type="submit"><Send size={14} /> Send</button>
+                      </form>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -109,9 +174,9 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
             <form className="quick-form portal-comment-form" action={addProjectComment}>
               <input name="clientId" type="hidden" value={selectedClientId} />
               <input name="pageUrl" type="hidden" value={previewUrl} />
-              <input name="markerX" type="hidden" value={marker?.x || ""} />
-              <input name="markerY" type="hidden" value={marker?.y || ""} />
-              <textarea aria-label="Project comment" disabled={!canSubmitPortalWork} name="body" placeholder={marker ? "Describe the change for this selected spot." : "Leave a general project comment or select the comment tool and click the preview."} required />
+              <input name="markerX" type="hidden" value="" />
+              <input name="markerY" type="hidden" value="" />
+              <textarea aria-label="Project comment" disabled={!canSubmitPortalWork} name="body" placeholder="Leave a general project comment about the site overall." required />
               <button className="primary-button" disabled={!canSubmitPortalWork} type="submit"><Send size={16} /> Send comment</button>
             </form>
           </article>
