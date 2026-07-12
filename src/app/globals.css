@@ -2538,6 +2538,127 @@ h1 {
   font-size: 0.85rem;
 }
 
+@keyframes commentPinTargetPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(49, 215, 255, 0.35); }
+  50% { box-shadow: 0 0 0 9px rgba(49, 215, 255, 0.18); }
+}
+
+.comment-pin--target {
+  z-index: 4;
+  animation: commentPinTargetPulse 1.4s ease-in-out infinite;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--fusion-border);
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+}
+
+.timeline-item--target {
+  background: rgba(49, 215, 255, 0.08);
+  border-radius: var(--fusion-radius-sm);
+  padding: 0.5rem;
+}
+
+.timeline-item__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--fusion-text-muted);
+  cursor: pointer;
+  padding: 0.2rem;
+  flex-shrink: 0;
+}
+
+.timeline-item__delete:hover {
+  color: var(--rose);
+}
+
+.portal-admin-comment {
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.portal-admin-comment__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.portal-admin-comment__meta .muted {
+  font-size: 0.78rem;
+}
+
+.portal-admin-comment__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.text-link--danger {
+  color: var(--rose);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.shell.client-portal-shell {
+  overflow: visible;
+  background: var(--fusion-surface-muted);
+}
+
+.client-portal-shell,
+.client-portal-shell h1,
+.client-portal-shell h2,
+.client-portal-shell p,
+.client-portal-shell span,
+.client-portal-shell strong,
+.client-portal-shell label {
+  color: var(--fusion-text);
+}
+
+.client-portal-shell .muted,
+.client-portal-shell .eyebrow {
+  color: var(--fusion-text-muted);
+}
+
+.client-portal-shell .admin-panel {
+  background: var(--fusion-surface);
+  border-color: var(--fusion-border);
+  box-shadow: var(--fusion-shadow-sm);
+}
+
+.client-portal-shell .portal-status-strip {
+  background: var(--fusion-surface);
+  border-color: var(--fusion-border);
+}
+
+.client-portal-shell .portal-empty-preview {
+  background: var(--fusion-surface);
+  border-color: var(--fusion-border);
+  color: var(--fusion-text);
+}
+
 .portal-empty-preview {
   display: grid;
   min-height: 420px;
