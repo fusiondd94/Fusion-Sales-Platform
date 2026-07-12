@@ -512,3 +512,17 @@ export async function deleteProjectComment(input: {
   if (error) return { ok: false, error: "Unable to delete comment." };
   return { ok: true };
 }
+
+export async function resolveProjectComment(input: { commentId: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.commentId) return { ok: false, error: "Comment id is required." };
+
+  const { error } = await supabase
+    .from("crm_project_comments")
+    .update({ status: "resolved" })
+    .eq("id", input.commentId);
+
+  if (error) return { ok: false, error: "Unable to resolve comment." };
+  return { ok: true };
+}
