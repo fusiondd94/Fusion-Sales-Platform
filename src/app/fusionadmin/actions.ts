@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireFusionAdmin } from "@/lib/auth";
 import {
+  createCrmClient,
   createCrmContact,
   createCrmDeal,
   createCrmNote,
@@ -97,6 +98,27 @@ export async function createFusionContact(formData: FormData) {
 
   revalidatePath("/fusionadmin");
   revalidatePath("/fusionadmin/clients");
+}
+
+export async function createFusionClient(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createCrmClient({
+    actorId: user.id,
+    customerName: String(formData.get("customerName") || ""),
+    customerEmail: String(formData.get("customerEmail") || ""),
+    company: String(formData.get("company") || ""),
+    password: String(formData.get("password") || ""),
+    projectName: String(formData.get("projectName") || ""),
+    previewUrl: String(formData.get("previewUrl") || ""),
+    liveUrl: String(formData.get("liveUrl") || ""),
+    clientInstructions: String(formData.get("clientInstructions") || "")
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+  revalidatePath("/portal");
 }
 
 export async function createFusionDeal(formData: FormData) {
