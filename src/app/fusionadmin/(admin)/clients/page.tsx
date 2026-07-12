@@ -1,7 +1,8 @@
-import { Building2, Search, UserRoundPlus, UsersRound } from "lucide-react";
+import { Building2, Search, Trash2, UserRoundPlus, UsersRound } from "lucide-react";
 import {
   createFusionClient,
   createFusionContact,
+  deleteFusionProjectComment,
   updateFusionClientProject,
   updateFusionCompany,
   updateFusionContact,
@@ -428,10 +429,26 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               {selectedPortalClient.recentComments?.length ? (
                 <div className="portal-admin-comments">
                   {selectedPortalClient.recentComments.map((comment) => (
-                    <p key={comment.id}>
-                      <strong>{comment.author_name}</strong>
-                      <span>{comment.body}</span>
-                    </p>
+                    <div className="portal-admin-comment" key={comment.id}>
+                      <p>
+                        <strong>{comment.author_name}</strong>
+                        <span>{comment.body}</span>
+                      </p>
+                      <div className="portal-admin-comment__meta">
+                        <span className="muted">
+                          {comment.marker_x !== null && comment.marker_y !== null
+                            ? `Pinned at ${Math.round(comment.marker_x)}%, ${Math.round(comment.marker_y)}% on ${comment.page_url || "the preview"}`
+                            : `General comment${comment.page_url ? ` on ${comment.page_url}` : ""}`}
+                        </span>
+                        <div className="portal-admin-comment__actions">
+                          <a className="text-link" href={`/portal?clientId=${selectedPortalClient.id}&highlightComment=${comment.id}`} rel="noreferrer" target="_blank">Locate on preview</a>
+                          <form action={deleteFusionProjectComment}>
+                            <input name="commentId" type="hidden" value={comment.id} />
+                            <button className="text-link text-link--danger" type="submit"><Trash2 size={13} /> Delete</button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : null}
