@@ -731,6 +731,93 @@ export async function createCrmContact(input: {
   return { ok: true };
 }
 
+export async function createCrmClient(input: {
+  actorId: string;
+  customerName: string;
+  customerEmail: string;
+  company?: string;
+  password?: string;
+  projectName?: string;
+  previewUrl?: string;
+  liveUrl?: string;
+  clientInstructions?: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const name = input.customerName.trim();
+  const email = normalizeEmail(input.customerEmail || "");
+  if (!name) return { ok: false, error: "Client name is required." };
+  if (!email) return { ok: false, error: "Client email is required." };
+
+  const password = input.password?.trim() || generateTempPassword();
+
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: name }
+  });
+
+  if (createError || !created.user) {
+    return { ok: false, error: createError?.message || "Unable to create the client's portal login." };
+  }
+
+  const { data: client, error: clientError } = await supabase
+    .from("crm_clients")
+    .insert({
+      organization_id: organizationId,
+      customer_email: email,
+      customer_name: name,
+      company: input.company?.trim() || "Not set",
+      status: "active",
+      portal_user_id: created.user.id,
+      portal_status: "active",
+      onboarding_status: "onboarded"
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (clientError || !client) {
+    return { ok: false, error: "Portal login created, but the client record could not be saved." };
+  }
+
+  const previewUrl = cleanUrl(input.previewUrl || input.liveUrl || "");
+  await supabase.from("crm_client_projects").insert({
+    organization_id: organizationId,
+    client_id: client.id,
+    project_name: input.projectName?.trim() || "Website Project",
+    project_status: "in_progress",
+    live_url: previewUrl,
+    preview_url: previewUrl,
+    current_phase: "Client Review",
+    client_instructions: input.clientInstructions?.trim() || null,
+    created_by: input.actorId,
+    updated_by: input.actorId
+  });
+
+  await logActivity(supabase, organizationId, input.actorId, "client.created", "client", client.id, `Client created: ${name}`);
+  return { ok: true };
+}
+
+function cleanUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) return `https://${trimmed}`;
+  return trimmed;
+}
+
+function generateTempPassword() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  let out = "";
+  for (let i = 0; i < 16; i += 1) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
+
 export async function createCrmDeal(input: {
   actorId: string;
   dealTitle: string;
