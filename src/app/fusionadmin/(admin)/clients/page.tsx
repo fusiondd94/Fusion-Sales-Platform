@@ -1,5 +1,6 @@
 import { Building2, Search, UserRoundPlus, UsersRound } from "lucide-react";
 import {
+  createFusionClient,
   createFusionContact,
   updateFusionClientProject,
   updateFusionCompany,
@@ -325,6 +326,45 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               </div>
             </form>
           ) : null}
+        </article>
+
+        <article className="admin-panel panel-span-2" id="add-client-editor">
+          <div className="panel-heading">
+            <h2><UserRoundPlus size={20} /> Add client</h2>
+            <span className="status-pill">Manual / demo</span>
+          </div>
+          <p className="muted">Create a client account outside the normal checkout flow — useful for demos, manually-paid clients, or onboarding help. This creates their portal login, marks them active, and sets up their review project in one step.</p>
+          <form action={createFusionClient} data-track-unsaved="true">
+            <div className="fusion-form-section__grid">
+              <FusionField label="Full name" required>
+                <FusionInput name="customerName" placeholder="Jane Doe" required />
+              </FusionField>
+              <FusionField label="Email" required>
+                <FusionInput name="customerEmail" placeholder="jane@example.com" required type="email" />
+              </FusionField>
+              <FusionField label="Company">
+                <FusionInput name="company" placeholder="Company name" />
+              </FusionField>
+              <FusionField label="Portal password" required>
+                <FusionInput name="password" placeholder="Set a login password for the client" required />
+              </FusionField>
+              <FusionField label="Project name">
+                <FusionInput name="projectName" placeholder="Website Project" />
+              </FusionField>
+              <FusionField label="Preview / review URL">
+                <FusionInput name="previewUrl" placeholder="https://your-preview-site.com" />
+              </FusionField>
+              <FusionField label="Live URL">
+                <FusionInput name="liveUrl" placeholder="https://client-domain.com" />
+              </FusionField>
+              <FusionField className="fusion-field--full" label="Client instructions">
+                <FusionTextarea name="clientInstructions" placeholder="Tell the client what to review or click through." />
+              </FusionField>
+            </div>
+            <div className="fusion-form-actions fusion-form-actions--end">
+              <FusionSubmitButton className="compact-button" pendingLabel="Creating client...">Create client</FusionSubmitButton>
+            </div>
+          </form>
         </article>
 
         <article className="admin-panel panel-span-2" id="portal-editor">
