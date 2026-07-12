@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Eye, FileUp, LogOut, MessageSquarePlus, MousePointer2, Send, Trash2, X } from "lucide-react";
+import { Download, Eye, FileUp, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
 import { addProjectComment, deleteOwnProjectComment, signOutClientPortal, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
 
@@ -15,10 +15,22 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   const [commentMode, setCommentMode] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
+  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [commentsTab, setCommentsTab] = useState<"active" | "resolved">("active");
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
   const openComments = useMemo(() => workspace.comments.filter((comment) => comment.status !== "resolved"), [workspace.comments]);
+  const resolvedComments = useMemo(() => workspace.comments.filter((comment) => comment.status === "resolved"), [workspace.comments]);
+  const pinNumberById = useMemo(() => {
+    const map = new Map();
+    [...openComments]
+      .filter((comment) => comment.marker_x !== null && comment.marker_y !== null)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .forEach((comment, index) => map.set(comment.id, index + 1));
+    return map;
+  }, [openComments]);
+  const visibleComments = commentsTab === "active" ? openComments : resolvedComments;
   const selectedClientId = workspace.client.id.startsWith("admin-preview-") ? "" : workspace.client.id;
   const canSubmitPortalWork = workspace.project.id !== "admin-preview-project";
 
@@ -94,21 +106,41 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
         <section className="portal-workspace-grid">
           <article className="admin-panel portal-preview-panel">
             <div className="panel-heading">
-              <h2><MousePointer2 size={20} /> Website review</h2>
-              <button
-                className={commentMode ? "primary-button compact-button" : "secondary-button compact-button"}
-                onClick={() => {
-                  setCommentMode((value) => !value);
-                  setMarker(null);
-                }}
-                type="button"
-              >
-                <MessageSquarePlus size={16} /> Comment tool
-              </button>
-            </div>
+                  <h2><MousePointer2 size={20} /> Website review</h2>
+                  <div className="portal-toolbar">
+                    <div className="viewport-switch">
+                      <button aria-label="Desktop view" className={viewport === "desktop" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("desktop")} type="button">
+                        <Monitor size={15} />
+                      </button>
+                      <button aria-label="Tablet view" className={viewport === "tablet" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("tablet")} type="button">
+                        <Tablet size={15} />
+                      </button>
+                      <button aria-label="Mobile view" className={viewport === "mobile" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("mobile")} type="button">
+                        <Smartphone size={15} />
+                      </button>
+                    </div>
+                    <div className="comment-mode-toggle">
+                      <button
+                        className={commentMode ? "comment-mode-toggle__btn comment-mode-toggle__btn--active" : "comment-mode-toggle__btn"}
+                        onClick={() => setCommentMode(true)}
+                        type="button"
+                      >
+                        <MessageSquarePlus size={14} /> Comment
+                      </button>
+                      <button
+                        className={!commentMode ? "comment-mode-toggle__btn comment-mode-toggle__btn--active" : "comment-mode-toggle__btn"}
+                        onClick={() => { setCommentMode(false); setMarker(null); }}
+                        type="button"
+                      >
+                        <MousePointer2 size={14} /> Browse
+                      </button>
+                    </div>
+                  </div>
+                </div>
             {workspace.project.client_instructions ? <p className="muted">{workspace.project.client_instructions}</p> : null}
             {commentMode ? <p className="muted comment-mode-hint">Click anywhere on the preview to drop a comment pin at that exact spot.</p> : null}
             {previewUrl ? (
+              <div className={"preview-frame-wrap preview-frame-wrap--" + viewport}>
               <div
                 className={commentMode ? "preview-frame comment-mode" : "preview-frame"}
                 onClick={(event) => {
@@ -131,14 +163,16 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                 <div className="comment-layer" aria-hidden={!commentMode}>
                   {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null).map((comment) => (
                     <span
-                      className={
-                        (comment.status === "resolved" ? "comment-pin resolved" : "comment-pin") +
-                        (comment.id === highlightCommentId ? " comment-pin--target" : "")
-                      }
-                      key={comment.id}
-                      style={{ left: `${comment.marker_x}%`, top: `${comment.marker_y}%` }}
-                      title={comment.body}
-                    />
+                            className={
+                              (comment.status === "resolved" ? "comment-pin resolved" : "comment-pin") +
+                              (comment.id === highlightCommentId ? " comment-pin--target" : "")
+                            }
+                            key={comment.id}
+                            style={{ left: `${comment.marker_x}%`, top: `${comment.marker_y}%` }}
+                            title={comment.body}
+                          >
+                            {pinNumberById.get(comment.id) || ""}
+                          </span>
                   ))}
                   {marker ? <span className="comment-pin draft" style={{ left: `${marker.x}%`, top: `${marker.y}%` }} /> : null}
                   {marker ? (
@@ -177,6 +211,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                   ) : null}
                 </div>
               </div>
+            </div>
             ) : (
               <div className="portal-empty-preview">
                 <p className="eyebrow">Preview pending</p>
@@ -235,11 +270,19 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
             <article className="admin-panel">
               <div className="panel-heading">
                 <h2>Comments</h2>
-                <span className="status-pill">{workspace.comments.length}</span>
+                <div className="comment-tabs">
+                  <button className={commentsTab === "active" ? "comment-tab comment-tab--active" : "comment-tab"} onClick={() => setCommentsTab("active")} type="button">
+                    {openComments.length} Active
+                  </button>
+                  <button className={commentsTab === "resolved" ? "comment-tab comment-tab--active" : "comment-tab"} onClick={() => setCommentsTab("resolved")} type="button">
+                    {resolvedComments.length} Resolved
+                  </button>
+                </div>
               </div>
               <div className="timeline-list">
-                {workspace.comments.map((comment) => (
+                {visibleComments.map((comment) => (
                   <div className={comment.id === highlightCommentId ? "timeline-item timeline-item--target" : "timeline-item"} key={comment.id}>
+                  {pinNumberById.get(comment.id) ? <span className="timeline-item__number">{pinNumberById.get(comment.id)}</span> : null}
                     <p>
                       <strong>{comment.author_name}</strong>
                       <br />
@@ -256,7 +299,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                     ) : null}
                   </div>
                 ))}
-                {!workspace.comments.length ? <p className="admin-empty">No comments yet.</p> : null}
+                {!visibleComments.length ? <p className="admin-empty">{commentsTab === "active" ? "No active comments." : "No resolved comments yet."}</p> : null}
               </div>
             </article>
           </aside>
