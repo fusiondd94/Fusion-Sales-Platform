@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Download, Eye, FileUp, LogOut, MessageSquarePlus, MousePointer2, Send, X } from "lucide-react";
-import { addProjectComment, signOutClientPortal, uploadProjectFile } from "@/app/portal/actions";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download, Eye, FileUp, LogOut, MessageSquarePlus, MousePointer2, Send, Trash2, X } from "lucide-react";
+import { addProjectComment, deleteOwnProjectComment, signOutClientPortal, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
 
 const DEFAULT_FRAME_HEIGHT = 1400;
@@ -11,11 +11,12 @@ function clampPercent(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspace }) {
+export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: ClientPortalWorkspace; highlightCommentId?: string }) {
   const [commentMode, setCommentMode] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
   const openComments = useMemo(() => workspace.comments.filter((comment) => comment.status !== "resolved"), [workspace.comments]);
   const selectedClientId = workspace.client.id.startsWith("admin-preview-") ? "" : workspace.client.id;
@@ -34,8 +35,17 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
     }
   }
 
+  useEffect(() => {
+    if (!highlightCommentId || !previewFrameRef.current) return;
+    const target = workspace.comments.find((comment) => comment.id === highlightCommentId);
+    if (!target || target.marker_y === null) return;
+    const frameTop = previewFrameRef.current.getBoundingClientRect().top + window.scrollY;
+    const targetY = frameTop + (target.marker_y / 100) * frameHeight;
+    window.scrollTo({ top: Math.max(targetY - 160, 0), behavior: "smooth" });
+  }, [highlightCommentId, frameHeight, workspace.comments]);
+
   return (
-    <main className="shell">
+    <main className="shell client-portal-shell">
       <div className="admin-shell crm-shell">
         <nav className="nav admin-nav">
           <a className="brand" href="/">
@@ -109,6 +119,7 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
                     y: Number((((event.clientY - box.top) / box.height) * 100).toFixed(3))
                   });
                 }}
+                ref={previewFrameRef}
               >
                 <iframe
                   onLoad={handleFrameLoad}
@@ -120,7 +131,10 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
                 <div className="comment-layer" aria-hidden={!commentMode}>
                   {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null).map((comment) => (
                     <span
-                      className={comment.status === "resolved" ? "comment-pin resolved" : "comment-pin"}
+                      className={
+                        (comment.status === "resolved" ? "comment-pin resolved" : "comment-pin") +
+                        (comment.id === highlightCommentId ? " comment-pin--target" : "")
+                      }
                       key={comment.id}
                       style={{ left: `${comment.marker_x}%`, top: `${comment.marker_y}%` }}
                       title={comment.body}
@@ -225,13 +239,22 @@ export function PortalWorkspace({ workspace }: { workspace: ClientPortalWorkspac
               </div>
               <div className="timeline-list">
                 {workspace.comments.map((comment) => (
-                  <p key={comment.id}>
-                    <strong>{comment.author_name}</strong>
-                    <br />
-                    <span className="muted">{comment.body}</span>
-                    <br />
-                    <span className="status-pill">{comment.status}</span>
-                  </p>
+                  <div className={comment.id === highlightCommentId ? "timeline-item timeline-item--target" : "timeline-item"} key={comment.id}>
+                    <p>
+                      <strong>{comment.author_name}</strong>
+                      <br />
+                      <span className="muted">{comment.body}</span>
+                      <br />
+                      <span className="status-pill">{comment.status}</span>
+                    </p>
+                    {comment.author_user_id === workspace.user.id ? (
+                      <form action={deleteOwnProjectComment}>
+                        <input name="clientId" type="hidden" value={selectedClientId} />
+                        <input name="commentId" type="hidden" value={comment.id} />
+                        <button aria-label="Delete comment" className="timeline-item__delete" type="submit"><Trash2 size={14} /></button>
+                      </form>
+                    ) : null}
+                  </div>
                 ))}
                 {!workspace.comments.length ? <p className="admin-empty">No comments yet.</p> : null}
               </div>
