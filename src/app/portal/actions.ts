@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClientProjectComment, uploadClientProjectFile } from "@/lib/portal";
+import { createClientProjectComment, deleteProjectComment, getClientPortalWorkspace, uploadClientProjectFile } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function signInClientPortal(_: unknown, formData: FormData) {
@@ -36,6 +36,21 @@ export async function addProjectComment(formData: FormData) {
     markerX: Number(formData.get("markerX") || 0) || null,
     markerY: Number(formData.get("markerY") || 0) || null,
     clientId: String(formData.get("clientId") || "")
+  });
+
+  revalidatePath("/portal");
+}
+
+export async function deleteOwnProjectComment(formData: FormData) {
+  const clientId = String(formData.get("clientId") || "");
+  const commentId = String(formData.get("commentId") || "");
+  const workspace = await getClientPortalWorkspace(clientId);
+  if (!workspace) return;
+
+  await deleteProjectComment({
+    actorId: workspace.user.id,
+    commentId,
+    requireOwnership: true
   });
 
   revalidatePath("/portal");
