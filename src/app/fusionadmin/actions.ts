@@ -40,7 +40,7 @@ import {
   toggleAutomation,
   updateAutomation
 } from "@/lib/automations";
-import { updateClientProject } from "@/lib/portal";
+import { deleteProjectComment, updateClientProject } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
@@ -237,6 +237,20 @@ export async function updateFusionClientProject(formData: FormData) {
     previewUrl: String(formData.get("previewUrl") || ""),
     currentPhase: String(formData.get("currentPhase") || "Design Review"),
     clientInstructions: String(formData.get("clientInstructions") || "")
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+  revalidatePath("/portal");
+}
+
+export async function deleteFusionProjectComment(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await deleteProjectComment({
+    actorId: user.id,
+    commentId: String(formData.get("commentId") || "")
   });
 
   revalidatePath("/fusionadmin");
