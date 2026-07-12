@@ -917,17 +917,19 @@ h1 {
   display: grid;
   gap: 0.25rem;
   border: 1px solid var(--fusion-border);
-  background: var(--fusion-surface-muted);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  box-shadow: var(--fusion-shadow-sm);
   padding: 1rem;
 }
 
 .admin-metric strong {
-  color: #ffffff;
+  color: var(--fusion-teal-900);
   font-size: 1.35rem;
 }
 
 .admin-metric span {
-  color: var(--muted);
+  color: var(--fusion-text-muted);
   font-size: 0.86rem;
   font-weight: 800;
 }
