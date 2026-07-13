@@ -40,7 +40,7 @@ import {
   toggleAutomation,
   updateAutomation
 } from "@/lib/automations";
-import { deleteProjectComment, resolveProjectComment, updateClientProject } from "@/lib/portal";
+import { createClientTask, deleteProjectComment, resolveProjectComment, updateClientProject } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
@@ -236,6 +236,7 @@ export async function updateFusionClientProject(formData: FormData) {
     liveUrl: String(formData.get("liveUrl") || ""),
     previewUrl: String(formData.get("previewUrl") || ""),
     currentPhase: String(formData.get("currentPhase") || "Design Review"),
+    paymentStatus: String(formData.get("paymentStatus") || "unpaid"),
     clientInstructions: String(formData.get("clientInstructions") || "")
   });
 
@@ -680,4 +681,20 @@ function parseAutomationActions(formData: FormData): AutomationAction[] {
     actions.push({ type: type.trim() as AutomationAction["type"], config });
   });
   return actions;
+}
+
+
+export async function assignFusionClientTask(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createClientTask({
+    clientId: String(formData.get("clientId") || ""),
+    title: String(formData.get("title") || ""),
+    description: String(formData.get("description") || ""),
+    dueAt: String(formData.get("dueAt") || "") || undefined
+  });
+
+  revalidatePath("/fusionadmin/clients");
+  revalidatePath("/portal");
 }
