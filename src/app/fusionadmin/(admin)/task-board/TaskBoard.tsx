@@ -230,7 +230,8 @@ export function TaskBoard({
         </div>
       ) : (
         <div className="admin-panel">
-          <table className="fusion-table">
+          <div className="fusion-data-table-wrap">
+          <table className="fusion-data-table">
             <thead>
               <tr>
                 <th>Task</th>
@@ -263,6 +264,7 @@ export function TaskBoard({
               ) : null}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
