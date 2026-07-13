@@ -1,5 +1,6 @@
 import { Building2, CheckCircle2, Search, Trash2, UserRoundPlus, UsersRound } from "lucide-react";
 import {
+  assignFusionClientTask,
   createFusionClient,
   createFusionContact,
   deleteFusionProjectComment,
@@ -38,6 +39,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
   const contactStatuses = Array.from(new Set(["new", "prospect", "qualified", "client", "inactive", ...(crm.settings?.lead_statuses || [])]));
   const leadStatuses = Array.from(new Set(["captured", "checkout_started", "paid", "qualified", "proposal_sent", "won", "lost", "unqualified", ...(crm.settings?.lead_statuses || [])]));
   const projectStatuses = ["not_started", "in_progress", "review", "done", "on_hold"];
+  const paymentStatuses = ["unpaid", "partial", "paid"];
   const selectedLead = crm.leads.find((lead) => lead.id === filters.leadId);
   const selectedCompany = crm.companies.find((company) => company.id === filters.companyId);
   const selectedContact = crm.contacts.find((contact) => contact.id === filters.contactId);
@@ -426,6 +428,11 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                 <FusionField className="fusion-field--full" label="Client instructions">
                   <FusionTextarea defaultValue={selectedPortalClient.project?.client_instructions || ""} name="clientInstructions" placeholder="Tell the client what to review or upload next." />
                 </FusionField>
+                <FusionField label="Payment status">
+                  <FusionSelect defaultValue={selectedPortalClient.project.payment_status || "unpaid"} name="paymentStatus">
+                    {paymentStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                  </FusionSelect>
+                </FusionField>
               </div>
               {selectedPortalClient.recentComments?.length ? (
                 <div className="portal-admin-comments">
@@ -464,6 +471,24 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                 <FusionSubmitButton className="compact-button" pendingLabel="Saving project...">Save portal project</FusionSubmitButton>
               </div>
             </form>
+              <form action={assignFusionClientTask} data-track-unsaved="true" style={{ marginTop: "1.5rem" }}>
+                <input name="clientId" type="hidden" value={selectedPortalClient.id} />
+                <h3 style={{ marginBottom: "0.5rem" }}>Assign a task to this client</h3>
+                <div className="fusion-form-section__grid">
+                  <FusionField className="fusion-field--full" label="Task title">
+                    <FusionInput name="title" placeholder="Upload your logo files" required />
+                  </FusionField>
+                  <FusionField className="fusion-field--full" label="Description">
+                    <FusionTextarea name="description" placeholder="Add any details the client needs to complete this task." />
+                  </FusionField>
+                  <FusionField label="Due date">
+                    <FusionInput name="dueAt" type="date" />
+                  </FusionField>
+                </div>
+                <div className="fusion-form-actions fusion-form-actions--end">
+                  <FusionSubmitButton className="compact-button" pendingLabel="Assigning task...">Assign task</FusionSubmitButton>
+                </div>
+              </form>
           ) : null}
         </article>
       </section>
