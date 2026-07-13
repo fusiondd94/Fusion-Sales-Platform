@@ -5095,7 +5095,9 @@ h1 {
   background-color: var(--fusion-surface-muted);
   background-image: radial-gradient(circle, var(--fusion-border-strong) 1px, transparent 1px);
   background-size: 20px 20px;
-  height: 560px;
+  height: min(82vh, 900px);
+  min-height: 640px;
+  width: 100%;
   margin-bottom: 16px;
 }
 
