@@ -59,23 +59,27 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
     const interval = setInterval(() => {
       const frame = iframeRef.current;
       if (!frame) return;
+      let liveUrl = null;
       try {
-        const liveUrl = frame.contentWindow ? frame.contentWindow.location.href : null;
-        if (liveUrl && liveUrl !== "about:blank") {
-          setCurrentPageUrl((prev) => (normalizeUrl(prev) === normalizeUrl(liveUrl) ? prev : liveUrl));
-        }
+        liveUrl = frame.contentWindow ? frame.contentWindow.location.href : null;
       } catch {
         // cross-origin preview: can't track in-frame navigation
+        return;
       }
-      try {
-        const doc = frame.contentDocument;
-        const height = doc ? Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0) : 0;
-        if (height && height > 300) {
-          setFrameHeight((prev) => (Math.abs(prev - (height + 24)) > 40 ? height + 24 : prev));
+      if (!liveUrl || liveUrl === "about:blank") return;
+      setCurrentPageUrl((prev) => {
+        if (normalizeUrl(prev) === normalizeUrl(liveUrl)) return prev;
+        // Only remeasure height on an actual page change so on-page scroll
+        // animations (which grow scrollHeight) don't shift pins mid-scroll.
+        try {
+          const doc = frame.contentDocument;
+          const height = doc ? Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0) : 0;
+          if (height && height > 300) setFrameHeight(height + 24);
+        } catch {
+          // cross-origin preview: can't read content height
         }
-      } catch {
-        // cross-origin preview: can't read content height
-      }
+        return liveUrl;
+      });
     }, 700);
     return () => clearInterval(interval);
   }, [previewUrl]);
