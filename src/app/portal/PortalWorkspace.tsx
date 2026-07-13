@@ -496,6 +496,11 @@ function TasksView({ workspace }: { workspace: ClientPortalWorkspace }) {
   const [boardTasks, setBoardTasks] = useState(workspace.tasks);
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setSections(workspace.sections);
+    setBoardTasks(workspace.tasks);
+  }, [workspace]);
+
   const tasksForSection = (sectionId: string | null) =>
     boardTasks
       .filter((task) => task.section_id === sectionId)
