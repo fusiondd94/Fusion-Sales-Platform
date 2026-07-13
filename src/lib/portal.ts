@@ -282,6 +282,7 @@ export async function getClientPortalWorkspace(clientId?: string): Promise<Clien
         project: adminPreviewProject(),
         comments: [],
         files: [],
+        tasks: [],
         isAdminPreview: true,
         availableClients
       };
