@@ -22,6 +22,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commentsTab, setCommentsTab] = useState<"active" | "resolved">("active");
+  const [activeTool, setActiveTool] = useState<"review" | "uploads">("review");
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
@@ -139,8 +140,19 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
           </div>
         </section>
 
-        <section className="portal-workspace-grid">
-          <article className="admin-panel portal-preview-panel">
+        <div className="portal-layout">
+        <aside className="portal-sidebar">
+          <button className={activeTool === "review" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("review")} type="button">
+            <MousePointer2 size={16} /> Website Review
+          </button>
+          <button className={activeTool === "uploads" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("uploads")} type="button">
+            <FileUp size={16} /> Uploads
+          </button>
+        </aside>
+        <div className="portal-main">
+          {activeTool === "review" ? (
+            <section className="portal-workspace-grid">
+              <article className="admin-panel portal-preview-panel">
             <div className="panel-heading">
                   <h2><MousePointer2 size={20} /> Website review</h2>
                   <div className="portal-toolbar">
@@ -265,45 +277,8 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
               <button className="primary-button" disabled={!canSubmitPortalWork} type="submit"><Send size={16} /> Send comment</button>
             </form>
           </article>
-
-          <aside className="portal-side-stack">
-            <article className="admin-panel">
-              <h2><FileUp size={20} /> Upload project files</h2>
-              <form className="quick-form" action={uploadProjectFile}>
-                <input name="clientId" type="hidden" value={selectedClientId} />
-                <label>
-                  Project file
-                  <input disabled={!canSubmitPortalWork} name="file" type="file" required />
-                </label>
-                <textarea aria-label="File description" disabled={!canSubmitPortalWork} name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
-                <button className="secondary-button" disabled={!canSubmitPortalWork} type="submit"><FileUp size={16} /> Upload file</button>
-              </form>
-            </article>
-
-            <article className="admin-panel">
-              <div className="panel-heading">
-                <h2>Uploaded files</h2>
-                <span className="status-pill">{workspace.files.length}</span>
-              </div>
-              <div className="stack-list">
-                {workspace.files.map((file) => (
-                  <p key={file.id}>
-                    <strong>{file.file_name}</strong>
-                    <br />
-                    <span className="muted">{formatFileSize(file.file_size)} · {file.description || "No note"}</span>
-                    {file.signedUrl ? (
-                      <>
-                        <br />
-                        <a className="text-link" href={file.signedUrl}><Download size={14} /> Download</a>
-                      </>
-                    ) : null}
-                  </p>
-                ))}
-                {!workspace.files.length ? <p className="admin-empty">No files uploaded yet.</p> : null}
-              </div>
-            </article>
-
-            <article className="admin-panel">
+              <aside className="portal-side-stack">
+                <article className="admin-panel">
               <div className="panel-heading">
                 <h2>Comments</h2>
                 <div className="comment-tabs">
@@ -338,8 +313,48 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                 {!visibleComments.length ? <p className="admin-empty">{commentsTab === "active" ? "No active comments." : "No resolved comments yet."}</p> : null}
               </div>
             </article>
-          </aside>
-        </section>
+              </aside>
+            </section>
+          ) : (
+            <div className="portal-side-stack portal-uploads-view">
+              <article className="admin-panel">
+              <h2><FileUp size={20} /> Upload project files</h2>
+              <form className="quick-form" action={uploadProjectFile}>
+                <input name="clientId" type="hidden" value={selectedClientId} />
+                <label>
+                  Project file
+                  <input disabled={!canSubmitPortalWork} name="file" type="file" required />
+                </label>
+                <textarea aria-label="File description" disabled={!canSubmitPortalWork} name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
+                <button className="secondary-button" disabled={!canSubmitPortalWork} type="submit"><FileUp size={16} /> Upload file</button>
+              </form>
+            </article>
+              <article className="admin-panel">
+              <div className="panel-heading">
+                <h2>Uploaded files</h2>
+                <span className="status-pill">{workspace.files.length}</span>
+              </div>
+              <div className="stack-list">
+                {workspace.files.map((file) => (
+                  <p key={file.id}>
+                    <strong>{file.file_name}</strong>
+                    <br />
+                    <span className="muted">{formatFileSize(file.file_size)} · {file.description || "No note"}</span>
+                    {file.signedUrl ? (
+                      <>
+                        <br />
+                        <a className="text-link" href={file.signedUrl}><Download size={14} /> Download</a>
+                      </>
+                    ) : null}
+                  </p>
+                ))}
+                {!workspace.files.length ? <p className="admin-empty">No files uploaded yet.</p> : null}
+              </div>
+            </article>
+            </div>
+          )}
+        </div>
+      </div>
       </div>
     </main>
   );
