@@ -37,6 +37,7 @@ import {
   AutomationTriggerType,
   createAutomation,
   deleteAutomation,
+  duplicateAutomation,
   toggleAutomation,
   updateAutomation
 } from "@/lib/automations";
@@ -648,6 +649,22 @@ export async function deleteFusionAutomation(formData: FormData) {
   });
 
   revalidatePath("/fusionadmin/automations");
+  redirect("/fusionadmin/automations");
+}
+
+export async function duplicateFusionAutomation(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const result = await duplicateAutomation({
+    actorId: user.id,
+    automationId: String(formData.get("automationId") || "")
+  });
+
+  revalidatePath("/fusionadmin/automations");
+  if (result.ok && result.newId) {
+    redirect("/fusionadmin/automations/" + result.newId + "/edit");
+  }
   redirect("/fusionadmin/automations");
 }
 
