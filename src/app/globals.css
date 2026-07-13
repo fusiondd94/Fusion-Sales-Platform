@@ -2683,6 +2683,15 @@ h1 {
   max-width: 1600px;
 }
 
+.client-portal-shell .portal-preview-panel .panel-heading {
+  position: sticky;
+  top: 4.75rem;
+  z-index: 20;
+  background: var(--fusion-surface);
+  padding-top: 0.4rem;
+  margin-top: -0.4rem;
+}
+
 .portal-empty-preview {
   display: grid;
   min-height: 420px;
