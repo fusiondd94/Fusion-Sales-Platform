@@ -11,6 +11,11 @@ function clampPercent(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function normalizeUrl(url: string | null | undefined) {
+  if (!url) return "";
+  return url.split("#")[0].replace(/\/$/, "");
+}
+
 export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: ClientPortalWorkspace; highlightCommentId?: string }) {
   const [commentMode, setCommentMode] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
@@ -20,6 +25,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
+  const [currentPageUrl, setCurrentPageUrl] = useState(previewUrl);
   const openComments = useMemo(() => workspace.comments.filter((comment) => comment.status !== "resolved"), [workspace.comments]);
   const resolvedComments = useMemo(() => workspace.comments.filter((comment) => comment.status === "resolved"), [workspace.comments]);
   const pinNumberById = useMemo(() => {
@@ -48,13 +54,43 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   }
 
   useEffect(() => {
+    if (!previewUrl) return;
+    const interval = setInterval(() => {
+      const frame = iframeRef.current;
+      if (!frame) return;
+      try {
+        const liveUrl = frame.contentWindow ? frame.contentWindow.location.href : null;
+        if (liveUrl && liveUrl !== "about:blank") {
+          setCurrentPageUrl((prev) => (normalizeUrl(prev) === normalizeUrl(liveUrl) ? prev : liveUrl));
+        }
+      } catch {
+        // cross-origin preview: can't track in-frame navigation
+      }
+      try {
+        const doc = frame.contentDocument;
+        const height = doc ? Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0) : 0;
+        if (height && height > 300) {
+          setFrameHeight((prev) => (Math.abs(prev - (height + 24)) > 40 ? height + 24 : prev));
+        }
+      } catch {
+        // cross-origin preview: can't read content height
+      }
+    }, 700);
+    return () => clearInterval(interval);
+  }, [previewUrl]);
+
+  useEffect(() => {
     if (!highlightCommentId || !previewFrameRef.current) return;
     const target = workspace.comments.find((comment) => comment.id === highlightCommentId);
     if (!target || target.marker_y === null) return;
+    if (target.page_url && normalizeUrl(target.page_url) !== normalizeUrl(currentPageUrl) && iframeRef.current) {
+      iframeRef.current.src = target.page_url;
+      setCurrentPageUrl(target.page_url);
+    }
     const frameTop = previewFrameRef.current.getBoundingClientRect().top + window.scrollY;
     const targetY = frameTop + (target.marker_y / 100) * frameHeight;
     window.scrollTo({ top: Math.max(targetY - 160, 0), behavior: "smooth" });
-  }, [highlightCommentId, frameHeight, workspace.comments]);
+  }, [highlightCommentId, frameHeight, workspace.comments, currentPageUrl]);
 
   return (
     <main className="shell client-portal-shell">
@@ -161,7 +197,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                   title={`${workspace.project.project_name} preview`}
                 />
                 <div className="comment-layer" aria-hidden={!commentMode}>
-                  {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null).map((comment) => (
+                  {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null && normalizeUrl(comment.page_url) === normalizeUrl(currentPageUrl)).map((comment) => (
                     <span
                             className={
                               (comment.status === "resolved" ? "comment-pin resolved" : "comment-pin") +
@@ -194,7 +230,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                       </div>
                       <form action={addProjectComment} className="quick-form" onSubmit={() => setMarker(null)}>
                         <input name="clientId" type="hidden" value={selectedClientId} />
-                        <input name="pageUrl" type="hidden" value={previewUrl} />
+                        <input name="pageUrl" type="hidden" value={currentPageUrl} />
                         <input name="markerX" type="hidden" value={marker.x} />
                         <input name="markerY" type="hidden" value={marker.y} />
                         <textarea
@@ -222,7 +258,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
 
             <form className="quick-form portal-comment-form" action={addProjectComment}>
               <input name="clientId" type="hidden" value={selectedClientId} />
-              <input name="pageUrl" type="hidden" value={previewUrl} />
+              <input name="pageUrl" type="hidden" value={currentPageUrl} />
               <input name="markerX" type="hidden" value="" />
               <input name="markerY" type="hidden" value="" />
               <textarea aria-label="Project comment" disabled={!canSubmitPortalWork} name="body" placeholder="Leave a general project comment about the site overall." required />
