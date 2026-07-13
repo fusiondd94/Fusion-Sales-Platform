@@ -46,7 +46,8 @@ export default async function EditFusionAutomationPage({
             conditions: automation.conditions.map((condition) => ({
               field: condition.field,
               operator: condition.operator,
-              value: condition.value || ""
+              value: condition.value || "",
+          group: condition.group ?? 0
             })),
             actions: automation.actions.map((action) => ({ type: action.type, config: action.config as Record<string, string> }))
           }}
