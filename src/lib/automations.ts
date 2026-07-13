@@ -585,6 +585,42 @@ export async function createAutomation(input: {
   return { ok: true };
 }
 
+export async function duplicateAutomation(input: { automationId: string; actorId: string }): Promise<{ ok: boolean; error?: string; newId?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data: source, error: fetchError } = await supabase
+    .from("crm_automations")
+    .select("*")
+    .eq("id", input.automationId)
+    .eq("organization_id", organizationId)
+    .single();
+
+  if (fetchError || !source) return { ok: false, error: "Automation not found." };
+
+  const { data, error } = await supabase
+    .from("crm_automations")
+    .insert({
+      organization_id: organizationId,
+      name: source.name + " (Copy)",
+      description: source.description,
+      trigger_type: source.trigger_type,
+      conditions: source.conditions,
+      actions: source.actions,
+      is_active: false,
+      created_by: input.actorId,
+      updated_by: input.actorId
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { ok: false, error: "Unable to duplicate automation." };
+  await logActivity(supabase, organizationId, input.actorId, "automation.duplicated", "automation", data.id, "Automation duplicated: " + source.name);
+  return { ok: true, newId: data.id };
+}
+
 export async function updateAutomation(input: {
   actorId: string;
   automationId: string;
