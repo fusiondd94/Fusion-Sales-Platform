@@ -779,11 +779,10 @@ export async function markFusionNotificationRead(formData: FormData) {
   revalidatePath("/fusionadmin", "layout");
 }
 
-export async function markAllFusionNotificationsRead() {
+export async function markAllFusionNotificationsRead(_formData: FormData) {
   const user = await requireFusionAdmin();
-  if (!user.isAllowed) return { ok: false };
+  if (!user.isAllowed) return;
 
-  const result = await markAllAdminNotificationsRead();
+  await markAllAdminNotificationsRead();
   revalidatePath("/fusionadmin", "layout");
-  return result;
 }
