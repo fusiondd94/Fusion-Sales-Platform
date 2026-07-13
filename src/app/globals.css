@@ -4466,3 +4466,60 @@ h1 {
   flex-shrink: 0;
   margin-right: 0.4rem;
 }
+
+
+.portal-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.portal-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  position: sticky;
+  top: 5.5rem;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-sm);
+  background: var(--fusion-surface);
+  padding: 0.6rem;
+}
+.portal-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: none;
+  border-radius: calc(var(--fusion-radius-sm) - 2px);
+  background: transparent;
+  color: var(--fusion-text-muted);
+  cursor: pointer;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  width: 100%;
+}
+.portal-sidebar__link--active {
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text);
+  box-shadow: inset 0 0 0 1px var(--fusion-border);
+}
+.portal-sidebar__link:hover {
+  color: var(--fusion-text);
+}
+
+.portal-uploads-view {
+  max-width: 640px;
+}
+
+@media (max-width: 860px) {
+  .portal-layout {
+    grid-template-columns: 1fr;
+  }
+  .portal-sidebar {
+    position: static;
+    flex-direction: row;
+  }
+}
