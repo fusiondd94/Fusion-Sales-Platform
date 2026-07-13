@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import {
   assignFusionClientTask,
@@ -61,6 +61,11 @@ export function TaskBoard({
   const [boardTasks, setBoardTasks] = useState<BoardTask[]>(projectBoard?.tasks || []);
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragSectionId, setDragSectionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSections(projectBoard?.sections ?? []);
+    setBoardTasks(projectBoard?.tasks ?? []);
+  }, [projectBoard]);
 
   function goTo(nextClientId: string, nextSearch: string) {
     const params = new URLSearchParams();
