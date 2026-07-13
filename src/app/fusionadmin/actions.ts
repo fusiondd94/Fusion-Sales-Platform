@@ -669,6 +669,7 @@ function parseAutomationConditions(formData: FormData): AutomationCondition[] {
   const fields = formData.getAll("conditionField").map(String);
   const operators = formData.getAll("conditionOperator").map(String);
   const values = formData.getAll("conditionValue").map(String);
+  const groups = formData.getAll("conditionGroup").map(String);
 
   const conditions: AutomationCondition[] = [];
   fields.forEach((field, index) => {
@@ -676,7 +677,8 @@ function parseAutomationConditions(formData: FormData): AutomationCondition[] {
     conditions.push({
       field: field.trim(),
       operator: (operators[index] || "is_set") as AutomationCondition["operator"],
-      value: values[index] || undefined
+      value: values[index] || undefined,
+      group: Number(groups[index] || 0) || 0
     });
   });
   return conditions;
