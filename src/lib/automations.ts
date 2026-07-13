@@ -500,6 +500,39 @@ export async function getAutomationsWorkspace() {
   };
 }
 
+export async function getAutomationEditWorkspace(automationId: string) {
+  const supabase = getServiceClient();
+  if (!supabase) {
+    return { automation: null as AutomationRecord | null, emailTemplates: [] as Array<{ id: string; template_name: string }> };
+  }
+
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) {
+    return { automation: null as AutomationRecord | null, emailTemplates: [] as Array<{ id: string; template_name: string }> };
+  }
+
+  const [automationResult, templatesResult] = await Promise.all([
+    supabase
+      .from("crm_automations")
+      .select("id, name, description, trigger_type, conditions, actions, is_active, run_count, last_run_at, created_at")
+      .eq("organization_id", organizationId)
+      .eq("id", automationId)
+      .is("deleted_at", null)
+      .maybeSingle<AutomationRecord>(),
+    supabase
+      .from("crm_email_templates")
+      .select("id, template_name")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+  ]);
+
+  return {
+    automation: automationResult.data || null,
+    emailTemplates: (templatesResult.data || []) as Array<{ id: string; template_name: string }>
+  };
+}
+
 export async function createAutomation(input: {
   actorId: string;
   name: string;
