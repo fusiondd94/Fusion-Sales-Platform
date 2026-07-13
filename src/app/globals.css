@@ -2427,16 +2427,19 @@ h1 {
 }
 
 .portal-workspace-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.38fr);
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
   padding-bottom: 2rem;
 }
 
 .portal-preview-panel {
   display: grid;
   gap: 1rem;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
 }
 
 .preview-frame {
@@ -2675,6 +2678,9 @@ h1 {
   background: var(--fusion-surface-muted);
   color: var(--fusion-text);
   border-color: var(--fusion-border);
+}
+.client-portal-shell .admin-shell {
+  max-width: 1600px;
 }
 
 .portal-empty-preview {
@@ -4429,6 +4435,9 @@ h1 {
 .preview-frame-wrap--mobile {
   max-width: 390px;
   margin: 0 auto;
+}
+.preview-frame-wrap--desktop {
+  min-width: 1408px;
 }
 
 .comment-tabs {
