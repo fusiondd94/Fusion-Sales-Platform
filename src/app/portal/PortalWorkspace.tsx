@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Circle, Clock, Download, Eye, FileUp, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
-import { addProjectComment, deleteOwnProjectComment, signOutClientPortal, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
+import { Bell, CheckCircle2, Circle, Clock, Download, Eye, FileUp, GripVertical, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
+import { addProjectComment, deleteOwnProjectComment, markAllOwnNotificationsRead, markOwnNotificationRead, reorderOwnBoardTasks, signOutClientPortal, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
 
 const DEFAULT_FRAME_HEIGHT = 1400;
@@ -36,6 +36,8 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commentsTab, setCommentsTab] = useState<"active" | "resolved">("active");
   const [activeTool, setActiveTool] = useState<"review" | "uploads" | "dashboard" | "tasks">("review");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unreadNotifCount = workspace.notifications.filter((notification) => !notification.read_at).length;
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
@@ -121,6 +123,41 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
           <form action={signOutClientPortal}>
             <button className="ghost-button" type="submit"><LogOut size={16} /> Sign out</button>
           </form>
+          <div className="portal-notif-bell">
+            <button className="ghost-button" onClick={() => setNotifOpen((value) => !value)} type="button">
+              <Bell size={16} />
+              {unreadNotifCount > 0 ? <span className="portal-notif-badge">{unreadNotifCount}</span> : null}
+            </button>
+            {notifOpen ? (
+              <div className="portal-notif-dropdown">
+                <div className="portal-notif-dropdown__heading">
+                  <strong>Notifications</strong>
+                  {unreadNotifCount > 0 ? (
+                    <form action={markAllOwnNotificationsRead}>
+                      <input name="clientId" type="hidden" value={selectedClientId} />
+                      <button className="text-link" type="submit">Mark all read</button>
+                    </form>
+                  ) : null}
+                </div>
+                <div className="portal-notif-list">
+                  {workspace.notifications.length ? (
+                    workspace.notifications.map((notification) => (
+                      <form action={markOwnNotificationRead} key={notification.id}>
+                        <input name="notificationId" type="hidden" value={notification.id} />
+                        <button className={notification.read_at ? "portal-notif-item" : "portal-notif-item portal-notif-item--unread"} type="submit">
+                          <strong>{notification.title}</strong>
+                          {notification.body ? <p>{notification.body}</p> : null}
+                          <span className="muted">{new Date(notification.created_at).toLocaleString()}</span>
+                        </button>
+                      </form>
+                    ))
+                  ) : (
+                    <p className="admin-empty">No notifications yet.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </nav>
 
         {workspace.isAdminPreview ? (
@@ -448,57 +485,124 @@ function DashboardView({ workspace }: { workspace: ClientPortalWorkspace }) {
   );
 }
 
+function priorityLabel(priority) {
+  if (priority === "high") return "High";
+  if (priority === "low") return "Low";
+  return "Medium";
+}
+
 function TasksView({ workspace }: { workspace: ClientPortalWorkspace }) {
-  const openTasks = workspace.tasks.filter((task) => task.status !== "completed");
-  const completedTasks = workspace.tasks.filter((task) => task.status === "completed");
+  const [sections, setSections] = useState(workspace.sections);
+  const [boardTasks, setBoardTasks] = useState(workspace.tasks);
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+
+  const tasksForSection = (sectionId: string | null) =>
+    boardTasks
+      .filter((task) => task.section_id === sectionId)
+      .sort((a, b) => a.position - b.position);
+
+  const handleDropOnSection = async (targetSectionId: string | null) => {
+    if (!dragTaskId) return;
+    const draggedId = dragTaskId;
+    setDragTaskId(null);
+    const dragged = boardTasks.find((task) => task.id === draggedId);
+    if (!dragged) return;
+
+    const destination = boardTasks.filter(
+      (task) => task.section_id === targetSectionId && task.id !== draggedId
+    );
+    destination.push({ ...dragged, section_id: targetSectionId });
+
+    const updates = destination.map((task, index) => ({
+      taskId: task.id,
+      sectionId: targetSectionId,
+      position: index,
+    }));
+
+    setBoardTasks((prev) =>
+      prev.map((task) => {
+        const match = updates.find((update) => update.taskId === task.id);
+        return match ? { ...task, section_id: match.sectionId, position: match.position } : task;
+      })
+    );
+
+    await reorderOwnBoardTasks(updates);
+  };
+
+  const sectionList = [...sections, { id: "__unsectioned", name: "No section", position: sections.length }];
 
   return (
     <div className="portal-side-stack portal-tasks-view">
       <article className="admin-panel">
         <div className="panel-heading">
           <h2>Your tasks</h2>
-          <span className="status-pill">{openTasks.length} open</span>
+          <span className="status-pill">
+            {boardTasks.filter((task) => task.status !== "completed").length} open
+          </span>
         </div>
-        <div className="stack-list">
-          {openTasks.map((task) => (
-            <div className="portal-task" key={task.id}>
-              <div>
-                <strong>{task.title}</strong>
-                {task.description ? <p className="muted">{task.description}</p> : null}
-                {task.due_at ? (
-                  <p className="muted">
-                    <Clock size={13} /> Due {new Date(task.due_at).toLocaleDateString()}
-                  </p>
-                ) : null}
+        <div className="task-board__columns">
+          {sectionList.map((section) => {
+            const sectionId = section.id === "__unsectioned" ? null : section.id;
+            const sectionTasks = tasksForSection(sectionId);
+            return (
+              <div
+                className="task-board__column"
+                key={section.id}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => handleDropOnSection(sectionId)}
+              >
+                <div className="task-board__column-heading">
+                  <div className="task-board__column-heading-label">
+                    <GripVertical size={14} />
+                    <span>{section.name}</span>
+                  </div>
+                  <span className="status-pill">{sectionTasks.length}</span>
+                </div>
+                <div className="task-board__column-body">
+                  {sectionTasks.map((task) => (
+                    <div
+                      className="task-board__card"
+                      draggable
+                      key={task.id}
+                      onDragStart={() => setDragTaskId(task.id)}
+                    >
+                      <div className="task-board__card-top">
+                        <span className="task-board__card-title">{task.title}</span>
+                        <span className={`task-board__priority task-board__priority--${task.priority}`}>
+                          {priorityLabel(task.priority)}
+                        </span>
+                      </div>
+                      {task.description ? <p className="muted">{task.description}</p> : null}
+                      <div className="task-board__card-meta">
+                        <span>
+                          {task.due_at
+                            ? new Date(task.due_at).toLocaleString(undefined, {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })
+                            : "No due date"}
+                        </span>
+                        {task.status !== "completed" ? (
+                          <form action={updateOwnClientTaskStatus}>
+                            <input name="taskId" type="hidden" value={task.id} />
+                            <input name="status" type="hidden" value="completed" />
+                            <button className="secondary-button compact-button" type="submit">
+                              <CheckCircle2 size={14} /> Done
+                            </button>
+                          </form>
+                        ) : (
+                          <CheckCircle2 size={16} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {!sectionTasks.length ? <p className="admin-empty">No tasks here.</p> : null}
+                </div>
               </div>
-              <form action={updateOwnClientTaskStatus}>
-                <input name="taskId" type="hidden" value={task.id} />
-                <input name="status" type="hidden" value="completed" />
-                <button className="secondary-button compact-button" type="submit">
-                  <CheckCircle2 size={14} /> Mark complete
-                </button>
-              </form>
-            </div>
-          ))}
-          {!openTasks.length ? <p className="admin-empty">No open tasks. You're all caught up.</p> : null}
+            );
+          })}
         </div>
       </article>
-      {completedTasks.length ? (
-        <article className="admin-panel">
-          <h2>Completed</h2>
-          <div className="stack-list">
-            {completedTasks.map((task) => (
-              <div className="portal-task portal-task--done" key={task.id}>
-                <div>
-                  <strong>{task.title}</strong>
-                  <p className="muted">Completed {task.completed_at ? new Date(task.completed_at).toLocaleDateString() : ""}</p>
-                </div>
-                <CheckCircle2 size={16} />
-              </div>
-            ))}
-          </div>
-        </article>
-      ) : null}
     </div>
   );
 }
