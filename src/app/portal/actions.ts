@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClientProjectComment, deleteProjectComment, getClientPortalWorkspace, uploadClientProjectFile } from "@/lib/portal";
+import { createClientProjectComment, deleteProjectComment, getClientPortalWorkspace, updateClientTaskStatus, uploadClientProjectFile } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function signInClientPortal(_: unknown, formData: FormData) {
@@ -65,6 +65,16 @@ export async function uploadProjectFile(formData: FormData) {
     description: String(formData.get("description") || ""),
     clientId: String(formData.get("clientId") || "")
   });
+
+  revalidatePath("/portal");
+}
+
+export async function updateOwnClientTaskStatus(formData: FormData) {
+  const taskId = String(formData.get("taskId") || "");
+  const status = String(formData.get("status") || "");
+  if (!taskId || !status) return;
+
+  await updateClientTaskStatus({ taskId, status });
 
   revalidatePath("/portal");
 }
