@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Eye, FileUp, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
-import { addProjectComment, deleteOwnProjectComment, signOutClientPortal, uploadProjectFile } from "@/app/portal/actions";
+import { CheckCircle2, Circle, Clock, Download, Eye, FileUp, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
+import { addProjectComment, deleteOwnProjectComment, signOutClientPortal, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
 
 const DEFAULT_FRAME_HEIGHT = 1400;
@@ -16,13 +16,26 @@ function normalizeUrl(url: string | null | undefined) {
   return url.split("#")[0].replace(/\/$/, "");
 }
 
+const PORTAL_PHASES = ["Discovery", "Design", "Development", "Client Review", "Launch"];
+
+function getPhaseIndex(currentPhase: string | null | undefined) {
+  return PORTAL_PHASES.findIndex((phase) => phase.toLowerCase() === (currentPhase || "").toLowerCase());
+}
+
+function getPhaseProgress(currentPhase: string | null | undefined, projectStatus: string | null | undefined) {
+  if (projectStatus === "done" || projectStatus === "complete" || projectStatus === "completed") return 100;
+  const idx = getPhaseIndex(currentPhase);
+  if (idx === -1) return 15;
+  return Math.round(((idx + 1) / PORTAL_PHASES.length) * 100);
+}
+
 export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: ClientPortalWorkspace; highlightCommentId?: string }) {
   const [commentMode, setCommentMode] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commentsTab, setCommentsTab] = useState<"active" | "resolved">("active");
-  const [activeTool, setActiveTool] = useState<"review" | "uploads">("review");
+  const [activeTool, setActiveTool] = useState<"review" | "uploads" | "dashboard" | "tasks">("review");
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
@@ -151,6 +164,12 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
           </button>
           <button className={activeTool === "uploads" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("uploads")} type="button">
             <FileUp size={16} /> Uploads
+          </button>
+          <button className={activeTool === "dashboard" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("dashboard")} type="button">
+            <LayoutDashboard size={16} /> Dashboard
+          </button>
+          <button className={activeTool === "tasks" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("tasks")} type="button">
+            <ListChecks size={16} /> Tasks
           </button>
         </aside>
         <div className="portal-main">
@@ -319,7 +338,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
             </article>
               </aside>
             </section>
-          ) : (
+          ) : activeTool === "uploads" ? (
             <div className="portal-side-stack portal-uploads-view">
               <article className="admin-panel">
               <h2><FileUp size={20} /> Upload project files</h2>
@@ -356,6 +375,10 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
               </div>
             </article>
             </div>
+          ) : activeTool === "dashboard" ? (
+            <DashboardView workspace={workspace} />
+          ) : (
+            <TasksView workspace={workspace} />
           )}
         </div>
       </div>
@@ -368,4 +391,114 @@ function formatFileSize(size: number) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+
+function DashboardView({ workspace }: { workspace: ClientPortalWorkspace }) {
+  const progress = getPhaseProgress(workspace.project.current_phase, workspace.project.project_status);
+  const currentIndex = getPhaseIndex(workspace.project.current_phase);
+  const paymentStatus = workspace.project.payment_status || "unpaid";
+  const paymentLabel = paymentStatus === "paid" ? "Paid" : paymentStatus === "partial" ? "Partially paid" : "Unpaid";
+
+  return (
+    <div className="portal-side-stack portal-dashboard-view">
+      <article className="admin-panel">
+        <div className="panel-heading">
+          <h2>Project progress</h2>
+          <span className={`status-pill status-pill--${paymentStatus}`}>{paymentLabel}</span>
+        </div>
+        <p className="muted">{workspace.project.project_name}</p>
+        <div className="dashboard-progress-bar">
+          <div className="dashboard-progress-bar__fill" style={{ width: `${progress}%` }} />
+        </div>
+        <p className="muted dashboard-progress-label">{progress}% complete · Currently in {workspace.project.current_phase || "Discovery"}</p>
+        <ul className="dashboard-milestones">
+          {PORTAL_PHASES.map((phase, index) => {
+            const state = currentIndex === -1 ? (index === 0 ? "current" : "upcoming") : index < currentIndex ? "done" : index === currentIndex ? "current" : "upcoming";
+            return (
+              <li className={`dashboard-milestone dashboard-milestone--${state}`} key={phase}>
+                {state === "done" ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                <span>{phase}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </article>
+      <article className="admin-panel">
+        <h2>Project details</h2>
+        <div className="dashboard-detail-grid">
+          <div>
+            <span className="muted">Status</span>
+            <p>{(workspace.project.project_status || "in_progress").replace("_", " ")}</p>
+          </div>
+          <div>
+            <span className="muted">Payment</span>
+            <p>{paymentStatus === "paid" ? "Paid in full" : paymentStatus === "partial" ? "Partially paid" : "Payment due"}</p>
+          </div>
+          {workspace.project.live_url ? (
+            <div>
+              <span className="muted">Live site</span>
+              <p><a className="text-link" href={workspace.project.live_url} rel="noreferrer" target="_blank">{workspace.project.live_url}</a></p>
+            </div>
+          ) : null}
+        </div>
+        {workspace.project.client_instructions ? <p className="muted">{workspace.project.client_instructions}</p> : null}
+      </article>
+    </div>
+  );
+}
+
+function TasksView({ workspace }: { workspace: ClientPortalWorkspace }) {
+  const openTasks = workspace.tasks.filter((task) => task.status !== "completed");
+  const completedTasks = workspace.tasks.filter((task) => task.status === "completed");
+
+  return (
+    <div className="portal-side-stack portal-tasks-view">
+      <article className="admin-panel">
+        <div className="panel-heading">
+          <h2>Your tasks</h2>
+          <span className="status-pill">{openTasks.length} open</span>
+        </div>
+        <div className="stack-list">
+          {openTasks.map((task) => (
+            <div className="portal-task" key={task.id}>
+              <div>
+                <strong>{task.title}</strong>
+                {task.description ? <p className="muted">{task.description}</p> : null}
+                {task.due_at ? (
+                  <p className="muted">
+                    <Clock size={13} /> Due {new Date(task.due_at).toLocaleDateString()}
+                  </p>
+                ) : null}
+              </div>
+              <form action={updateOwnClientTaskStatus}>
+                <input name="taskId" type="hidden" value={task.id} />
+                <input name="status" type="hidden" value="completed" />
+                <button className="secondary-button compact-button" type="submit">
+                  <CheckCircle2 size={14} /> Mark complete
+                </button>
+              </form>
+            </div>
+          ))}
+          {!openTasks.length ? <p className="admin-empty">No open tasks. You're all caught up.</p> : null}
+        </div>
+      </article>
+      {completedTasks.length ? (
+        <article className="admin-panel">
+          <h2>Completed</h2>
+          <div className="stack-list">
+            {completedTasks.map((task) => (
+              <div className="portal-task portal-task--done" key={task.id}>
+                <div>
+                  <strong>{task.title}</strong>
+                  <p className="muted">Completed {task.completed_at ? new Date(task.completed_at).toLocaleDateString() : ""}</p>
+                </div>
+                <CheckCircle2 size={16} />
+              </div>
+            ))}
+          </div>
+        </article>
+      ) : null}
+    </div>
+  );
 }
