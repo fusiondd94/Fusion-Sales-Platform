@@ -34,10 +34,13 @@ import {
 import {
   AutomationAction,
   AutomationCondition,
+  AutomationPreviewResult,
   AutomationTriggerType,
   createAutomation,
   deleteAutomation,
   duplicateAutomation,
+  getAutomationEditWorkspace,
+  previewAutomation,
   toggleAutomation,
   updateAutomation
 } from "@/lib/automations";
@@ -650,6 +653,47 @@ export async function deleteFusionAutomation(formData: FormData) {
 
   revalidatePath("/fusionadmin/automations");
   redirect("/fusionadmin/automations");
+}
+
+export async function previewFusionAutomation(
+  _prevState: { result?: AutomationPreviewResult; error?: string } | undefined,
+  formData: FormData
+): Promise<{ result?: AutomationPreviewResult; error?: string }> {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return { error: "You are not authorized to do that." };
+
+  const automationId = String(formData.get("automationId") || "");
+  if (!automationId) return { error: "Missing automation id." };
+
+  const { automation } = await getAutomationEditWorkspace(automationId);
+  if (!automation) return { error: "Automation not found." };
+
+  const dealValueRaw = String(formData.get("sampleDealValue") || "").trim();
+  const proposalTotalRaw = String(formData.get("sampleProposalTotal") || "").trim();
+
+  const sample = {
+    contact: {
+      name: String(formData.get("sampleContactName") || ""),
+      email: String(formData.get("sampleContactEmail") || ""),
+      phone: String(formData.get("sampleContactPhone") || "")
+    },
+    company: {
+      name: String(formData.get("sampleCompanyName") || "")
+    },
+    deal: {
+      value: dealValueRaw ? Number(dealValueRaw) : undefined,
+      stageName: String(formData.get("sampleDealStage") || "")
+    },
+    task: {
+      title: String(formData.get("sampleTaskTitle") || "")
+    },
+    proposal: {
+      total: proposalTotalRaw ? Number(proposalTotalRaw) : undefined
+    }
+  };
+
+  const result = previewAutomation(automation.trigger_type, automation.conditions, automation.actions, sample);
+  return { result };
 }
 
 export async function duplicateFusionAutomation(formData: FormData) {
