@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FileText,
   FormInput,
+  Kanban,
   Library,
   LayoutDashboard,
   Mail,
@@ -51,7 +52,8 @@ const navSections = [
     label: "Operations",
     items: [
       { href: "/fusionadmin/calendar", label: "Calendar", icon: CalendarDays, description: "Meetings" },
-      { href: "/fusionadmin/tasks", label: "Tasks", icon: ClipboardList, description: "Work queue" }
+      { href: "/fusionadmin/tasks", label: "Tasks", icon: ClipboardList, description: "Work queue" },
+      { href: "/fusionadmin/task-board", label: "Task Board", icon: Kanban, description: "Client kanban" }
     ]
   },
   {
