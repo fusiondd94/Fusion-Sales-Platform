@@ -401,6 +401,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
           </FusionDataTable>
 
           {selectedPortalClient ? (
+            <>
             <form action={updateFusionClientProject} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
               <input name="clientId" type="hidden" value={selectedPortalClient.id} />
               <p><a className="text-link" href={`/portal?clientId=${selectedPortalClient.id}`}>Open client portal preview</a></p>
@@ -489,6 +490,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   <FusionSubmitButton className="compact-button" pendingLabel="Assigning task...">Assign task</FusionSubmitButton>
                 </div>
               </form>
+            </>
           ) : null}
         </article>
       </section>
