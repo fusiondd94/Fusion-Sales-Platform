@@ -130,18 +130,25 @@ export default async function FusionAutomationsPage({
                     <div className="automation-runs">
                       <p className="muted">Recent runs</p>
                       {recentRuns.slice(0, 5).map((run) => (
-                        <p key={run.id}>
-                          <span className={"status-pill " + (run.status === "error" ? "status-pill-error" : run.status === "skipped" ? "status-pill-muted" : "")}>
-                            {run.status}
-                          </span>
-                          <span className="muted"> {formatDate(run.created_at)}</span>
-                          {run.error_message ? (
-                            <>
-                              <br />
-                              <span className="muted">{run.error_message}</span>
-                            </>
+                        <details key={run.id} className="automation-run-detail">
+                          <summary>
+                            <span className={"status-pill " + (run.status === "error" ? "status-pill-error" : run.status === "skipped" ? "status-pill-muted" : "")}>
+                              {run.status}
+                            </span>
+                            <span className="muted"> {formatDate(run.created_at)}</span>
+                          </summary>
+                          {run.error_message ? <p className="muted">{run.error_message}</p> : null}
+                          {run.actions_run && run.actions_run.length ? (
+                            <ul className="automation-run-actions">
+                              {run.actions_run.map((actionRun, index) => (
+                                <li key={index} className={actionRun.ok ? "action-run-ok" : "action-run-fail"}>
+                                  <strong>{actionRun.type}</strong> {actionRun.ok ? "succeeded" : "failed"}
+                                  {actionRun.detail ? <span className="muted"> - {actionRun.detail}</span> : null}
+                                </li>
+                              ))}
+                            </ul>
                           ) : null}
-                        </p>
+                        </details>
                       ))}
                     </div>
                   ) : null}
