@@ -1,5 +1,5 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
-import { getFusionAdminUser } from "@/lib/auth";
+import { getAdminEmails, getFusionAdminUser } from "@/lib/auth";
 import { sendCrmEmail } from "@/lib/email";
 
 export type ClientProject = {
@@ -250,6 +250,7 @@ async function buildPortalWorkspace(input: {
       .from("notifications")
       .select("id, type, title, body, related_task_id, read_at, created_at")
       .eq("client_id", input.client.id)
+      .eq("audience", "client")
       .order("created_at", { ascending: false })
       .limit(50)
   ]);
@@ -653,19 +654,41 @@ export async function createClientTask(input: {
 }
 
 export async function updateClientTaskStatus(input: { taskId: string; status: string }) {
-  const supabase = createSupabaseServiceClient();
+  const supabase = await createSupabaseServiceClient();
   if (!supabase) return { ok: false, error: "Supabase is not configured." };
   if (!input.taskId) return { ok: false, error: "Task id is required." };
+
+  const { data: existing } = await supabase
+    .from("crm_tasks")
+    .select("title, status, client_id")
+    .eq("id", input.taskId)
+    .single<{ title: string; status: string; client_id: string | null }>();
 
   const { error } = await supabase
     .from("crm_tasks")
     .update({
       status: input.status,
-      completed_at: input.status === "completed" ? new Date().toISOString() : null
+      completed_at: input.status === "completed" ? new Date().toISOString() : null,
     })
     .eq("id", input.taskId);
 
   if (error) return { ok: false, error: "Unable to update task." };
+
+  if (input.status === "completed" && existing && existing.status !== "completed" && existing.client_id) {
+    const { data: client } = await supabase
+      .from("crm_clients")
+      .select("customer_name")
+      .eq("id", existing.client_id)
+      .single<{ customer_name: string }>();
+
+    await notifyAdminsOfTaskCompletion({
+      clientId: existing.client_id,
+      clientName: client?.customer_name || "A client",
+      title: existing.title,
+      relatedTaskId: input.taskId,
+    });
+  }
+
   return { ok: true };
 }
 
@@ -830,6 +853,7 @@ export async function markAllNotificationsRead(input: { clientId: string }) {
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("client_id", input.clientId)
+    .eq("audience", "client")
     .is("read_at", null);
 
   if (error) return { ok: false, error: "Unable to update notifications." };
@@ -916,4 +940,81 @@ export async function getAdminTaskBoard(input?: { clientId?: string; projectId?:
       return { id: client.id, customer_name: client.customer_name, project_id: project?.id || null, project_name: project?.project_name || null };
     })
   };
+}
+
+
+async function notifyAdminsOfTaskCompletion(input: { clientId: string; clientName: string; title: string; relatedTaskId: string }) {
+  const supabase = await createSupabaseServiceClient();
+  if (!supabase) return;
+
+  await supabase.from("notifications").insert({
+    client_id: input.clientId,
+    audience: "admin",
+    type: "task_completed",
+    title: "Task completed",
+    body: `${input.clientName} marked "${input.title}" as done.`,
+    related_task_id: input.relatedTaskId,
+  });
+
+  const adminEmails = getAdminEmails();
+  for (const email of adminEmails) {
+    await sendCrmEmail({
+      to: email,
+      subject: `Task completed: ${input.title}`,
+      html: `<p>${input.clientName} marked "<strong>${input.title}</strong>" as done.</p><p><a href="https://fusion-digital-dynamics-sales-platf.vercel.app/fusionadmin/task-board">View the task board</a></p>`,
+    });
+  }
+}
+
+export type AdminNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  related_task_id: string | null;
+  client_id: string;
+  read_at: string | null;
+  created_at: string;
+};
+
+export async function getAdminNotifications() {
+  const supabase = await createSupabaseServiceClient();
+  if (!supabase) return [] as AdminNotification[];
+
+  const { data } = await supabase
+    .from("notifications")
+    .select("id, type, title, body, related_task_id, client_id, read_at, created_at")
+    .eq("audience", "admin")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  return (data || []) as AdminNotification[];
+}
+
+export async function markAdminNotificationRead(input: { notificationId: string }) {
+  const supabase = await createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", input.notificationId)
+    .eq("audience", "admin");
+
+  if (error) return { ok: false, error: "Unable to update notification." };
+  return { ok: true };
+}
+
+export async function markAllAdminNotificationsRead() {
+  const supabase = await createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("audience", "admin")
+    .is("read_at", null);
+
+  if (error) return { ok: false, error: "Unable to update notifications." };
+  return { ok: true };
 }
