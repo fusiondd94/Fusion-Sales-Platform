@@ -1,5 +1,6 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { getFusionAdminUser } from "@/lib/auth";
+import { sendCrmEmail } from "@/lib/email";
 
 export type ClientProject = {
   id: string;
@@ -41,9 +42,28 @@ export type ClientTask = {
   title: string;
   description: string | null;
   status: string;
+  priority: string;
+  section_id: string | null;
+  position: number;
   due_at: string | null;
   created_at: string;
   completed_at: string | null;
+};
+
+export type TaskSection = {
+  id: string;
+  name: string;
+  position: number;
+};
+
+export type PortalNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  related_task_id: string | null;
+  read_at: string | null;
+  created_at: string;
 };
 
 export type ClientPortalWorkspace = {
@@ -64,6 +84,8 @@ export type ClientPortalWorkspace = {
   comments: ClientProjectComment[];
   files: ClientProjectFile[];
   tasks: ClientTask[];
+  sections: TaskSection[];
+  notifications: PortalNotification[];
   isAdminPreview?: boolean;
   availableClients?: Array<{
     id: string;
@@ -199,7 +221,7 @@ async function buildPortalWorkspace(input: {
   const project = await ensureClientProject(input.client.id, input.actorId || input.user.id);
   if (!project) return null;
 
-  const [{ data: comments }, { data: files }, { data: tasks }] = await Promise.all([
+  const [{ data: comments }, { data: files }, { data: tasks }, { data: sections }, { data: notifications }] = await Promise.all([
     supabase
       .from("crm_project_comments")
       .select("id, author_user_id, author_name, author_role, body, page_url, marker_x, marker_y, status, created_at")
@@ -214,9 +236,20 @@ async function buildPortalWorkspace(input: {
       .limit(50),
     supabase
       .from("crm_tasks")
-      .select("id, title, description, status, due_at, created_at, completed_at")
+      .select("id, title, description, status, priority, section_id, position, due_at, created_at, completed_at")
       .eq("client_id", input.client.id)
       .eq("client_visible", true)
+      .order("position", { ascending: true })
+      .limit(200),
+    supabase
+      .from("task_sections")
+      .select("id, name, position")
+      .eq("project_id", project.id)
+      .order("position", { ascending: true }),
+    supabase
+      .from("notifications")
+      .select("id, type, title, body, related_task_id, read_at, created_at")
+      .eq("client_id", input.client.id)
       .order("created_at", { ascending: false })
       .limit(50)
   ]);
@@ -238,6 +271,8 @@ async function buildPortalWorkspace(input: {
     comments: (comments || []) as ClientProjectComment[],
     files: signedFiles,
     tasks: (tasks || []) as ClientTask[],
+    sections: (sections || []) as TaskSection[],
+    notifications: (notifications || []) as PortalNotification[],
     isAdminPreview: input.isAdminPreview,
     availableClients: input.availableClients
   };
@@ -283,6 +318,8 @@ export async function getClientPortalWorkspace(clientId?: string): Promise<Clien
         comments: [],
         files: [],
         tasks: [],
+        sections: [],
+        notifications: [],
         isAdminPreview: true,
         availableClients
       };
@@ -557,26 +594,61 @@ export async function createClientTask(input: {
   title: string;
   description?: string;
   dueAt?: string;
+  priority?: string;
+  sectionId?: string | null;
+  projectId?: string | null;
+  notify?: boolean;
 }) {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return { ok: false, error: "Supabase is not configured." };
   if (!input.title.trim()) return { ok: false, error: "Task title is required." };
 
   const organizationId = await getDefaultOrganizationId();
+  const allowedPriorities = new Set(["low", "medium", "high"]);
+  const priority = input.priority && allowedPriorities.has(input.priority) ? input.priority : "medium";
 
-  const { error } = await supabase.from("crm_tasks").insert({
-    organization_id: organizationId,
-    client_id: input.clientId,
-    title: input.title.trim(),
-    description: input.description?.trim() || null,
-    due_at: input.dueAt || null,
-    status: "open",
-    owner: "Fusion Design Team",
-    task_type: "Client Task",
-    client_visible: true
-  });
+  let position = 0;
+  if (input.sectionId) {
+    const { data: existingTasks } = await supabase
+      .from("crm_tasks")
+      .select("position")
+      .eq("section_id", input.sectionId)
+      .order("position", { ascending: false })
+      .limit(1);
+    position = existingTasks && existingTasks.length ? existingTasks[0].position + 1 : 0;
+  }
+
+  const { data, error } = await supabase
+    .from("crm_tasks")
+    .insert({
+      organization_id: organizationId,
+      client_id: input.clientId,
+      project_id: input.projectId || null,
+      section_id: input.sectionId || null,
+      position,
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      due_at: input.dueAt || null,
+      priority,
+      status: "open",
+      owner: "Fusion Design Team",
+      task_type: "Client Task",
+      client_visible: true
+    })
+    .select("id")
+    .single<{ id: string }>();
 
   if (error) return { ok: false, error: "Unable to create task." };
+
+  if (input.notify !== false && data?.id) {
+    await notifyClientOfTask({
+      clientId: input.clientId,
+      title: "New task assigned",
+      body: `You have a new task: "${input.title.trim()}".`,
+      relatedTaskId: data.id
+    });
+  }
+
   return { ok: true };
 }
 
@@ -595,4 +667,253 @@ export async function updateClientTaskStatus(input: { taskId: string; status: st
 
   if (error) return { ok: false, error: "Unable to update task." };
   return { ok: true };
+}
+
+
+export async function createTaskSection(input: { projectId: string; name: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.name.trim()) return { ok: false, error: "Section name is required." };
+
+  const { data: existing } = await supabase
+    .from("task_sections")
+    .select("position")
+    .eq("project_id", input.projectId)
+    .order("position", { ascending: false })
+    .limit(1);
+
+  const nextPosition = existing && existing.length ? existing[0].position + 1 : 0;
+
+  const { error } = await supabase.from("task_sections").insert({
+    project_id: input.projectId,
+    name: input.name.trim(),
+    position: nextPosition
+  });
+
+  if (error) return { ok: false, error: "Unable to create section." };
+  return { ok: true };
+}
+
+export async function renameTaskSection(input: { sectionId: string; name: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.name.trim()) return { ok: false, error: "Section name is required." };
+
+  const { error } = await supabase
+    .from("task_sections")
+    .update({ name: input.name.trim() })
+    .eq("id", input.sectionId);
+
+  if (error) return { ok: false, error: "Unable to rename section." };
+  return { ok: true };
+}
+
+export async function deleteTaskSection(input: { sectionId: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  await supabase.from("crm_tasks").update({ section_id: null }).eq("section_id", input.sectionId);
+
+  const { error } = await supabase.from("task_sections").delete().eq("id", input.sectionId);
+
+  if (error) return { ok: false, error: "Unable to delete section." };
+  return { ok: true };
+}
+
+export async function reorderTaskSections(input: { orderedSectionIds: string[] }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  await Promise.all(
+    input.orderedSectionIds.map((id, index) =>
+      supabase.from("task_sections").update({ position: index }).eq("id", id)
+    )
+  );
+
+  return { ok: true };
+}
+
+export async function reorderBoardTasks(input: { updates: Array<{ taskId: string; sectionId: string | null; position: number }> }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  await Promise.all(
+    input.updates.map((update) =>
+      supabase
+        .from("crm_tasks")
+        .update({ section_id: update.sectionId, position: update.position })
+        .eq("id", update.taskId)
+    )
+  );
+
+  return { ok: true };
+}
+
+export async function updateBoardTask(input: {
+  taskId: string;
+  title?: string;
+  description?: string;
+  dueAt?: string | null;
+  priority?: string;
+}) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  const allowedPriorities = new Set(["low", "medium", "high"]);
+  const updatePayload: Record<string, unknown> = {};
+  if (typeof input.title === "string") updatePayload.title = input.title.trim();
+  if (typeof input.description === "string") updatePayload.description = input.description.trim() || null;
+  if (input.dueAt !== undefined) updatePayload.due_at = input.dueAt || null;
+  if (input.priority && allowedPriorities.has(input.priority)) updatePayload.priority = input.priority;
+
+  const { error } = await supabase.from("crm_tasks").update(updatePayload).eq("id", input.taskId);
+
+  if (error) return { ok: false, error: "Unable to update task." };
+  return { ok: true };
+}
+
+export async function deleteBoardTask(input: { taskId: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  const { error } = await supabase.from("crm_tasks").delete().eq("id", input.taskId);
+
+  if (error) return { ok: false, error: "Unable to delete task." };
+  return { ok: true };
+}
+
+async function notifyClientOfTask(input: { clientId: string; title: string; body: string; relatedTaskId: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return;
+
+  await supabase.from("notifications").insert({
+    client_id: input.clientId,
+    type: "task_assigned",
+    title: input.title,
+    body: input.body,
+    related_task_id: input.relatedTaskId
+  });
+
+  const { data: client } = await supabase
+    .from("crm_clients")
+    .select("customer_name, customer_email")
+    .eq("id", input.clientId)
+    .single<{ customer_name: string; customer_email: string }>();
+
+  if (client?.customer_email) {
+    await sendCrmEmail({
+      to: client.customer_email,
+      subject: input.title,
+      html: `<p>Hi ${client.customer_name || "there"},</p><p>${input.body}</p><p><a href="https://fusion-digital-dynamics-sales-platf.vercel.app/portal">Open your client portal</a></p>`
+    });
+  }
+}
+
+export async function markNotificationRead(input: { notificationId: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", input.notificationId);
+
+  if (error) return { ok: false, error: "Unable to update notification." };
+  return { ok: true };
+}
+
+export async function markAllNotificationsRead(input: { clientId: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("client_id", input.clientId)
+    .is("read_at", null);
+
+  if (error) return { ok: false, error: "Unable to update notifications." };
+  return { ok: true };
+}
+
+export async function getProjectTaskBoard(input: { clientId: string; projectId: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { sections: [] as TaskSection[], tasks: [] as Array<ClientTask & { client_visible: boolean }> };
+
+  const [{ data: sections }, { data: tasks }] = await Promise.all([
+    supabase
+      .from("task_sections")
+      .select("id, name, position")
+      .eq("project_id", input.projectId)
+      .order("position", { ascending: true }),
+    supabase
+      .from("crm_tasks")
+      .select("id, title, description, status, priority, section_id, position, due_at, created_at, completed_at, client_visible")
+      .eq("client_id", input.clientId)
+      .order("position", { ascending: true })
+      .limit(500)
+  ]);
+
+  return {
+    sections: (sections || []) as TaskSection[],
+    tasks: (tasks || []) as Array<ClientTask & { client_visible: boolean }>
+  };
+}
+
+export type AdminTaskBoardTask = ClientTask & {
+  client_id: string | null;
+  client_name: string | null;
+  project_id: string | null;
+  project_name: string | null;
+  client_visible: boolean;
+};
+
+export async function getAdminTaskBoard(input?: { clientId?: string; projectId?: string; search?: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) {
+    return {
+      tasks: [] as AdminTaskBoardTask[],
+      clients: [] as Array<{ id: string; customer_name: string; project_id: string | null; project_name: string | null }>
+    };
+  }
+
+  let query = supabase
+    .from("crm_tasks")
+    .select("id, title, description, status, priority, section_id, position, project_id, client_id, due_at, created_at, completed_at, client_visible")
+    .not("client_id", "is", null)
+    .order("due_at", { ascending: true, nullsFirst: false })
+    .limit(500);
+
+  if (input?.clientId) query = query.eq("client_id", input.clientId);
+  if (input?.projectId) query = query.eq("project_id", input.projectId);
+  if (input?.search) query = query.ilike("title", `%${input.search}%`);
+
+  const { data: tasks } = await query;
+
+  const { data: clients } = await supabase
+    .from("crm_clients")
+    .select("id, customer_name")
+    .order("customer_name", { ascending: true })
+    .limit(200);
+
+  const { data: projects } = await supabase
+    .from("crm_client_projects")
+    .select("id, client_id, project_name");
+
+  const projectById = new Map((projects || []).map((project) => [project.id, project]));
+  const clientById = new Map((clients || []).map((client) => [client.id, client]));
+
+  const enrichedTasks: AdminTaskBoardTask[] = (tasks || []).map((task) => ({
+    ...task,
+    client_name: task.client_id ? clientById.get(task.client_id)?.customer_name || null : null,
+    project_name: task.project_id ? projectById.get(task.project_id)?.project_name || null : null
+  })) as AdminTaskBoardTask[];
+
+  return {
+    tasks: enrichedTasks,
+    clients: (clients || []).map((client) => {
+      const project = (projects || []).find((p) => p.client_id === client.id);
+      return { id: client.id, customer_name: client.customer_name, project_id: project?.id || null, project_name: project?.project_name || null };
+    })
+  };
 }
