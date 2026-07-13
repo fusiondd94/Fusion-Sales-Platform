@@ -485,7 +485,7 @@ function DashboardView({ workspace }: { workspace: ClientPortalWorkspace }) {
   );
 }
 
-function priorityLabel(priority) {
+function priorityLabel(priority: string) {
   if (priority === "high") return "High";
   if (priority === "low") return "Low";
   return "Medium";
