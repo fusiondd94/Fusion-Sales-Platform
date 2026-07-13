@@ -2667,6 +2667,16 @@ h1 {
   color: var(--fusion-text);
 }
 
+.client-portal-shell .nav {
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom-color: var(--fusion-border);
+}
+.client-portal-shell .secondary-button {
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text);
+  border-color: var(--fusion-border);
+}
+
 .portal-empty-preview {
   display: grid;
   min-height: 420px;
