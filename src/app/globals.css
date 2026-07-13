@@ -5042,3 +5042,148 @@ h1 {
 .admin-notif-item--unread:hover {
   background: color-mix(in srgb, var(--fusion-teal-100) 80%, white);
 }
+
+
+/* Automation canvas builder (drag-and-drop) */
+.automation-canvas-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+
+.automation-canvas-hint {
+  margin: 0;
+}
+
+.automation-canvas-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.automation-palette {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.automation-palette-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px dashed var(--fusion-border-strong, var(--fusion-border));
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--fusion-text-muted);
+  background: var(--fusion-surface);
+  cursor: grab;
+  user-select: none;
+}
+
+.automation-palette-chip:active {
+  cursor: grabbing;
+}
+
+.automation-canvas {
+  position: relative;
+  overflow: auto;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-lg);
+  background-color: var(--fusion-surface-muted);
+  background-image: radial-gradient(circle, var(--fusion-border-strong) 1px, transparent 1px);
+  background-size: 20px 20px;
+  height: 560px;
+  margin-bottom: 16px;
+}
+
+.automation-canvas-inner {
+  position: relative;
+}
+
+.automation-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.automation-edge-path {
+  fill: none;
+  stroke: var(--fusion-focus);
+  stroke-width: 2;
+  opacity: 0.45;
+}
+
+.automation-node {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface-raised);
+  box-shadow: var(--fusion-shadow-sm);
+  overflow: hidden;
+}
+
+.automation-node-trigger {
+  border-color: var(--fusion-focus);
+}
+
+.automation-node-handle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--fusion-surface-muted);
+  border-bottom: 1px solid var(--fusion-border);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: grab;
+  color: var(--fusion-text-muted);
+  touch-action: none;
+}
+
+.automation-node-handle:active {
+  cursor: grabbing;
+}
+
+.automation-node-handle .icon-remove-button {
+  margin-left: auto;
+}
+
+.automation-node-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.automation-node-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fusion-text-muted);
+}
+
+.automation-node-body input,
+.automation-node-body select,
+.automation-node-body textarea {
+  width: 100%;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-xs);
+  color: var(--fusion-text);
+  background: var(--fusion-surface);
+}
+
+.automation-node-body textarea {
+  min-height: 60px;
+  resize: vertical;
+}
