@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   BarChart3,
+  Bell,
   BriefcaseBusiness,
   CalendarDays,
   ClipboardList,
@@ -20,10 +22,11 @@ import {
   UserRoundCog,
   Zap
 } from "lucide-react";
-import { signOutFusionAdmin } from "@/app/fusionadmin/actions";
+import { markAllFusionNotificationsRead, markFusionNotificationRead, signOutFusionAdmin } from "@/app/fusionadmin/actions";
 import { FusionAvatar } from "@/app/fusionadmin/(admin)/crm-ui";
 import { AdminFeedbackBoundary, SignOutButton } from "@/components/ui";
 import type { FusionAdminUser } from "@/lib/auth";
+import type { AdminNotification } from "@/lib/portal";
 
 const navSections = [
   {
@@ -77,7 +80,9 @@ const navSections = [
   }
 ];
 
-export function AdminShell({ children, user }: { children: ReactNode; user: FusionAdminUser }) {
+export function AdminShell({ children, notifications, user }: { children: ReactNode; notifications: AdminNotification[]; user: FusionAdminUser }) {
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unreadCount = notifications.filter((notification) => !notification.read_at).length;
   const pathname = usePathname();
   const allNavItems = navSections.flatMap((section) => section.items.map((item) => ({ ...item, section: section.label })));
   const activeItem = allNavItems.find((item) => pathname === item.href || (item.href !== "/fusionadmin" && pathname.startsWith(`${item.href}/`))) || allNavItems[0];
@@ -131,6 +136,40 @@ export function AdminShell({ children, user }: { children: ReactNode; user: Fusi
             <p className="eyebrow">{activeItem.section}</p>
             <h1>{activeItem.label}</h1>
             <span>{activeItem.description}</span>
+          </div>
+          <div className="admin-notif-bell">
+            <button className="ghost-button" onClick={() => setNotifOpen((value) => !value)} type="button">
+              <Bell size={16} />
+              {unreadCount > 0 ? <span className="admin-notif-badge">{unreadCount}</span> : null}
+            </button>
+            {notifOpen ? (
+              <div className="admin-notif-dropdown">
+                <div className="admin-notif-dropdown__heading">
+                  <strong>Notifications</strong>
+                  {unreadCount > 0 ? (
+                    <form action={markAllFusionNotificationsRead}>
+                      <button className="text-link" type="submit">Mark all read</button>
+                    </form>
+                  ) : null}
+                </div>
+                <div className="admin-notif-list">
+                  {notifications.length ? (
+                    notifications.map((notification) => (
+                      <form action={markFusionNotificationRead} key={notification.id}>
+                        <input name="notificationId" type="hidden" value={notification.id} />
+                        <button className={notification.read_at ? "admin-notif-item" : "admin-notif-item admin-notif-item--unread"} type="submit">
+                          <strong>{notification.title}</strong>
+                          {notification.body ? <p>{notification.body}</p> : null}
+                          <span className="muted">{new Date(notification.created_at).toLocaleString()}</span>
+                        </button>
+                      </form>
+                    ))
+                  ) : (
+                    <p className="admin-empty">No notifications yet.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="admin-user-card">
             <FusionAvatar name={user.displayName || user.email} />
