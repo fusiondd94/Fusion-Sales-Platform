@@ -430,7 +430,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   <FusionTextarea defaultValue={selectedPortalClient.project?.client_instructions || ""} name="clientInstructions" placeholder="Tell the client what to review or upload next." />
                 </FusionField>
                 <FusionField label="Payment status">
-                  <FusionSelect defaultValue={selectedPortalClient.project.payment_status || "unpaid"} name="paymentStatus">
+                  <FusionSelect defaultValue={selectedPortalClient.project?.payment_status || "unpaid"} name="paymentStatus">
                     {paymentStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
                   </FusionSelect>
                 </FusionField>
