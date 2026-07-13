@@ -8,6 +8,7 @@ export type ClientProject = {
   live_url: string | null;
   preview_url: string | null;
   current_phase: string;
+  payment_status: string;
   client_instructions: string | null;
   updated_at: string;
 };
@@ -35,6 +36,16 @@ export type ClientProjectFile = {
   signedUrl?: string | null;
 };
 
+export type ClientTask = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_at: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
 export type ClientPortalWorkspace = {
   user: {
     id: string;
@@ -52,6 +63,7 @@ export type ClientPortalWorkspace = {
   project: ClientProject;
   comments: ClientProjectComment[];
   files: ClientProjectFile[];
+  tasks: ClientTask[];
   isAdminPreview?: boolean;
   availableClients?: Array<{
     id: string;
@@ -110,7 +122,7 @@ async function ensureClientProject(clientId: string, actorId?: string | null) {
 
   const { data: existing } = await supabase
     .from("crm_client_projects")
-    .select("id, project_name, project_status, live_url, preview_url, current_phase, client_instructions, updated_at")
+    .select("id, project_name, project_status, live_url, preview_url, current_phase, client_instructions, payment_status, updated_at")
     .eq("client_id", clientId)
     .single<ClientProject>();
 
@@ -125,7 +137,7 @@ async function ensureClientProject(clientId: string, actorId?: string | null) {
       created_by: actorId || null,
       updated_by: actorId || null
     })
-    .select("id, project_name, project_status, live_url, preview_url, current_phase, client_instructions, updated_at")
+    .select("id, project_name, project_status, live_url, preview_url, current_phase, client_instructions, payment_status, updated_at")
     .single<ClientProject>();
 
   if (error || !data) return null;
@@ -186,7 +198,7 @@ async function buildPortalWorkspace(input: {
   const project = await ensureClientProject(input.client.id, input.actorId || input.user.id);
   if (!project) return null;
 
-  const [{ data: comments }, { data: files }] = await Promise.all([
+  const [{ data: comments }, { data: files }, { data: tasks }] = await Promise.all([
     supabase
       .from("crm_project_comments")
       .select("id, author_user_id, author_name, author_role, body, page_url, marker_x, marker_y, status, created_at")
@@ -197,6 +209,13 @@ async function buildPortalWorkspace(input: {
       .from("crm_project_files")
       .select("id, file_name, file_type, file_size, description, storage_path, created_at")
       .eq("project_id", project.id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("crm_tasks")
+      .select("id, title, description, status, due_at, created_at, completed_at")
+      .eq("client_id", input.client.id)
+      .eq("client_visible", true)
       .order("created_at", { ascending: false })
       .limit(50)
   ]);
@@ -217,6 +236,7 @@ async function buildPortalWorkspace(input: {
     project,
     comments: (comments || []) as ClientProjectComment[],
     files: signedFiles,
+    tasks: (tasks || []) as ClientTask[],
     isAdminPreview: input.isAdminPreview,
     availableClients: input.availableClients
   };
@@ -385,6 +405,7 @@ export async function updateClientProject(input: {
   previewUrl?: string;
   currentPhase?: string;
   clientInstructions?: string;
+  paymentStatus?: string;
 }) {
   const supabase = createSupabaseServiceClient();
   if (!supabase) return { ok: false, error: "Supabase is not configured." };
@@ -405,7 +426,8 @@ export async function updateClientProject(input: {
       current_phase: input.currentPhase?.trim() || "Design Review",
       client_instructions: input.clientInstructions?.trim() || null,
       updated_by: input.actorId,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      ...(input.paymentStatus ? { payment_status: input.paymentStatus } : {})
     })
     .eq("id", project.id);
 
@@ -524,5 +546,51 @@ export async function resolveProjectComment(input: { commentId: string }) {
     .eq("id", input.commentId);
 
   if (error) return { ok: false, error: "Unable to resolve comment." };
+  return { ok: true };
+}
+
+
+export async function createClientTask(input: {
+  clientId: string;
+  title: string;
+  description?: string;
+  dueAt?: string;
+}) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.title.trim()) return { ok: false, error: "Task title is required." };
+
+  const organizationId = await getDefaultOrganizationId();
+
+  const { error } = await supabase.from("crm_tasks").insert({
+    organization_id: organizationId,
+    client_id: input.clientId,
+    title: input.title.trim(),
+    description: input.description?.trim() || null,
+    due_at: input.dueAt || null,
+    status: "open",
+    owner: "Fusion Design Team",
+    task_type: "Client Task",
+    client_visible: true
+  });
+
+  if (error) return { ok: false, error: "Unable to create task." };
+  return { ok: true };
+}
+
+export async function updateClientTaskStatus(input: { taskId: string; status: string }) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.taskId) return { ok: false, error: "Task id is required." };
+
+  const { error } = await supabase
+    .from("crm_tasks")
+    .update({
+      status: input.status,
+      completed_at: input.status === "completed" ? new Date().toISOString() : null
+    })
+    .eq("id", input.taskId);
+
+  if (error) return { ok: false, error: "Unable to update task." };
   return { ok: true };
 }
