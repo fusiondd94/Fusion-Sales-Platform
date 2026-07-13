@@ -580,14 +580,14 @@ export async function updateFusionCrmForm(formData: FormData) {
   revalidatePath("/fusionadmin/reports");
 }
 
-export async function createFusionAutomation(formData: FormData) {
+export async function createFusionAutomation(_prevState: { error?: string } | undefined, formData: FormData): Promise<{ error?: string }> {
   const user = await requireFusionAdmin();
-  if (!user.isAllowed) return;
+  if (!user.isAllowed) return { error: "You are not authorized to do that." };
 
   const conditions = parseAutomationConditions(formData);
   const actions = parseAutomationActions(formData);
 
-  await createAutomation({
+  const result = await createAutomation({
     actorId: user.id,
     name: String(formData.get("name") || ""),
     description: String(formData.get("description") || ""),
@@ -597,17 +597,19 @@ export async function createFusionAutomation(formData: FormData) {
     isActive: formData.get("isActive") === "on"
   });
 
-  revalidatePath("/fusionadmin/automations");
-}
+  if (!result.ok) return { error: result.error };
 
-export async function updateFusionAutomation(formData: FormData) {
+  revalidatePath("/fusionadmin/automations");
+  return {};
+}
+export async function updateFusionAutomation(_prevState: { error?: string } | undefined, formData: FormData): Promise<{ error?: string }> {
   const user = await requireFusionAdmin();
-  if (!user.isAllowed) return;
+  if (!user.isAllowed) return { error: "You are not authorized to do that." };
 
   const conditions = parseAutomationConditions(formData);
   const actions = parseAutomationActions(formData);
 
-  await updateAutomation({
+  const result = await updateAutomation({
     actorId: user.id,
     automationId: String(formData.get("automationId") || ""),
     name: String(formData.get("name") || ""),
@@ -618,9 +620,11 @@ export async function updateFusionAutomation(formData: FormData) {
     isActive: formData.get("isActive") === "on"
   });
 
-  revalidatePath("/fusionadmin/automations");
-}
+  if (!result.ok) return { error: result.error };
 
+  revalidatePath("/fusionadmin/automations");
+  return {};
+}
 export async function toggleFusionAutomation(formData: FormData) {
   const user = await requireFusionAdmin();
   if (!user.isAllowed) return;
