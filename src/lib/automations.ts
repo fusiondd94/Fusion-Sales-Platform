@@ -45,6 +45,7 @@ export type AutomationCondition = {
   field: string;
   operator: "equals" | "not_equals" | "contains" | "greater_than" | "less_than" | "is_set" | "is_not_set";
   value?: string;
+  group?: number;
 };
 
 export type AutomationAction = {
@@ -149,6 +150,18 @@ function evaluateCondition(context: AutomationContext, condition: AutomationCond
     default:
       return true;
   }
+}
+
+function evaluateConditionGroups(context: AutomationContext, conditions: AutomationCondition[]): boolean {
+  if (!conditions.length) return true;
+  const groups = new Map<number, AutomationCondition[]>();
+  for (const condition of conditions) {
+    const groupKey = condition.group ?? 0;
+    const list = groups.get(groupKey) || [];
+    list.push(condition);
+    groups.set(groupKey, list);
+  }
+  return Array.from(groups.values()).some((group) => group.every((condition) => evaluateCondition(context, condition)));
 }
 
 function fillTemplate(template: string, context: AutomationContext): string {
@@ -408,7 +421,7 @@ export async function runAutomations(context: AutomationContext) {
 
     for (const automation of automations || []) {
       const conditions = (automation.conditions || []) as AutomationCondition[];
-      const passes = conditions.every((condition) => evaluateCondition(context, condition));
+      const passes = evaluateConditionGroups(context, conditions);
       if (!passes) {
         await supabase.from("crm_automation_runs").insert({
           organization_id: context.organizationId,
