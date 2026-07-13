@@ -4,6 +4,7 @@ import { ArrowLeft, Zap } from "lucide-react";
 import { updateFusionAutomation } from "@/app/fusionadmin/actions";
 import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, getAutomationEditWorkspace } from "@/lib/automations";
 import { AutomationBuilder } from "@/components/AutomationBuilder";
+import { AutomationTestPanel } from "@/components/AutomationTestPanel";
 import { PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
 
 export default async function EditFusionAutomationPage({
@@ -54,6 +55,8 @@ export default async function EditFusionAutomationPage({
           triggers={AUTOMATION_TRIGGERS}
         />
       </article>
+
+      <AutomationTestPanel automationId={automation.id} />
     </div>
   );
 }
