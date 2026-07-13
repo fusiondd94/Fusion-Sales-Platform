@@ -40,7 +40,17 @@ import {
   toggleAutomation,
   updateAutomation
 } from "@/lib/automations";
-import { createClientTask, deleteProjectComment, resolveProjectComment, updateClientProject } from "@/lib/portal";
+import {
+  createClientTask,
+  createTaskSection,
+  deleteBoardTask,
+  deleteProjectComment,
+  deleteTaskSection,
+  reorderBoardTasks,
+  reorderTaskSections,
+  resolveProjectComment,
+  updateClientProject
+} from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
@@ -690,11 +700,67 @@ export async function assignFusionClientTask(formData: FormData) {
 
   await createClientTask({
     clientId: String(formData.get("clientId") || ""),
+    projectId: String(formData.get("projectId") || "") || undefined,
+    sectionId: String(formData.get("sectionId") || "") || undefined,
     title: String(formData.get("title") || ""),
     description: String(formData.get("description") || ""),
-    dueAt: String(formData.get("dueAt") || "") || undefined
+    dueAt: String(formData.get("dueAt") || "") || undefined,
+    priority: String(formData.get("priority") || "medium")
   });
 
   revalidatePath("/fusionadmin/clients");
+  revalidatePath("/fusionadmin/task-board");
   revalidatePath("/portal");
+}
+
+export async function createFusionTaskSection(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createTaskSection({
+    projectId: String(formData.get("projectId") || ""),
+    name: String(formData.get("name") || "")
+  });
+
+  revalidatePath("/fusionadmin/task-board");
+  revalidatePath("/portal");
+}
+
+export async function deleteFusionTaskSection(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await deleteTaskSection({ sectionId: String(formData.get("sectionId") || "") });
+
+  revalidatePath("/fusionadmin/task-board");
+  revalidatePath("/portal");
+}
+
+export async function deleteFusionBoardTask(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await deleteBoardTask({ taskId: String(formData.get("taskId") || "") });
+
+  revalidatePath("/fusionadmin/task-board");
+  revalidatePath("/portal");
+}
+
+export async function reorderFusionTaskSections(orderedSectionIds: string[]) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return { ok: false };
+
+  const result = await reorderTaskSections({ orderedSectionIds });
+  revalidatePath("/fusionadmin/task-board");
+  return result;
+}
+
+export async function reorderFusionBoardTasks(updates: Array<{ taskId: string; sectionId: string | null; position: number }>) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return { ok: false };
+
+  const result = await reorderBoardTasks({ updates });
+  revalidatePath("/fusionadmin/task-board");
+  revalidatePath("/portal");
+  return result;
 }
