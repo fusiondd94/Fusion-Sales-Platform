@@ -49,7 +49,7 @@ const START_X = 32;
 const START_Y = 24;
 
 function makeId(prefix: string) {
-  return \`\${prefix}-\${Math.random().toString(36).slice(2, 9)}-\${Date.now().toString(36)}\`;
+  return prefix + "-" + Math.random().toString(36).slice(2, 9) + "-" + Date.now().toString(36);
 }
 
 function actionConfigFields(
@@ -322,7 +322,9 @@ export function AutomationBuilder({
     const fromPoint = { x: from.x + NODE_WIDTH / 2, y: from.y + from.height };
     const toPoint = { x: to.x + NODE_WIDTH / 2, y: to.y };
     const midY = (fromPoint.y + toPoint.y) / 2;
-    edgePaths.push(\`M \${fromPoint.x} \${fromPoint.y} C \${fromPoint.x} \${midY} \${toPoint.x} \${midY} \${toPoint.x} \${toPoint.y}\`);
+    edgePaths.push(
+      "M " + fromPoint.x + " " + fromPoint.y + " C " + fromPoint.x + " " + midY + " " + toPoint.x + " " + midY + " " + toPoint.x + " " + toPoint.y
+    );
   }
 
   const canvasWidth =
