@@ -600,7 +600,7 @@ export async function createFusionAutomation(_prevState: { error?: string } | un
   if (!result.ok) return { error: result.error };
 
   revalidatePath("/fusionadmin/automations");
-  return {};
+  redirect("/fusionadmin/automations");
 }
 export async function updateFusionAutomation(_prevState: { error?: string } | undefined, formData: FormData): Promise<{ error?: string }> {
   const user = await requireFusionAdmin();
@@ -623,7 +623,7 @@ export async function updateFusionAutomation(_prevState: { error?: string } | un
   if (!result.ok) return { error: result.error };
 
   revalidatePath("/fusionadmin/automations");
-  return {};
+  redirect("/fusionadmin/automations");
 }
 export async function toggleFusionAutomation(formData: FormData) {
   const user = await requireFusionAdmin();
@@ -648,6 +648,7 @@ export async function deleteFusionAutomation(formData: FormData) {
   });
 
   revalidatePath("/fusionadmin/automations");
+  redirect("/fusionadmin/automations");
 }
 
 export async function updateFusionProposalStatus(formData: FormData) {
