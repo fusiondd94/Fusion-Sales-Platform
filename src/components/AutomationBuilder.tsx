@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  useActionState,
+  useEffect,
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
@@ -8,7 +10,7 @@ import {
   type ReactNode
 } from "react";
 import { GripVertical, PlusCircle, Trash2, Zap } from "lucide-react";
-import { SubmitButton } from "@/components/ui";
+import { FormError, SubmitButton } from "@/components/ui";
 
 export type BuilderTrigger = { value: string; label: string; description: string };
 export type BuilderActionType = { value: string; label: string; description: string };
@@ -179,7 +181,7 @@ export function AutomationBuilder({
   emailTemplates,
   initial
 }: {
-  formAction: (formData: FormData) => void;
+  formAction: (prevState: { error?: string } | undefined, formData: FormData) => Promise<{ error?: string }> | { error?: string };
   triggers: BuilderTrigger[];
   actionTypes: BuilderActionType[];
   emailTemplates: BuilderEmailTemplate[];
@@ -194,6 +196,7 @@ export function AutomationBuilder({
   };
 }) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [state, dispatchFormAction] = useActionState(formAction, undefined as { error?: string } | undefined);
 
   const [triggerType, setTriggerType] = useState(initial?.triggerType || triggers[0]?.value || "lead.captured");
   const [triggerPos, setTriggerPos] = useState({ x: START_X, y: START_Y });
@@ -216,6 +219,29 @@ export function AutomationBuilder({
     });
   });
 
+    useEffect(() => {
+      if (!state || state.error) return;
+      setTriggerType(initial?.triggerType || triggers[0]?.value || "lead.captured");
+      setTriggerPos({ x: START_X, y: START_Y });
+      let condY = START_Y + TRIGGER_HEIGHT + V_GAP;
+      setConditions(
+        (initial?.conditions || []).map((condition) => {
+          const node = { ...condition, id: makeId("cond"), x: START_X, y: condY };
+          condY += CONDITION_HEIGHT + V_GAP;
+          return node;
+        })
+      );
+      let actionY = START_Y + TRIGGER_HEIGHT + V_GAP + (initial?.conditions?.length || 0) * (CONDITION_HEIGHT + V_GAP);
+      setActions(
+        (initial?.actions || []).map((action) => {
+          const node = { ...action, id: makeId("action"), x: START_X, y: actionY };
+          actionY += ACTION_HEIGHT + V_GAP;
+          return node;
+        })
+      );
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state]);
+  
   function appendY() {
     const ys = [
       triggerPos.y + TRIGGER_HEIGHT,
@@ -339,7 +365,7 @@ export function AutomationBuilder({
     ) + 80;
 
   return (
-    <form action={formAction} className="automation-form" data-track-unsaved="true">
+    <form action={dispatchFormAction} className="automation-form" data-track-unsaved="true">
       {initial?.automationId ? <input name="automationId" type="hidden" value={initial.automationId} /> : null}
 
       <label>
@@ -491,6 +517,12 @@ export function AutomationBuilder({
         <input defaultChecked={initial?.isActive ?? true} name="isActive" type="checkbox" />
         Active
       </label>
+
+      {actions.length === 0 ? (
+        <p className="muted automation-canvas-hint">This automation has no actions yet. Add at least one before saving.</p>
+      ) : null}
+
+      <FormError message={state?.error} />
 
       <SubmitButton pendingLabel="Saving...">{initial?.automationId ? "Save automation" : "Create automation"}</SubmitButton>
     </form>
