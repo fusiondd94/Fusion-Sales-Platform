@@ -14,7 +14,7 @@ import { FormError, SubmitButton } from "@/components/ui";
 
 export type BuilderTrigger = { value: string; label: string; description: string };
 export type BuilderActionType = { value: string; label: string; description: string };
-export type BuilderCondition = { field: string; operator: string; value: string };
+export type BuilderCondition = { field: string; operator: string; value: string; group?: number };
 export type BuilderAction = { type: string; config: Record<string, string | number | boolean> };
 export type BuilderEmailTemplate = { id: string; template_name: string };
 
@@ -204,7 +204,7 @@ export function AutomationBuilder({
   const [conditions, setConditions] = useState<ConditionNode[]>(() => {
     let y = START_Y + TRIGGER_HEIGHT + V_GAP;
     return (initial?.conditions || []).map((condition, index) => {
-      const node = { ...condition, id: "cond-initial-" + index, x: START_X, y };
+      const node = { ...condition, group: condition.group ?? 0, id: "cond-initial-" + index, x: START_X, y };
       y += CONDITION_HEIGHT + V_GAP;
       return node;
     });
@@ -226,7 +226,7 @@ export function AutomationBuilder({
       let condY = START_Y + TRIGGER_HEIGHT + V_GAP;
       setConditions(
         (initial?.conditions || []).map((condition) => {
-          const node = { ...condition, id: makeId("cond"), x: START_X, y: condY };
+          const node = { ...condition, group: condition.group ?? 0, id: makeId("cond"), x: START_X, y: condY };
           condY += CONDITION_HEIGHT + V_GAP;
           return node;
         })
@@ -252,7 +252,7 @@ export function AutomationBuilder({
   }
 
   function addConditionAt(x: number, y: number) {
-    setConditions((current) => [...current, { field: "", operator: "is_set", value: "", id: makeId("cond"), x, y }]);
+    setConditions((current) => [...current, { field: "", operator: "is_set", value: "", group: 0, id: makeId("cond"), x, y }]);
   }
 
   function addActionAt(x: number, y: number) {
@@ -332,7 +332,10 @@ export function AutomationBuilder({
     else addActionAt(x, y);
   }
 
-  const sortedConditions = [...conditions].sort((a, b) => a.y - b.y);
+  const existingGroups = Array.from(new Set(conditions.map((condition) => condition.group ?? 0))).sort((a, b) => a - b);
+  const groupOptions = existingGroups.length ? existingGroups : [0];
+  const nextGroupNumber = Math.max(0, ...groupOptions) + 1;
+  const sortedConditions = [...conditions].sort((a, b) => (a.group ?? 0) - (b.group ?? 0) || a.y - b.y);
   const sortedActions = [...actions].sort((a, b) => a.y - b.y);
 
   const chainForEdges = [
@@ -473,6 +476,23 @@ export function AutomationBuilder({
                   placeholder="value (if needed)"
                   value={condition.value}
                 />
+                <label className="automation-condition-group">
+                  OR group
+                  <select
+                    name="conditionGroup"
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      const nextValue = raw === "new" ? nextGroupNumber : Number(raw);
+                      updateCondition(condition.id, { group: nextValue });
+                    }}
+                    value={String(condition.group ?? 0)}
+                  >
+                    {groupOptions.map((groupNumber) => (
+                      <option key={groupNumber} value={groupNumber}>Group {groupNumber + 1}</option>
+                    ))}
+                    <option value="new">+ New OR group</option>
+                  </select>
+                </label>
               </div>
             </div>
           ))}
