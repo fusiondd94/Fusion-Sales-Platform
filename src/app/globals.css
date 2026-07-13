@@ -5227,3 +5227,36 @@ h1 {
 .automation-builder-page .automation-form {
   max-width: 1400px;
 }
+
+.automation-run-detail {
+  border: 1px solid var(--border-color, #e2e2e2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+
+.automation-run-detail summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.automation-run-detail summary::-webkit-details-marker {
+  display: none;
+}
+
+.automation-run-actions {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.automation-run-actions li {
+  margin-bottom: 4px;
+}
+
+.action-run-ok strong {
+  color: #1a7f37;
+}
+
+.action-run-fail strong {
+  color: #c0392b;
+}
