@@ -4541,3 +4541,117 @@ h1 {
     flex-direction: row;
   }
 }
+
+.client-portal-shell .status-pill {
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text);
+}
+
+.client-portal-shell .status-pill--paid {
+  border-color: color-mix(in srgb, #1f9d55 40%, white);
+  background: color-mix(in srgb, #1f9d55 14%, white);
+  color: #146c3a;
+}
+
+.client-portal-shell .status-pill--partial {
+  border-color: color-mix(in srgb, #b7791f 40%, white);
+  background: color-mix(in srgb, #b7791f 14%, white);
+  color: #8a5a10;
+}
+
+.client-portal-shell .status-pill--unpaid {
+  border-color: color-mix(in srgb, #c53030 40%, white);
+  background: color-mix(in srgb, #c53030 12%, white);
+  color: #9b2c2c;
+}
+
+.portal-dashboard-view,
+.portal-tasks-view {
+  max-width: 720px;
+}
+
+.dashboard-progress-bar {
+  width: 100%;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: var(--fusion-surface-muted);
+  border: 1px solid var(--fusion-border);
+  overflow: hidden;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.dashboard-progress-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--fusion-teal-900);
+  transition: width 0.3s ease;
+}
+
+.dashboard-progress-label {
+  margin-bottom: 1rem;
+}
+
+.dashboard-milestones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dashboard-milestone {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--fusion-radius-sm);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
+  color: var(--fusion-text-muted);
+}
+
+.dashboard-milestone--done {
+  color: #146c3a;
+  border-color: color-mix(in srgb, #1f9d55 35%, white);
+  background: color-mix(in srgb, #1f9d55 10%, white);
+}
+
+.dashboard-milestone--current {
+  color: var(--fusion-text);
+  border-color: var(--fusion-teal-900);
+  background: var(--fusion-teal-100);
+  font-weight: 600;
+}
+
+.dashboard-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.dashboard-detail-grid p {
+  margin: 0.15rem 0 0;
+  color: var(--fusion-text);
+}
+
+.portal-task {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: var(--fusion-radius-sm);
+  border: 1px solid var(--fusion-border);
+  background: var(--fusion-surface-muted);
+}
+
+.portal-task--done {
+  opacity: 0.7;
+}
+
+.portal-task--done svg {
+  color: #1f9d55;
+}
