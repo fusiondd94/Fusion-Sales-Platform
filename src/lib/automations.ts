@@ -406,6 +406,144 @@ async function runAction(
  * automation failures are logged to crm_automation_runs and crm_activities
  * but must not interrupt the primary CRM action that triggered them.
  */
+export type AutomationPreviewCondition = {
+  field: string;
+  operator: string;
+  value?: string;
+  actual: string;
+  passed: boolean;
+};
+
+export type AutomationPreviewGroup = {
+  group: number;
+  passed: boolean;
+  conditions: AutomationPreviewCondition[];
+};
+
+export type AutomationPreviewAction = {
+  type: string;
+  summary: string;
+};
+
+export type AutomationPreviewResult = {
+  passes: boolean;
+  groups: AutomationPreviewGroup[];
+  actions: AutomationPreviewAction[];
+};
+
+export type AutomationSampleData = {
+  contact?: { name?: string; email?: string; phone?: string };
+  company?: { name?: string };
+  deal?: { value?: number; stageName?: string };
+  task?: { title?: string };
+  proposal?: { total?: number };
+};
+
+const TRIGGER_ENTITY_TYPE: Record<string, string> = {
+  "lead.captured": "lead",
+  "deal.stage_changed": "deal",
+  "task.completed": "task",
+  "task.overdue": "task",
+  "payment.received": "payment",
+  "proposal.sent": "proposal",
+  "proposal.signed": "proposal"
+};
+
+export function previewAutomation(
+  triggerType: AutomationTriggerType,
+  conditions: AutomationCondition[],
+  actions: AutomationAction[],
+  sample: AutomationSampleData
+): AutomationPreviewResult {
+  const context: AutomationContext = {
+    trigger: triggerType,
+    entityType: TRIGGER_ENTITY_TYPE[triggerType] || "unknown",
+    entityId: "preview",
+    organizationId: "preview",
+    contact: sample.contact,
+    company: sample.company,
+    deal: sample.deal,
+    task: sample.task,
+    proposal: sample.proposal
+  };
+
+  const groupsMap = new Map<number, AutomationCondition[]>();
+  for (const condition of conditions) {
+    const key = condition.group ?? 0;
+    const list = groupsMap.get(key) || [];
+    list.push(condition);
+    groupsMap.set(key, list);
+  }
+
+  const groups: AutomationPreviewGroup[] = Array.from(groupsMap.entries()).map(([group, groupConditions]) => {
+    const evaluated = groupConditions.map((condition) => ({
+      field: condition.field,
+      operator: condition.operator,
+      value: condition.value,
+      actual: String(getPath(context, condition.field) ?? ""),
+      passed: evaluateCondition(context, condition)
+    }));
+    return { group, passed: evaluated.every((item) => item.passed), conditions: evaluated };
+  });
+
+  const passes = !groups.length || groups.some((group) => group.passed);
+
+  const previewActions: AutomationPreviewAction[] = actions.map((action) => ({
+    type: action.type,
+    summary: describeActionPreview(action, context)
+  }));
+
+  return { passes, groups, actions: previewActions };
+}
+
+function describeActionPreview(action: AutomationAction, context: AutomationContext): string {
+  switch (action.type) {
+    case "create_contact": {
+      const name = context.contact?.name;
+      return name ? "Would create/link contact \"" + name + "\"." : "Would create/link a contact (no sample contact name provided).";
+    }
+    case "link_company": {
+      const name = context.company?.name;
+      return name ? "Would link company \"" + name + "\"." : "Would link a company (no sample company name provided).";
+    }
+    case "create_deal": {
+      const titleTemplate = String(action.config.dealTitleTemplate || "{{company.name}} - New Deal");
+      const title = fillTemplate(titleTemplate, context) || "New Deal";
+      return "Would create deal \"" + title + "\".";
+    }
+    case "create_task": {
+      const titleTemplate = String(action.config.titleTemplate || "Follow up");
+      const title = fillTemplate(titleTemplate, context) || "Follow up";
+      const dueInHours = Number(action.config.dueInHours ?? 24);
+      return "Would create task \"" + title + "\" due in " + dueInHours + " hour(s).";
+    }
+    case "update_lead_status": {
+      const status = String(action.config.status || "").trim();
+      if (!status) return "Would update lead status (no status configured).";
+      if (context.entityType !== "lead") return "Would update lead status to \"" + status + "\" (skipped in this sample: trigger is not a lead event).";
+      return "Would update lead status to \"" + status + "\".";
+    }
+    case "add_note": {
+      const bodyTemplate = String(action.config.bodyTemplate || "");
+      const body = fillTemplate(bodyTemplate, context);
+      return body ? "Would add note: \"" + body + "\"." : "Would add a note (no template configured).";
+    }
+    case "notify_team": {
+      const titleTemplate = String(action.config.titleTemplate || "Automation triggered: {{trigger}}");
+      const title = fillTemplate(titleTemplate, context) || "Automation notification";
+      return "Would notify team: \"" + title + "\".";
+    }
+    case "send_email": {
+      const templateId = String(action.config.templateId || "");
+      if (!templateId) return "Would send email (no template selected).";
+      if (!context.contact?.email) return "Would send email using the configured template (no sample contact email provided).";
+      return "Would send email to " + context.contact.email + " using the configured template.";
+    }
+    default:
+      return "Would run action: " + action.type + ".";
+  }
+}
+
 export async function runAutomations(context: AutomationContext) {
   const supabase = getServiceClient();
   if (!supabase) return;
