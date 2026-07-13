@@ -46,6 +46,8 @@ import {
   deleteBoardTask,
   deleteProjectComment,
   deleteTaskSection,
+  markAdminNotificationRead,
+  markAllAdminNotificationsRead,
   reorderBoardTasks,
   reorderTaskSections,
   resolveProjectComment,
@@ -762,5 +764,26 @@ export async function reorderFusionBoardTasks(updates: Array<{ taskId: string; s
   const result = await reorderBoardTasks({ updates });
   revalidatePath("/fusionadmin/task-board");
   revalidatePath("/portal");
+  return result;
+}
+
+
+export async function markFusionNotificationRead(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const notificationId = String(formData.get("notificationId") || "");
+  if (!notificationId) return;
+
+  await markAdminNotificationRead({ notificationId });
+  revalidatePath("/fusionadmin", "layout");
+}
+
+export async function markAllFusionNotificationsRead() {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return { ok: false };
+
+  const result = await markAllAdminNotificationsRead();
+  revalidatePath("/fusionadmin", "layout");
   return result;
 }
