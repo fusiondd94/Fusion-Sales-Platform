@@ -176,6 +176,7 @@ function adminPreviewProject(): ClientProject {
     live_url: null,
     preview_url: null,
     current_phase: "Portal QA",
+    payment_status: "unpaid",
     client_instructions: "Create or select a client record to test comments, file uploads, and live website review tools.",
     updated_at: new Date().toISOString()
   };
