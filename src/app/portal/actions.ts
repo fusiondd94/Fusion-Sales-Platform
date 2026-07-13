@@ -2,7 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClientProjectComment, deleteProjectComment, getClientPortalWorkspace, updateClientTaskStatus, uploadClientProjectFile } from "@/lib/portal";
+import {
+  createClientProjectComment,
+  deleteProjectComment,
+  getClientPortalWorkspace,
+  markAllNotificationsRead,
+  markNotificationRead,
+  reorderBoardTasks,
+  updateClientTaskStatus,
+  uploadClientProjectFile,
+} from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function signInClientPortal(_: unknown, formData: FormData) {
@@ -76,5 +85,27 @@ export async function updateOwnClientTaskStatus(formData: FormData) {
 
   await updateClientTaskStatus({ taskId, status });
 
+  revalidatePath("/portal");
+}
+
+
+export async function reorderOwnBoardTasks(
+  updates: Array<{ taskId: string; sectionId: string | null; position: number }>
+) {
+  await reorderBoardTasks({ updates });
+  revalidatePath("/portal");
+}
+
+export async function markOwnNotificationRead(formData: FormData) {
+  const notificationId = String(formData.get("notificationId") || "");
+  if (!notificationId) return;
+  await markNotificationRead({ notificationId });
+  revalidatePath("/portal");
+}
+
+export async function markAllOwnNotificationsRead(formData: FormData) {
+  const clientId = String(formData.get("clientId") || "");
+  if (!clientId) return;
+  await markAllNotificationsRead({ clientId });
   revalidatePath("/portal");
 }
