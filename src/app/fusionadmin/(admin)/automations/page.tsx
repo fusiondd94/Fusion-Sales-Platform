@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Zap } from "lucide-react";
-import { deleteFusionAutomation, toggleFusionAutomation } from "@/app/fusionadmin/actions";
+import { deleteFusionAutomation, duplicateFusionAutomation, toggleFusionAutomation } from "@/app/fusionadmin/actions";
 import { AUTOMATION_TRIGGERS, getAutomationsWorkspace } from "@/lib/automations";
 import { EmptyState, formatDate, PageHeader } from "../crm-ui";
 
@@ -115,6 +115,10 @@ export default async function FusionAutomationsPage({
                       <button className="secondary-button compact-button" type="submit">
                         {automation.is_active ? "Pause" : "Activate"}
                       </button>
+                    </form>
+                    <form action={duplicateFusionAutomation}>
+                      <input name="automationId" type="hidden" value={automation.id} />
+                      <button className="secondary-button compact-button" type="submit">Duplicate</button>
                     </form>
                     <form action={deleteFusionAutomation}>
                       <input name="automationId" type="hidden" value={automation.id} />
