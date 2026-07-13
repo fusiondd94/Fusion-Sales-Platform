@@ -200,8 +200,8 @@ export function AutomationBuilder({
 
   const [conditions, setConditions] = useState<ConditionNode[]>(() => {
     let y = START_Y + TRIGGER_HEIGHT + V_GAP;
-    return (initial?.conditions || []).map((condition) => {
-      const node = { ...condition, id: makeId("cond"), x: START_X, y };
+    return (initial?.conditions || []).map((condition, index) => {
+      const node = { ...condition, id: "cond-initial-" + index, x: START_X, y };
       y += CONDITION_HEIGHT + V_GAP;
       return node;
     });
@@ -209,8 +209,8 @@ export function AutomationBuilder({
 
   const [actions, setActions] = useState<ActionNode[]>(() => {
     let y = START_Y + TRIGGER_HEIGHT + V_GAP + (initial?.conditions?.length || 0) * (CONDITION_HEIGHT + V_GAP);
-    return (initial?.actions || []).map((action) => {
-      const node = { ...action, id: makeId("action"), x: START_X, y };
+    return (initial?.actions || []).map((action, index) => {
+      const node = { ...action, id: "action-initial-" + index, x: START_X, y };
       y += ACTION_HEIGHT + V_GAP;
       return node;
     });
