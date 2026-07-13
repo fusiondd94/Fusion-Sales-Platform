@@ -4940,3 +4940,105 @@ h1 {
 .portal-notif-item--unread:hover {
   background: color-mix(in srgb, var(--fusion-teal-100) 80%, white);
 }
+
+.admin-notif-bell {
+  position: relative;
+  margin-left: auto;
+}
+
+.admin-notif-bell > .ghost-button {
+  position: relative;
+}
+
+.admin-notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #d64545;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-notif-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 40;
+  width: 320px;
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--fusion-border);
+  border-radius: var(--fusion-radius-md);
+  background: var(--fusion-surface);
+  box-shadow: var(--fusion-shadow-md, var(--fusion-shadow-sm));
+}
+
+.admin-notif-dropdown__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--fusion-border);
+}
+
+.admin-notif-dropdown__heading strong {
+  color: var(--fusion-text);
+}
+
+.admin-notif-list {
+  display: grid;
+}
+
+.admin-notif-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid var(--fusion-border);
+  background: transparent;
+  padding: 0.7rem 0.85rem;
+  cursor: pointer;
+}
+
+.admin-notif-item:last-child {
+  border-bottom: none;
+}
+
+.admin-notif-item:hover {
+  background: var(--fusion-surface-muted);
+}
+
+.admin-notif-item strong {
+  display: block;
+  color: var(--fusion-text);
+  font-size: 0.88rem;
+}
+
+.admin-notif-item p {
+  margin: 0.2rem 0;
+  color: var(--fusion-text-muted);
+  font-size: 0.82rem;
+}
+
+.admin-notif-item span {
+  color: var(--fusion-text-muted);
+  font-size: 0.72rem;
+}
+
+.admin-notif-item--unread {
+  background: var(--fusion-teal-100);
+}
+
+.admin-notif-item--unread:hover {
+  background: color-mix(in srgb, var(--fusion-teal-100) 80%, white);
+}
