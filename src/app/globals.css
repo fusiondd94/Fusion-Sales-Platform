@@ -5189,3 +5189,41 @@ h1 {
   min-height: 60px;
   resize: vertical;
 }
+
+/* Automation results tabs + full-page builder layout */
+.automation-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 16px;
+  border-bottom: 1px solid var(--fusion-border);
+}
+
+.automation-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--fusion-text-muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.automation-tab:hover {
+  color: var(--fusion-text);
+}
+
+.automation-tab--active {
+  color: var(--fusion-focus);
+  border-bottom-color: var(--fusion-focus);
+}
+
+.automation-builder-page {
+  max-width: none;
+}
+
+.automation-builder-page .automation-form {
+  max-width: 1400px;
+}
