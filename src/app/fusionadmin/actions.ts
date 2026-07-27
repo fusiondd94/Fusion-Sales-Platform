@@ -58,6 +58,13 @@ import {
   updateClientProject
 } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  disconnectMessageChannel,
+  MessageChannelType,
+  MESSAGE_CHANNEL_TYPES,
+  saveMessageChannel,
+  sendMessage
+} from "@/lib/messages";
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
   const text = String(value || "");
@@ -853,4 +860,78 @@ export async function markAllFusionNotificationsRead(_formData: FormData) {
 
   await markAllAdminNotificationsRead();
   revalidatePath("/fusionadmin", "layout");
+}
+
+export async function saveFusionMessageChannel(
+  _prevState: { error?: string } | undefined,
+  formData: FormData
+): Promise<{ error?: string }> {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return { error: "You are not authorized to do that." };
+
+  const channelType = String(formData.get("channelType") || "") as MessageChannelType;
+  if (!MESSAGE_CHANNEL_TYPES.includes(channelType)) return { error: "Unknown channel." };
+
+  const credentials: Record<string, string> = {};
+  let externalAccountId = "";
+  let displayName = String(formData.get("displayName") || "").trim();
+
+  if (channelType === "whatsapp") {
+    externalAccountId = String(formData.get("phoneNumberId") || "").trim();
+    credentials.phoneNumberId = externalAccountId;
+    credentials.accessToken = String(formData.get("accessToken") || "").trim();
+    credentials.wabaId = String(formData.get("wabaId") || "").trim();
+    displayName = displayName || "WhatsApp";
+  } else if (channelType === "messenger") {
+    externalAccountId = String(formData.get("pageId") || "").trim();
+    credentials.pageId = externalAccountId;
+    credentials.accessToken = String(formData.get("accessToken") || "").trim();
+    displayName = displayName || "Messenger";
+  } else if (channelType === "instagram") {
+    externalAccountId = String(formData.get("igAccountId") || "").trim();
+    credentials.igAccountId = externalAccountId;
+    credentials.accessToken = String(formData.get("accessToken") || "").trim();
+    displayName = displayName || "Instagram";
+  }
+
+  const result = await saveMessageChannel({
+    actorId: user.id,
+    channelType,
+    displayName,
+    externalAccountId,
+    credentials
+  });
+
+  if (result.error) return { error: result.error };
+
+  revalidatePath("/fusionadmin/messages/settings");
+  redirect("/fusionadmin/messages/settings");
+}
+
+export async function disconnectFusionMessageChannel(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const channelType = String(formData.get("channelType") || "") as MessageChannelType;
+  await disconnectMessageChannel({ actorId: user.id, channelType });
+
+  revalidatePath("/fusionadmin/messages/settings");
+  redirect("/fusionadmin/messages/settings");
+}
+
+export async function sendFusionMessage(
+  _prevState: { error?: string } | undefined,
+  formData: FormData
+): Promise<{ error?: string }> {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return { error: "You are not authorized to do that." };
+
+  const threadId = String(formData.get("threadId") || "");
+  const body = String(formData.get("body") || "");
+
+  const result = await sendMessage({ actorId: user.id, threadId, body });
+  if (!result.ok) return { error: result.error || "Unable to send message." };
+
+  revalidatePath("/fusionadmin/messages");
+  redirect("/fusionadmin/messages?thread=" + threadId);
 }
