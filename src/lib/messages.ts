@@ -136,7 +136,23 @@ export async function saveMessageChannel(input: {
   const organizationId = await getDefaultOrganizationId(supabase);
   if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
 
-  const hasCredentials = Object.values(input.credentials).some((value) => value && value.trim());
+  const { data: existing } = await supabase
+    .from("crm_message_channels")
+    .select("credentials")
+    .eq("organization_id", organizationId)
+    .eq("channel_type", input.channelType)
+    .maybeSingle<{ credentials: Record<string, string> }>();
+
+  const mergedCredentials: Record<string, string> = { ...(existing?.credentials || {}) };
+  for (const [key, value] of Object.entries(input.credentials)) {
+    if (value && value.trim()) {
+      mergedCredentials[key] = value.trim();
+    } else if (!(key in mergedCredentials)) {
+      mergedCredentials[key] = "";
+    }
+  }
+
+  const hasCredentials = Object.values(mergedCredentials).some((value) => value && value.trim());
 
   const { error } = await supabase
     .from("crm_message_channels")
@@ -146,7 +162,7 @@ export async function saveMessageChannel(input: {
         channel_type: input.channelType,
         display_name: input.displayName || CHANNEL_LABELS[input.channelType],
         external_account_id: input.externalAccountId || null,
-        credentials: input.credentials,
+        credentials: mergedCredentials,
         status: hasCredentials ? "connected" : "disconnected",
         last_error: null,
         updated_by: input.actorId,
