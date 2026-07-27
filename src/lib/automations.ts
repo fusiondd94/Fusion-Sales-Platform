@@ -8,7 +8,8 @@ export type AutomationTriggerType =
   | "task.overdue"
   | "payment.received"
   | "proposal.sent"
-  | "proposal.signed";
+  | "proposal.signed"
+  | "message.received";
 
 export const AUTOMATION_TRIGGERS: Array<{ value: AutomationTriggerType; label: string; description: string }> = [
   { value: "lead.captured", label: "New lead captured", description: "A potential client submits the sales questionnaire." },
@@ -17,7 +18,8 @@ export const AUTOMATION_TRIGGERS: Array<{ value: AutomationTriggerType; label: s
   { value: "task.overdue", label: "Task overdue", description: "A task passes its due date without being completed." },
   { value: "payment.received", label: "Payment received", description: "A Stripe checkout completes and a client is created." },
   { value: "proposal.sent", label: "Proposal sent", description: "A proposal is marked as sent to a client." },
-  { value: "proposal.signed", label: "Proposal signed", description: "A proposal is marked as accepted/signed." }
+  { value: "proposal.signed", label: "Proposal signed", description: "A proposal is marked as accepted/signed." },
+  { value: "message.received", label: "Message received", description: "A new WhatsApp, Messenger, or Instagram message arrives." }
 ];
 
 export type AutomationActionType =
@@ -89,6 +91,7 @@ export type AutomationContext = {
   deal?: { title?: string | null; value?: number | null; stageId?: string | null; stageName?: string | null; previousStageName?: string | null };
   task?: { title?: string | null; dueAt?: string | null; owner?: string | null };
   proposal?: { title?: string | null; number?: string | null; total?: number | null };
+  message?: { body?: string | null; channel?: string | null };
   raw?: Record<string, unknown>;
 };
 
@@ -446,7 +449,8 @@ const TRIGGER_ENTITY_TYPE: Record<string, string> = {
   "task.overdue": "task",
   "payment.received": "payment",
   "proposal.sent": "proposal",
-  "proposal.signed": "proposal"
+  "proposal.signed": "proposal",
+  "message.received": "message"
 };
 
 export function previewAutomation(
