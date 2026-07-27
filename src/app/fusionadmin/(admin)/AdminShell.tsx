@@ -16,6 +16,7 @@ import {
   Library,
   LayoutDashboard,
   Mail,
+  MessageCircle,
   MonitorUp,
   Settings,
   UsersRound,
@@ -69,6 +70,12 @@ const navSections = [
     label: "Automation",
     items: [
       { href: "/fusionadmin/automations", label: "Automations", icon: Zap, description: "Rules and triggers" }
+    ]
+  },
+  {
+    label: "Messaging",
+    items: [
+      { href: "/fusionadmin/messages", label: "Messages", icon: MessageCircle, description: "Unified inbox" }
     ]
   },
   {
