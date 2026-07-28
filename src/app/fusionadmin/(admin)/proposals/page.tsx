@@ -1,7 +1,7 @@
 import { FileText, PlusCircle } from "lucide-react";
 import { createFusionProposal, updateFusionProposalStatus } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
-import { EmptyState, formatCurrency, formatDate, FusionDataTable, FusionSubmitButton, PageHeader } from "../crm-ui";
+import { EmptyState, formatCurrency, formatDate, FusionBadge, FusionDataTable, FusionSubmitButton, PageHeader, statusTone } from "../crm-ui";
 
 export default async function FusionProposalsPage() {
   const salesOps = await getSalesOpsWorkspace();
@@ -35,7 +35,7 @@ export default async function FusionProposalsPage() {
               <tr key={proposal.id}>
                 <td data-label="Proposal">{proposal.proposal_title}<br /><span className="muted">{proposal.proposal_number}</span></td>
                 <td data-label="Status">
-                  <span className="status-pill">{proposal.status}</span>
+                  <FusionBadge tone={statusTone(proposal.status)}>{proposal.status}</FusionBadge>
                   <form action={updateFusionProposalStatus} className="inline-status-form">
                     <input name="proposalId" type="hidden" value={proposal.id} />
                     <select aria-label="Update proposal status" defaultValue={proposal.status} name="status">
