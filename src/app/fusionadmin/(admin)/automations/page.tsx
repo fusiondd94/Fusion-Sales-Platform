@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Zap } from "lucide-react";
 import { deleteFusionAutomation, duplicateFusionAutomation, toggleFusionAutomation } from "@/app/fusionadmin/actions";
 import { AUTOMATION_TRIGGERS, getAutomationsWorkspace } from "@/lib/automations";
-import { EmptyState, formatDate, PageHeader } from "../crm-ui";
+import { EmptyState, formatDate, FusionBadge, PageHeader, statusTone } from "../crm-ui";
 
 type StatusFilter = "active" | "draft" | "paused";
 
@@ -95,9 +95,9 @@ export default async function FusionAutomationsPage({
                     </small>
                   </span>
                   <span className="automation-summary-meta">
-                    <span className={status === "active" ? "status-pill" : "status-pill status-pill-muted"}>
+                    <FusionBadge tone={statusTone(status)}>
                       {status === "active" ? "Active" : status === "draft" ? "Draft" : "Paused"}
-                    </span>
+                    </FusionBadge>
                     <span className="muted">{automation.run_count} run{automation.run_count === 1 ? "" : "s"}</span>
                   </span>
                 </summary>
@@ -132,9 +132,9 @@ export default async function FusionAutomationsPage({
                       {recentRuns.slice(0, 5).map((run) => (
                         <details key={run.id} className="automation-run-detail">
                           <summary>
-                            <span className={"status-pill " + (run.status === "error" ? "status-pill-error" : run.status === "skipped" ? "status-pill-muted" : "")}>
+                            <FusionBadge tone={statusTone(run.status)}>
                               {run.status}
-                            </span>
+                            </FusionBadge>
                             <span className="muted"> {formatDate(run.created_at)}</span>
                           </summary>
                           {run.error_message ? <p className="muted">{run.error_message}</p> : null}
