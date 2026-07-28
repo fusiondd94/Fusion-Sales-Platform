@@ -440,9 +440,15 @@
   gap: 1.25rem;
 }
 
+.portal-preview-panel .panel-heading {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .portal-preview-panel .portal-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
@@ -485,10 +491,15 @@
 
 .preview-frame-wrap {
   border-radius: var(--fusion-radius-lg);
-  overflow: hidden;
   border: 1px solid var(--fusion-border, #dfe5ea);
   margin-top: 0.85rem;
   background: var(--fusion-beige-50);
+  /* Bound the preview vertically and scroll inside the card instead of the
+     whole page, so the toolbar above (viewport switch, comment/browse
+     toggle) never scrolls out of reach on a tall site. */
+  max-height: min(76vh, 900px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .preview-frame-wrap--tablet {
@@ -501,6 +512,14 @@
   max-width: 420px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.preview-frame {
+  position: relative;
+}
+
+.preview-frame-scaler {
+  position: relative;
 }
 
 .comment-pin {
