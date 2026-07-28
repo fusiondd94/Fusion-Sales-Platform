@@ -1,11 +1,26 @@
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { cookies } from "next/headers";
+import { LogIn, MessageCircle, ShieldCheck } from "lucide-react";
 import { getMessagingWorkspace } from "@/lib/messages";
 import { MessageChannelForm } from "@/components/MessageChannelForm";
 import { PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
+import { FormError } from "@/components/ui";
+import { cancelMetaConnect, connectMetaPage } from "@/app/fusionadmin/actions";
 
-export default async function MessageSettingsPage() {
+type MetaPageOption = {
+  id: string;
+  name: string;
+  accessToken: string;
+  instagram: { id: string; username: string } | null;
+};
+
+export default async function MessageSettingsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ connect?: string; metaError?: string }>;
+}) {
   const { channels } = await getMessagingWorkspace();
+  const { connect, metaError } = await searchParams;
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 
   function webhookUrlFor(channelType: string) {
@@ -13,18 +28,105 @@ export default async function MessageSettingsPage() {
     return appUrl + (channelType === "whatsapp" ? "/api/webhooks/whatsapp" : "/api/webhooks/meta");
   }
 
+  let pendingPages: MetaPageOption[] = [];
+  if (connect === "1") {
+    const cookieStore = await cookies();
+    const raw = cookieStore.get("meta_oauth_pages")?.value;
+    if (raw) {
+      try {
+        pendingPages = JSON.parse(raw) as MetaPageOption[];
+      } catch {
+        pendingPages = [];
+      }
+    }
+  }
+
   return (
     <div className="admin-content">
       <PageHeader
         eyebrow="Messaging"
         title="Channel connections"
-        description="Connect WhatsApp, Messenger, and Instagram to receive and reply to messages from one inbox."
+        description="Connect Facebook and Instagram to receive and reply to messages from one inbox."
         action={
           <Link className="secondary-button compact-button" href="/fusionadmin/messages">
             <MessageCircle size={16} /> Go to inbox
           </Link>
         }
       />
+
+      <FormError message={metaError} />
+
+      <div className="meta-connect-card">
+        <div className="meta-connect-card__copy">
+          <span className="meta-connect-card__icon">
+            <LogIn size={20} />
+          </span>
+          <div>
+            <h3>Connect with Facebook</h3>
+            <p className="muted">
+              Sign in with your Facebook account to link a Page for Messenger and its connected Instagram account.
+              Your password stays on Facebook &mdash; this app only receives a secure access token, the same way
+              &quot;Login with Facebook&quot; works on any site.
+            </p>
+          </div>
+        </div>
+        <a className="primary-button compact-button" href="/api/oauth/meta/start">
+          <LogIn size={16} /> Connect with Facebook
+        </a>
+      </div>
+
+      {pendingPages.length ? (
+        <div className="admin-panel meta-page-picker">
+          <div className="meta-page-picker__header">
+            <ShieldCheck size={18} />
+            <div>
+              <h3>Choose a Page to connect</h3>
+              <p className="muted">
+                We found {pendingPages.length} Facebook Page{pendingPages.length === 1 ? "" : "s"} you manage. Pick
+                the one to use for Messenger{pendingPages.some((page) => page.instagram) ? " and Instagram" : ""}.
+              </p>
+            </div>
+          </div>
+
+          <div className="meta-page-picker__list">
+            {pendingPages.map((page) => (
+              <form action={connectMetaPage} className="meta-page-option" key={page.id}>
+                <input name="pageId" type="hidden" value={page.id} />
+                <input name="pageName" type="hidden" value={page.name} />
+                <input name="pageToken" type="hidden" value={page.accessToken} />
+                {page.instagram ? (
+                  <>
+                    <input name="igId" type="hidden" value={page.instagram.id} />
+                    <input name="igUsername" type="hidden" value={page.instagram.username} />
+                  </>
+                ) : null}
+
+                <div className="meta-page-option__info">
+                  <strong>{page.name}</strong>
+                  <span className="muted">
+                    {page.instagram
+                      ? `Messenger + Instagram @${page.instagram.username}`
+                      : "Messenger only — no linked Instagram account"}
+                  </span>
+                </div>
+                <button className="primary-button compact-button" type="submit">
+                  Connect
+                </button>
+              </form>
+            ))}
+          </div>
+
+          <form action={cancelMetaConnect}>
+            <button className="ghost-button compact-button" type="submit">
+              Cancel
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      <p className="meta-connect-note muted">
+        Need WhatsApp, or prefer to paste tokens manually? Use the advanced setup below.
+      </p>
 
       <div className="message-channel-grid">
         {channels.map((channel) => (
