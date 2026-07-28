@@ -207,106 +207,169 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
           </section>
         ) : null}
 
-        <section className="portal-hero">
-          <div>
-            <p className="eyebrow">Project workspace</p>
-            <h1>{workspace.project.project_name}</h1>
-            <p className="hero-copy">{workspace.client.company} · {workspace.project.current_phase}</p>
-          </div>
-          <div className="portal-status-strip">
-            <span>{workspace.project.project_status.replace("_", " ")}</span>
-            <strong>{openComments.length}</strong>
-            <span>open comments</span>
-          </div>
-        </section>
+        {activeTool !== "review" ? (
+          <section className="portal-hero">
+            <div>
+              <p className="eyebrow">Project workspace</p>
+              <h1>{workspace.project.project_name}</h1>
+              <p className="hero-copy">{workspace.client.company} · {workspace.project.current_phase}</p>
+            </div>
+            <div className="portal-status-strip">
+              <span>{workspace.project.project_status.replace("_", " ")}</span>
+              <strong>{openComments.length}</strong>
+              <span>open comments</span>
+            </div>
+          </section>
+        ) : null}
 
-        <div className="portal-layout">
-        <aside className="portal-sidebar">
-          <button className={activeTool === "review" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("review")} type="button">
-            <MousePointer2 size={16} /> Website Review
-          </button>
-          <button className={activeTool === "uploads" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("uploads")} type="button">
-            <FileUp size={16} /> Uploads
-          </button>
-          <button className={activeTool === "dashboard" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("dashboard")} type="button">
-            <LayoutDashboard size={16} /> Dashboard
-          </button>
-          <button className={activeTool === "tasks" ? "portal-sidebar__link portal-sidebar__link--active" : "portal-sidebar__link"} onClick={() => setActiveTool("tasks")} type="button">
-            <ListChecks size={16} /> Tasks
-          </button>
-        </aside>
-        <div className="portal-main">
+        <div className="portal-toolbar-bar">
+          <div className="portal-tool-tabs">
+            <button className={activeTool === "review" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("review")} type="button">
+              <MousePointer2 size={16} /> <span>Website Review</span>
+            </button>
+            <button className={activeTool === "uploads" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("uploads")} type="button">
+              <FileUp size={16} /> <span>Uploads</span>
+            </button>
+            <button className={activeTool === "dashboard" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("dashboard")} type="button">
+              <LayoutDashboard size={16} /> <span>Dashboard</span>
+            </button>
+            <button className={activeTool === "tasks" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("tasks")} type="button">
+              <ListChecks size={16} /> <span>Tasks</span>
+            </button>
+          </div>
+
+          {activeTool === "review" && previewUrl ? (
+            <div className="portal-toolbar-bar__center">
+              <div className="viewport-switch">
+                <button aria-label="Desktop view" className={viewport === "desktop" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("desktop")} type="button">
+                  <Monitor size={15} />
+                </button>
+                <button aria-label="Tablet view" className={viewport === "tablet" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("tablet")} type="button">
+                  <Tablet size={15} />
+                </button>
+                <button aria-label="Mobile view" className={viewport === "mobile" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("mobile")} type="button">
+                  <Smartphone size={15} />
+                </button>
+              </div>
+              <div className="comment-mode-toggle">
+                <button
+                  className={commentMode ? "comment-mode-toggle__btn comment-mode-toggle__btn--active" : "comment-mode-toggle__btn"}
+                  onClick={() => setCommentMode(true)}
+                  type="button"
+                >
+                  <MessageSquarePlus size={14} /> Comment
+                </button>
+                <button
+                  className={!commentMode ? "comment-mode-toggle__btn comment-mode-toggle__btn--active" : "comment-mode-toggle__btn"}
+                  onClick={() => { setCommentMode(false); setMarker(null); }}
+                  type="button"
+                >
+                  <MousePointer2 size={14} /> Browse
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="portal-toolbar-bar__center" />
+          )}
+
+          <div className="portal-toolbar-bar__meta">
+            <span className={`status-pill status-pill--${workspace.project.project_status}`}>
+              {(workspace.project.project_status || "").replace("_", " ")}
+            </span>
+          </div>
+        </div>
+
+        <div className="portal-main portal-main--full">
           {activeTool === "review" ? (
             <section className="portal-workspace-grid">
-              <article className="admin-panel portal-preview-panel">
-            <div className="panel-heading">
-                  <h2><MousePointer2 size={20} /> Website review</h2>
-                  <div className="portal-toolbar">
-                    <div className="viewport-switch">
-                      <button aria-label="Desktop view" className={viewport === "desktop" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("desktop")} type="button">
-                        <Monitor size={15} />
+              <aside className="portal-side-stack portal-comments-rail">
+                <article className="admin-panel portal-comments-panel">
+                  <div className="panel-heading">
+                    <h2>Comments</h2>
+                    <div className="comment-tabs">
+                      <button className={commentsTab === "active" ? "comment-tab comment-tab--active" : "comment-tab"} onClick={() => setCommentsTab("active")} type="button">
+                        {openComments.length} Active
                       </button>
-                      <button aria-label="Tablet view" className={viewport === "tablet" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("tablet")} type="button">
-                        <Tablet size={15} />
-                      </button>
-                      <button aria-label="Mobile view" className={viewport === "mobile" ? "viewport-switch__btn viewport-switch__btn--active" : "viewport-switch__btn"} onClick={() => setViewport("mobile")} type="button">
-                        <Smartphone size={15} />
-                      </button>
-                    </div>
-                    <div className="comment-mode-toggle">
-                      <button
-                        className={commentMode ? "comment-mode-toggle__btn comment-mode-toggle__btn--active" : "comment-mode-toggle__btn"}
-                        onClick={() => setCommentMode(true)}
-                        type="button"
-                      >
-                        <MessageSquarePlus size={14} /> Comment
-                      </button>
-                      <button
-                        className={!commentMode ? "comment-mode-toggle__btn comment-mode-toggle__btn--active" : "comment-mode-toggle__btn"}
-                        onClick={() => { setCommentMode(false); setMarker(null); }}
-                        type="button"
-                      >
-                        <MousePointer2 size={14} /> Browse
+                      <button className={commentsTab === "resolved" ? "comment-tab comment-tab--active" : "comment-tab"} onClick={() => setCommentsTab("resolved")} type="button">
+                        {resolvedComments.length} Resolved
                       </button>
                     </div>
                   </div>
-                </div>
-            {workspace.project.client_instructions ? <p className="muted">{workspace.project.client_instructions}</p> : null}
-            {commentMode ? <p className="muted comment-mode-hint">Click anywhere on the preview to drop a comment pin at that exact spot.</p> : null}
-            {previewUrl ? (
-              <div className={"preview-frame-wrap preview-frame-wrap--" + viewport} ref={previewWrapRef}>
-              <div
-                className={commentMode ? "preview-frame comment-mode" : "preview-frame"}
-                onClick={(event) => {
-                  if (!commentMode) return;
-                  const box = event.currentTarget.getBoundingClientRect();
-                  setMarker({
-                    x: Number((((event.clientX - box.left) / box.width) * 100).toFixed(3)),
-                    y: Number((((event.clientY - box.top) / box.height) * 100).toFixed(3))
-                  });
-                }}
-                ref={previewFrameRef}
-                style={viewport === "desktop" ? { height: frameHeight * desktopFitScale } : undefined}
-              >
-                <div
-                  className="preview-frame-scaler"
-                  style={
-                    viewport === "desktop"
-                      ? { width: DESKTOP_FIT_WIDTH, height: frameHeight, transform: `scale(${desktopFitScale})`, transformOrigin: "top left" }
-                      : undefined
-                  }
-                >
-                  <iframe
-                    onLoad={handleFrameLoad}
-                    ref={iframeRef}
-                    src={previewUrl}
-                    style={{ height: frameHeight, width: viewport === "desktop" ? DESKTOP_FIT_WIDTH : undefined }}
-                    title={`${workspace.project.project_name} preview`}
-                  />
-                </div>
-                <div className="comment-layer" aria-hidden={!commentMode}>
-                  {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null && normalizeUrl(comment.page_url) === normalizeUrl(currentPageUrl)).map((comment) => (
-                    <span
+                  <div className="timeline-list">
+                    {visibleComments.map((comment) => (
+                      <div className={comment.id === highlightCommentId ? "timeline-item timeline-item--target" : "timeline-item"} key={comment.id}>
+                        {pinNumberById.get(comment.id) ? <span className="timeline-item__number">{pinNumberById.get(comment.id)}</span> : null}
+                        <p>
+                          <strong>{comment.author_name}</strong>
+                          <br />
+                          <span className="muted">{comment.body}</span>
+                          <br />
+                          <span className={`status-pill status-pill--${comment.status}`}>{comment.status}</span>
+                        </p>
+                        {comment.author_user_id === workspace.user.id ? (
+                          <form action={deleteOwnProjectComment}>
+                            <input name="clientId" type="hidden" value={selectedClientId} />
+                            <input name="commentId" type="hidden" value={comment.id} />
+                            <button aria-label="Delete comment" className="timeline-item__delete" type="submit"><Trash2 size={14} /></button>
+                          </form>
+                        ) : null}
+                      </div>
+                    ))}
+                    {!visibleComments.length ? (
+                      <div className="portal-comments-empty">
+                        <MessageSquarePlus size={22} />
+                        <p>{commentsTab === "active" ? "Click anywhere on the preview to leave a comment." : "No resolved comments yet."}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                  <form className="quick-form portal-comment-form" action={addProjectComment}>
+                    <input name="clientId" type="hidden" value={selectedClientId} />
+                    <input name="pageUrl" type="hidden" value={currentPageUrl} />
+                    <input name="markerX" type="hidden" value="" />
+                    <input name="markerY" type="hidden" value="" />
+                    <textarea aria-label="Project comment" disabled={!canSubmitPortalWork} name="body" placeholder="Leave a general comment about the site overall." required />
+                    <button className="primary-button compact-button" disabled={!canSubmitPortalWork} type="submit"><Send size={14} /> Send comment</button>
+                  </form>
+                </article>
+              </aside>
+
+              <article className="admin-panel portal-preview-panel">
+                {workspace.project.client_instructions ? <p className="muted portal-preview-note">{workspace.project.client_instructions}</p> : null}
+                {commentMode ? <p className="muted comment-mode-hint">Click anywhere on the preview to drop a comment pin at that exact spot.</p> : null}
+                {previewUrl ? (
+                  <div className={"preview-frame-wrap preview-frame-wrap--" + viewport} ref={previewWrapRef}>
+                    <div
+                      className={commentMode ? "preview-frame comment-mode" : "preview-frame"}
+                      onClick={(event) => {
+                        if (!commentMode) return;
+                        const box = event.currentTarget.getBoundingClientRect();
+                        setMarker({
+                          x: Number((((event.clientX - box.left) / box.width) * 100).toFixed(3)),
+                          y: Number((((event.clientY - box.top) / box.height) * 100).toFixed(3))
+                        });
+                      }}
+                      ref={previewFrameRef}
+                      style={viewport === "desktop" ? { height: frameHeight * desktopFitScale } : undefined}
+                    >
+                      <div
+                        className="preview-frame-scaler"
+                        style={
+                          viewport === "desktop"
+                            ? { width: DESKTOP_FIT_WIDTH, height: frameHeight, transform: `scale(${desktopFitScale})`, transformOrigin: "top left" }
+                            : undefined
+                        }
+                      >
+                        <iframe
+                          onLoad={handleFrameLoad}
+                          ref={iframeRef}
+                          src={previewUrl}
+                          style={{ height: frameHeight, width: viewport === "desktop" ? DESKTOP_FIT_WIDTH : undefined }}
+                          title={`${workspace.project.project_name} preview`}
+                        />
+                      </div>
+                      <div className="comment-layer" aria-hidden={!commentMode}>
+                        {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null && normalizeUrl(comment.page_url) === normalizeUrl(currentPageUrl)).map((comment) => (
+                          <span
                             className={
                               (comment.status === "resolved" ? "comment-pin resolved" : "comment-pin") +
                               (comment.id === highlightCommentId ? " comment-pin--target" : "")
@@ -317,136 +380,90 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                           >
                             {pinNumberById.get(comment.id) || ""}
                           </span>
-                  ))}
-                  {marker ? <span className="comment-pin draft" style={{ left: `${marker.x}%`, top: `${marker.y}%` }} /> : null}
-                  {marker ? (
-                    <div
-                      className="comment-popup"
-                      onClick={(event) => event.stopPropagation()}
-                      style={{ left: `${clampPercent(marker.x, 4, 78)}%`, top: `${clampPercent(marker.y, 4, 82)}%` }}
-                    >
-                      <div className="comment-popup__head">
-                        <span>New comment</span>
-                        <button
-                          aria-label="Cancel comment"
-                          className="comment-popup__close"
-                          onClick={() => setMarker(null)}
-                          type="button"
-                        >
-                          <X size={14} />
-                        </button>
+                        ))}
+                        {marker ? <span className="comment-pin draft" style={{ left: `${marker.x}%`, top: `${marker.y}%` }} /> : null}
+                        {marker ? (
+                          <div
+                            className="comment-popup"
+                            onClick={(event) => event.stopPropagation()}
+                            style={{ left: `${clampPercent(marker.x, 4, 78)}%`, top: `${clampPercent(marker.y, 4, 82)}%` }}
+                          >
+                            <div className="comment-popup__head">
+                              <span>New comment</span>
+                              <button
+                                aria-label="Cancel comment"
+                                className="comment-popup__close"
+                                onClick={() => setMarker(null)}
+                                type="button"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            <form action={addProjectComment} className="quick-form" onSubmit={() => setMarker(null)}>
+                              <input name="clientId" type="hidden" value={selectedClientId} />
+                              <input name="pageUrl" type="hidden" value={currentPageUrl} />
+                              <input name="markerX" type="hidden" value={marker.x} />
+                              <input name="markerY" type="hidden" value={marker.y} />
+                              <textarea
+                                aria-label="Project comment"
+                                autoFocus
+                                disabled={!canSubmitPortalWork}
+                                name="body"
+                                placeholder="Describe the change for this spot."
+                                required
+                              />
+                              <button className="primary-button compact-button" disabled={!canSubmitPortalWork} type="submit"><Send size={14} /> Send</button>
+                            </form>
+                          </div>
+                        ) : null}
                       </div>
-                      <form action={addProjectComment} className="quick-form" onSubmit={() => setMarker(null)}>
-                        <input name="clientId" type="hidden" value={selectedClientId} />
-                        <input name="pageUrl" type="hidden" value={currentPageUrl} />
-                        <input name="markerX" type="hidden" value={marker.x} />
-                        <input name="markerY" type="hidden" value={marker.y} />
-                        <textarea
-                          aria-label="Project comment"
-                          autoFocus
-                          disabled={!canSubmitPortalWork}
-                          name="body"
-                          placeholder="Describe the change for this spot."
-                          required
-                        />
-                        <button className="primary-button compact-button" disabled={!canSubmitPortalWork} type="submit"><Send size={14} /> Send</button>
-                      </form>
                     </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-            ) : (
-              <div className="portal-empty-preview">
-                <p className="eyebrow">Preview pending</p>
-                <h2>Fusion will add your project preview here.</h2>
-                <p className="muted">Once the admin pastes the preview link, your live website review will appear in this workspace.</p>
-              </div>
-            )}
-
-            <form className="quick-form portal-comment-form" action={addProjectComment}>
-              <input name="clientId" type="hidden" value={selectedClientId} />
-              <input name="pageUrl" type="hidden" value={currentPageUrl} />
-              <input name="markerX" type="hidden" value="" />
-              <input name="markerY" type="hidden" value="" />
-              <textarea aria-label="Project comment" disabled={!canSubmitPortalWork} name="body" placeholder="Leave a general project comment about the site overall." required />
-              <button className="primary-button" disabled={!canSubmitPortalWork} type="submit"><Send size={16} /> Send comment</button>
-            </form>
-          </article>
-              <aside className="portal-side-stack">
-                <article className="admin-panel">
-              <div className="panel-heading">
-                <h2>Comments</h2>
-                <div className="comment-tabs">
-                  <button className={commentsTab === "active" ? "comment-tab comment-tab--active" : "comment-tab"} onClick={() => setCommentsTab("active")} type="button">
-                    {openComments.length} Active
-                  </button>
-                  <button className={commentsTab === "resolved" ? "comment-tab comment-tab--active" : "comment-tab"} onClick={() => setCommentsTab("resolved")} type="button">
-                    {resolvedComments.length} Resolved
-                  </button>
-                </div>
-              </div>
-              <div className="timeline-list">
-                {visibleComments.map((comment) => (
-                  <div className={comment.id === highlightCommentId ? "timeline-item timeline-item--target" : "timeline-item"} key={comment.id}>
-                  {pinNumberById.get(comment.id) ? <span className="timeline-item__number">{pinNumberById.get(comment.id)}</span> : null}
-                    <p>
-                      <strong>{comment.author_name}</strong>
-                      <br />
-                      <span className="muted">{comment.body}</span>
-                      <br />
-                      <span className={`status-pill status-pill--${comment.status}`}>{comment.status}</span>
-                    </p>
-                    {comment.author_user_id === workspace.user.id ? (
-                      <form action={deleteOwnProjectComment}>
-                        <input name="clientId" type="hidden" value={selectedClientId} />
-                        <input name="commentId" type="hidden" value={comment.id} />
-                        <button aria-label="Delete comment" className="timeline-item__delete" type="submit"><Trash2 size={14} /></button>
-                      </form>
-                    ) : null}
                   </div>
-                ))}
-                {!visibleComments.length ? <p className="admin-empty">{commentsTab === "active" ? "No active comments." : "No resolved comments yet."}</p> : null}
-              </div>
-            </article>
-              </aside>
+                ) : (
+                  <div className="portal-empty-preview">
+                    <p className="eyebrow">Preview pending</p>
+                    <h2>Fusion will add your project preview here.</h2>
+                    <p className="muted">Once the admin pastes the preview link, your live website review will appear in this workspace.</p>
+                  </div>
+                )}
+              </article>
             </section>
           ) : activeTool === "uploads" ? (
             <div className="portal-side-stack portal-uploads-view">
               <article className="admin-panel">
-              <h2><FileUp size={20} /> Upload project files</h2>
-              <form className="quick-form" action={uploadProjectFile}>
-                <input name="clientId" type="hidden" value={selectedClientId} />
-                <label>
-                  Project file
-                  <input disabled={!canSubmitPortalWork} name="file" type="file" required />
-                </label>
-                <textarea aria-label="File description" disabled={!canSubmitPortalWork} name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
-                <button className="secondary-button" disabled={!canSubmitPortalWork} type="submit"><FileUp size={16} /> Upload file</button>
-              </form>
-            </article>
+                <h2><FileUp size={20} /> Upload project files</h2>
+                <form className="quick-form" action={uploadProjectFile}>
+                  <input name="clientId" type="hidden" value={selectedClientId} />
+                  <label>
+                    Project file
+                    <input disabled={!canSubmitPortalWork} name="file" type="file" required />
+                  </label>
+                  <textarea aria-label="File description" disabled={!canSubmitPortalWork} name="description" placeholder="What is this file for? Logo, copy, inspiration, photos..." />
+                  <button className="secondary-button" disabled={!canSubmitPortalWork} type="submit"><FileUp size={16} /> Upload file</button>
+                </form>
+              </article>
               <article className="admin-panel">
-              <div className="panel-heading">
-                <h2>Uploaded files</h2>
-                <span className="status-pill">{workspace.files.length}</span>
-              </div>
-              <div className="stack-list">
-                {workspace.files.map((file) => (
-                  <p key={file.id}>
-                    <strong>{file.file_name}</strong>
-                    <br />
-                    <span className="muted">{formatFileSize(file.file_size)} · {file.description || "No note"}</span>
-                    {file.signedUrl ? (
-                      <>
-                        <br />
-                        <a className="text-link" href={file.signedUrl}><Download size={14} /> Download</a>
-                      </>
-                    ) : null}
-                  </p>
-                ))}
-                {!workspace.files.length ? <p className="admin-empty">No files uploaded yet.</p> : null}
-              </div>
-            </article>
+                <div className="panel-heading">
+                  <h2>Uploaded files</h2>
+                  <span className="status-pill">{workspace.files.length}</span>
+                </div>
+                <div className="stack-list">
+                  {workspace.files.map((file) => (
+                    <p key={file.id}>
+                      <strong>{file.file_name}</strong>
+                      <br />
+                      <span className="muted">{formatFileSize(file.file_size)} · {file.description || "No note"}</span>
+                      {file.signedUrl ? (
+                        <>
+                          <br />
+                          <a className="text-link" href={file.signedUrl}><Download size={14} /> Download</a>
+                        </>
+                      ) : null}
+                    </p>
+                  ))}
+                  {!workspace.files.length ? <p className="admin-empty">No files uploaded yet.</p> : null}
+                </div>
+              </article>
             </div>
           ) : activeTool === "dashboard" ? (
             <DashboardView workspace={workspace} />
@@ -454,7 +471,6 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
             <TasksView workspace={workspace} />
           )}
         </div>
-      </div>
       </div>
     </main>
   );
