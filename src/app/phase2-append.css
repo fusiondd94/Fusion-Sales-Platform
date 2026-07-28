@@ -1,0 +1,114 @@
+
+/* ==========================================================================
+   FUSION FINTECH DESIGN SYSTEM — Phase 2
+   Status badges (color-coded), sticky data-table headers, and table polish
+   for Deals, Clients, Proposals, and Reports.
+   ========================================================================== */
+
+.fusion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: var(--fusion-radius-pill, 999px);
+  padding: 0.28rem 0.65rem;
+  font-size: var(--fusion-text-xs, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.fusion-badge--neutral {
+  background: var(--fusion-beige-100, #f2ede4);
+  color: var(--brand-charcoal, #36454f);
+}
+
+.fusion-badge--teal {
+  background: rgba(0, 68, 67, 0.1);
+  color: var(--brand-teal, #004443);
+}
+
+.fusion-badge--gold {
+  background: rgba(211, 169, 57, 0.16);
+  color: #8a6a1f;
+}
+
+.fusion-badge--success {
+  background: #e3f4ed;
+  color: #0f5b3f;
+}
+
+.fusion-badge--warning {
+  background: #fff2cc;
+  color: #8a5a12;
+}
+
+.fusion-badge--danger {
+  background: #fde8e7;
+  color: #a3271f;
+}
+
+.fusion-badge--info {
+  background: #e5f0fb;
+  color: #1f6fb2;
+}
+
+/* Sticky, cleaner data tables */
+
+.fusion-data-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--fusion-radius-md, 8px);
+}
+
+.fusion-data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.fusion-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--fusion-beige-50, #faf8f5);
+  color: var(--fusion-text-muted, #667783);
+  font-size: var(--fusion-text-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--fusion-border, #dfe5ea);
+}
+
+.fusion-data-table tbody td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--fusion-border, #dfe5ea);
+  font-size: var(--fusion-text-sm, 0.8125rem);
+  vertical-align: middle;
+}
+
+.fusion-data-table tbody tr {
+  transition: background-color var(--fusion-duration-fast, 140ms) var(--fusion-ease-out, ease);
+}
+
+.fusion-data-table tbody tr:hover {
+  background: var(--fusion-beige-50, #faf8f5);
+}
+
+.fusion-data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-action-column {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* Report page metric grid reuses .admin-metric / .admin-metric-icon from Phase 1 */
+
+.report-metrics .admin-metric {
+  animation: fusion-slide-up var(--fusion-duration-slow, 360ms) var(--fusion-ease-out, ease) both;
+}
