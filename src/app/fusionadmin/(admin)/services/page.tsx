@@ -4,6 +4,7 @@ import { getSalesOpsWorkspace } from "@/lib/sales-ops";
 import {
   EmptyState,
   formatCurrency,
+  FusionBadge,
   FusionDataTable,
   FusionField,
   FusionInput,
@@ -11,7 +12,8 @@ import {
   FusionSubmitButton,
   FusionSwitch,
   FusionTextarea,
-  PageHeader
+  PageHeader,
+  statusTone
 } from "../crm-ui";
 
 type PageProps = {
@@ -58,7 +60,7 @@ export default async function FusionServicesPage({ searchParams }: PageProps) {
                 <td data-label="Billing">{service.billing_type}<br /><span className="muted">{service.recurring_interval || service.pricing_model}</span></td>
                 <td data-label="Price">{formatCurrency(service.base_price)}</td>
                 <td data-label="Cost">{formatCurrency(service.internal_estimated_cost)}</td>
-                <td data-label="Status"><span className="status-pill">{service.is_active ? "active" : "inactive"}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(service.is_active ? "active" : "inactive")}>{service.is_active ? "active" : "inactive"}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/services?serviceId=${service.id}#service-editor`}>Edit</a></td>
               </tr>
             ))}
