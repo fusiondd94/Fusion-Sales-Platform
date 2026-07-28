@@ -545,6 +545,40 @@ export async function uploadClientProjectFile(input: {
   return { ok: true };
 }
 
+export async function deleteClientProjectFile(input: {
+  fileId: string;
+  clientId?: string;
+}) {
+  const workspace = await getClientPortalWorkspace(input.clientId);
+  if (!workspace) return { ok: false, error: "Sign in to manage your files." };
+  if (workspace.project.id === "admin-preview-project") return { ok: false, error: "Select a client before deleting files." };
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.fileId) return { ok: false, error: "File id is required." };
+
+  const { data: existing } = await supabase
+    .from("crm_project_files")
+    .select("id, project_id, storage_path")
+    .eq("id", input.fileId)
+    .single<{ id: string; project_id: string; storage_path: string }>();
+
+  if (!existing || existing.project_id !== workspace.project.id) {
+    return { ok: false, error: "File not found." };
+  }
+
+  if (existing.storage_path) {
+    await supabase.storage.from("client-project-files").remove([existing.storage_path]);
+  }
+
+  const { error } = await supabase
+    .from("crm_project_files")
+    .delete()
+    .eq("id", input.fileId);
+
+  if (error) return { ok: false, error: "Unable to delete file." };
+  return { ok: true };
+}
+
 export async function deleteProjectComment(input: {
   actorId: string;
   commentId: string;
