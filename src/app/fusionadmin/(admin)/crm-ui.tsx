@@ -72,6 +72,42 @@ export function optionList(values?: string[] | null) {
   return values?.length ? values : [];
 }
 
+const STATUS_TONE_MAP: Record<string, "success" | "warning" | "danger" | "info" | "teal" | "neutral"> = {
+  won: "success",
+  paid: "success",
+  accepted: "success",
+  active: "success",
+  client: "success",
+  done: "success",
+  resolved: "success",
+  published: "success",
+  qualified: "teal",
+  proposal_sent: "teal",
+  in_progress: "teal",
+  sent: "info",
+  new: "info",
+  prospect: "info",
+  captured: "info",
+  checkout_started: "info",
+  not_started: "neutral",
+  draft: "neutral",
+  review: "warning",
+  partial: "warning",
+  on_hold: "warning",
+  pending: "warning",
+  lost: "danger",
+  declined: "danger",
+  expired: "danger",
+  unqualified: "danger",
+  inactive: "danger",
+  unpaid: "danger"
+};
+
+export function statusTone(status: string | null | undefined): "success" | "warning" | "danger" | "info" | "teal" | "neutral" {
+  if (!status) return "neutral";
+  return STATUS_TONE_MAP[status.toLowerCase()] || "neutral";
+}
+
 export function EmptyState({ children }: { children: ReactNode }) {
   return <p className="admin-empty">{children}</p>;
 }
