@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CheckCircle2, Circle, Clock, Download, Eye, FileUp, GripVertical, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
-import { addProjectComment, deleteOwnProjectComment, markAllOwnNotificationsRead, markOwnNotificationRead, reorderOwnBoardTasks, signOutClientPortal, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
+import { Bell, CheckCircle2, Circle, Clock, Download, Eye, File as FileIcon, FileUp, GripVertical, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
+import { addProjectComment, deleteOwnProjectComment, deleteOwnProjectFile, markAllOwnNotificationsRead, markOwnNotificationRead, reorderOwnBoardTasks, signOutClientPortal, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
 
 const DEFAULT_FRAME_HEIGHT = 1400;
@@ -447,22 +447,56 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                   <h2>Uploaded files</h2>
                   <span className="status-pill">{workspace.files.length}</span>
                 </div>
-                <div className="stack-list">
-                  {workspace.files.map((file) => (
-                    <p key={file.id}>
-                      <strong>{file.file_name}</strong>
-                      <br />
-                      <span className="muted">{formatFileSize(file.file_size)} · {file.description || "No note"}</span>
-                      {file.signedUrl ? (
-                        <>
-                          <br />
-                          <a className="text-link" href={file.signedUrl}><Download size={14} /> Download</a>
-                        </>
-                      ) : null}
-                    </p>
-                  ))}
-                  {!workspace.files.length ? <p className="admin-empty">No files uploaded yet.</p> : null}
-                </div>
+                {workspace.files.length ? (
+                  <div className="portal-files-grid">
+                    {workspace.files.map((file) => {
+                      const isImage = (file.file_type || "").startsWith("image/");
+                      return (
+                        <div className="portal-file-card" key={file.id}>
+                          {isImage && file.signedUrl ? (
+                            <a className="portal-file-card__thumb" href={file.signedUrl} rel="noreferrer" target="_blank">
+                              <img alt={file.file_name} src={file.signedUrl} />
+                            </a>
+                          ) : (
+                            <div className="portal-file-card__thumb">
+                              <FileIcon size={28} />
+                            </div>
+                          )}
+                          <div className="portal-file-card__body">
+                            <strong title={file.file_name}>{file.file_name}</strong>
+                            <span className="muted">{formatFileSize(file.file_size)}</span>
+                            {file.description ? <span className="muted">{file.description}</span> : null}
+                          </div>
+                          <div className="portal-file-card__actions">
+                            {file.signedUrl ? (
+                              <a className="secondary-button compact-button" href={file.signedUrl} rel="noreferrer" target="_blank">
+                                <Download size={14} /> {isImage ? "View" : "Download"}
+                              </a>
+                            ) : (
+                              <span />
+                            )}
+                            <form
+                              action={deleteOwnProjectFile}
+                              onSubmit={(event) => {
+                                if (!window.confirm(`Delete "${file.file_name}"? This can't be undone.`)) {
+                                  event.preventDefault();
+                                }
+                              }}
+                            >
+                              <input name="clientId" type="hidden" value={selectedClientId} />
+                              <input name="fileId" type="hidden" value={file.id} />
+                              <button aria-label={`Delete ${file.file_name}`} className="portal-file-card__delete" disabled={!canSubmitPortalWork} type="submit">
+                                <Trash2 size={14} />
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="admin-empty">No files uploaded yet.</p>
+                )}
               </article>
             </div>
           ) : activeTool === "dashboard" ? (
