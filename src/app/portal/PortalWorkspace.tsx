@@ -359,7 +359,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                       <br />
                       <span className="muted">{comment.body}</span>
                       <br />
-                      <span className="status-pill">{comment.status}</span>
+                      <span className={`status-pill status-pill--${comment.status}`}>{comment.status}</span>
                     </p>
                     {comment.author_user_id === workspace.user.id ? (
                       <form action={deleteOwnProjectComment}>
