@@ -1,19 +1,28 @@
-import { BarChart3 } from "lucide-react";
+import {
+  BarChart3,
+  CalendarCheck,
+  CheckCircle2,
+  FileText,
+  FormInput,
+  TrendingUp,
+  UsersRound,
+  Wallet
+} from "lucide-react";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
 import { formatCurrency, PageHeader } from "../crm-ui";
 
 export default async function FusionReportsPage() {
   const salesOps = await getSalesOpsWorkspace();
   const metrics = [
-    { label: "Leads created", value: salesOps.reports.leadsCreated },
-    { label: "Deals created", value: salesOps.reports.dealsCreated },
-    { label: "Proposals created", value: salesOps.reports.proposalsCreated },
-    { label: "Proposals accepted", value: salesOps.reports.proposalsAccepted },
-    { label: "Appointments scheduled", value: salesOps.reports.appointmentsScheduled },
-    { label: "Published forms", value: salesOps.reports.formsPublished },
-    { label: "Pipeline value", value: formatCurrency(salesOps.reports.totalPipelineValue) },
-    { label: "Weighted pipeline", value: formatCurrency(salesOps.reports.weightedPipelineValue) },
-    { label: "Won revenue", value: formatCurrency(salesOps.reports.wonRevenue) }
+    { label: "Leads created", value: salesOps.reports.leadsCreated, icon: UsersRound },
+    { label: "Deals created", value: salesOps.reports.dealsCreated, icon: TrendingUp },
+    { label: "Proposals created", value: salesOps.reports.proposalsCreated, icon: FileText },
+    { label: "Proposals accepted", value: salesOps.reports.proposalsAccepted, icon: CheckCircle2 },
+    { label: "Appointments scheduled", value: salesOps.reports.appointmentsScheduled, icon: CalendarCheck },
+    { label: "Published forms", value: salesOps.reports.formsPublished, icon: FormInput },
+    { label: "Pipeline value", value: formatCurrency(salesOps.reports.totalPipelineValue), icon: Wallet },
+    { label: "Weighted pipeline", value: formatCurrency(salesOps.reports.weightedPipelineValue), icon: BarChart3 },
+    { label: "Won revenue", value: formatCurrency(salesOps.reports.wonRevenue), icon: Wallet }
   ];
 
   return (
@@ -25,12 +34,18 @@ export default async function FusionReportsPage() {
       />
 
       <section className="admin-metrics report-metrics">
-        {metrics.map((metric) => (
-          <article className="admin-metric" key={metric.label}>
-            <strong>{metric.value}</strong>
-            <span>{metric.label}</span>
-          </article>
-        ))}
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <article className="admin-metric" key={metric.label}>
+              <span className="admin-metric-icon">
+                <Icon size={18} />
+              </span>
+              <strong>{metric.value}</strong>
+              <span>{metric.label}</span>
+            </article>
+          );
+        })}
       </section>
 
       <section className="admin-two-column">
