@@ -15,6 +15,7 @@ import { getAdminPortalClients } from "@/lib/portal";
 import {
   EmptyState,
   formatCurrency,
+  FusionBadge,
   FusionDataTable,
   FusionField,
   FusionInput,
@@ -22,7 +23,8 @@ import {
   FusionSubmitButton,
   FusionTextarea,
   optionList,
-  PageHeader
+  PageHeader,
+  statusTone
 } from "../crm-ui";
 
 type PageProps = {
@@ -88,7 +90,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                 </td>
                 <td data-label="Contact">{lead.customer_name}<br /><span className="muted">{lead.customer_email} · {lead.customer_phone}</span></td>
                 <td data-label="Offer">{lead.package_name}<br /><span className="muted">{formatCurrency(lead.total_today)} + ${lead.monthly_due}/mo</span></td>
-                <td data-label="Status"><span className="status-pill">{lead.status}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(lead.status)}>{lead.status}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>Edit</a></td>
               </tr>
             ))}
@@ -216,7 +218,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   <a className="fusion-record-link" href={`/fusionadmin/clients?companyId=${company.id}#company-editor`}>{company.company_name}</a>
                 </td>
                 <td data-label="Industry">{company.industry || "Not set"}</td>
-                <td data-label="Status"><span className="status-pill">{company.lifecycle_status}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(company.lifecycle_status)}>{company.lifecycle_status}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?companyId=${company.id}#company-editor`}>Edit</a></td>
               </tr>
             ))}
@@ -284,7 +286,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   <span className="muted">{contact.email || "No email"} · {contact.phone || "No phone"}</span>
                 </td>
                 <td data-label="Company">{contact.crm_companies?.company_name || "No company"}</td>
-                <td data-label="Status"><span className="status-pill">{contact.lifecycle_status}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(contact.lifecycle_status)}>{contact.lifecycle_status}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?contactId=${contact.id}#contact-editor`}>Edit</a></td>
               </tr>
             ))}
@@ -393,7 +395,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   <br />
                   <span className="muted">{client.customer_name} · {client.customer_email}</span>
                 </td>
-                <td data-label="Project status"><span className="status-pill">{client.project?.project_status || "in_progress"}</span></td>
+                <td data-label="Project status"><FusionBadge tone={statusTone(client.project?.project_status || "in_progress")}>{client.project?.project_status || "in_progress"}</FusionBadge></td>
                 <td data-label="Activity">{client.commentCount || 0} comments · {client.fileCount || 0} files</td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?clientId=${client.id}#portal-editor`}>Edit</a></td>
               </tr>
