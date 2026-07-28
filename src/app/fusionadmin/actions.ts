@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { requireFusionAdmin } from "@/lib/auth";
 import {
   createCrmClient,
@@ -770,7 +771,6 @@ function parseAutomationActions(formData: FormData): AutomationAction[] {
   return actions;
 }
 
-
 export async function assignFusionClientTask(formData: FormData) {
   const user = await requireFusionAdmin();
   if (!user.isAllowed) return;
@@ -841,7 +841,6 @@ export async function reorderFusionBoardTasks(updates: Array<{ taskId: string; s
   revalidatePath("/portal");
   return result;
 }
-
 
 export async function markFusionNotificationRead(formData: FormData) {
   const user = await requireFusionAdmin();
@@ -934,4 +933,60 @@ export async function sendFusionMessage(
 
   revalidatePath("/fusionadmin/messages");
   redirect("/fusionadmin/messages?thread=" + threadId);
+}
+
+export async function connectMetaPage(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const pageId = String(formData.get("pageId") || "").trim();
+  const pageName = String(formData.get("pageName") || "").trim();
+  const pageToken = String(formData.get("pageToken") || "").trim();
+  const igId = String(formData.get("igId") || "").trim();
+  const igUsername = String(formData.get("igUsername") || "").trim();
+
+  if (pageId && pageToken) {
+    await saveMessageChannel({
+      actorId: user.id,
+      channelType: "messenger",
+      displayName: pageName || "Messenger",
+      externalAccountId: pageId,
+      credentials: { accessToken: pageToken }
+    });
+
+    try {
+      await fetch(
+        `https://graph.facebook.com/v19.0/${pageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks&access_token=${encodeURIComponent(pageToken)}`,
+        { method: "POST" }
+      );
+    } catch {
+      // Non-fatal: the channel is still saved even if the webhook subscription call fails.
+    }
+
+    if (igId) {
+      await saveMessageChannel({
+        actorId: user.id,
+        channelType: "instagram",
+        displayName: igUsername ? "@" + igUsername : "Instagram",
+        externalAccountId: igId,
+        credentials: { accessToken: pageToken }
+      });
+    }
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set("meta_oauth_pages", "", { maxAge: 0, path: "/" });
+
+  revalidatePath("/fusionadmin/messages/settings");
+  redirect("/fusionadmin/messages/settings");
+}
+
+export async function cancelMetaConnect() {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const cookieStore = await cookies();
+  cookieStore.set("meta_oauth_pages", "", { maxAge: 0, path: "/" });
+
+  redirect("/fusionadmin/messages/settings");
 }
