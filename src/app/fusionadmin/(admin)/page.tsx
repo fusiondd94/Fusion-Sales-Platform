@@ -1,4 +1,18 @@
-import { Activity, ArrowUpRight, Bell, BriefcaseBusiness, CalendarCheck, Clock, FileText, ListChecks, Search, UsersRound } from "lucide-react";
+import {
+  Activity,
+  ArrowUpRight,
+  Bell,
+  BriefcaseBusiness,
+  CalendarCheck,
+  Clock,
+  FileText,
+  ListChecks,
+  Search,
+  Sparkles,
+  Target,
+  TrendingUp,
+  UsersRound
+} from "lucide-react";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
 import { EmptyState, formatCurrency, formatDate, PageHeader } from "./crm-ui";
@@ -27,6 +41,21 @@ export default async function FusionAdminDashboard({ searchParams }: PageProps) 
     { label: "Published forms", value: salesOps.forms.filter((form) => form.is_published).length, detail: "Lead capture live" }
   ];
 
+  const stageCounts = crm.stages.map((stage) => ({
+    name: stage.name,
+    count: crm.deals.filter((deal) => deal.crm_pipeline_stages?.name === stage.name).length
+  }));
+  const busiestStage = stageCounts.reduce(
+    (best, stage) => (stage.count > best.count ? stage : best),
+    { name: "", count: 0 }
+  );
+  const smartInsight = buildSmartInsight({
+    openDealsCount: openDeals.length,
+    pipelineValue,
+    leadsCount: crm.leads.length,
+    busiestStage: busiestStage.count > 0 ? busiestStage.name : null
+  });
+
   return (
     <div className="admin-content dashboard-content">
       <PageHeader
@@ -47,6 +76,9 @@ export default async function FusionAdminDashboard({ searchParams }: PageProps) 
           <p className="eyebrow">Current focus</p>
           <h2>{openDeals.length} active opportunities</h2>
           <p className="muted">Pipeline value is {formatCurrency(pipelineValue)} across open deals, with {crm.leads.length} leads available for follow-up.</p>
+          <p className="dashboard-smart-insight">
+            <Sparkles size={15} /> {smartInsight}
+          </p>
           <div className="dashboard-brief-actions">
             <a className="secondary-button compact-button" href="/fusionadmin/clients">Review leads <ArrowUpRight size={15} /></a>
             <a className="secondary-button compact-button" href="/fusionadmin/calendar">Open calendar <ArrowUpRight size={15} /></a>
@@ -67,13 +99,19 @@ export default async function FusionAdminDashboard({ searchParams }: PageProps) 
       </section>
 
       <section className="admin-metrics dashboard-metrics">
-        {dashboardMetrics.map((item) => (
-          <article className="admin-metric" key={item.label}>
-            <strong>{item.value}</strong>
-            <span>{item.label}</span>
-            <small>{item.detail}</small>
-          </article>
-        ))}
+        {dashboardMetrics.map((item) => {
+          const Icon = metricIcon(item.label);
+          return (
+            <article className="admin-metric" key={item.label}>
+              <span className="admin-metric-icon">
+                <Icon size={18} />
+              </span>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+              <small>{item.detail}</small>
+            </article>
+          );
+        })}
       </section>
 
       <section className="admin-dashboard-grid">
@@ -203,6 +241,40 @@ function metricDetail(label: string) {
   if (normalized.includes("task")) return "Work queue";
   if (normalized.includes("deal")) return "Opportunity health";
   return "CRM signal";
+}
+
+function metricIcon(label: string) {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("lead")) return UsersRound;
+  if (normalized.includes("pipeline") || normalized.includes("proposal")) return TrendingUp;
+  if (normalized.includes("task")) return ListChecks;
+  if (normalized.includes("deal")) return BriefcaseBusiness;
+  if (normalized.includes("appointment")) return CalendarCheck;
+  if (normalized.includes("form")) return FileText;
+  return Target;
+}
+
+function buildSmartInsight({
+  openDealsCount,
+  pipelineValue,
+  leadsCount,
+  busiestStage
+}: {
+  openDealsCount: number;
+  pipelineValue: number;
+  leadsCount: number;
+  busiestStage: string | null;
+}) {
+  if (!openDealsCount && !leadsCount) {
+    return "Smart insight: add a lead or deal to start seeing pipeline trends here.";
+  }
+  if (busiestStage) {
+    return `Smart insight: most open deals are sitting in "${busiestStage}" — worth a status check.`;
+  }
+  if (leadsCount > openDealsCount) {
+    return `Smart insight: ${leadsCount} leads haven't converted to deals yet — prioritize follow-up.`;
+  }
+  return `Smart insight: ${formatCurrency(pipelineValue)} is currently in motion across ${openDealsCount} open deals.`;
 }
 
 function formatTime(value: string) {
