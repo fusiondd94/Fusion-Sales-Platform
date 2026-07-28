@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   createClientProjectComment,
+  deleteClientProjectFile,
   deleteProjectComment,
   getClientPortalWorkspace,
   markAllNotificationsRead,
@@ -74,6 +75,16 @@ export async function uploadProjectFile(formData: FormData) {
     description: String(formData.get("description") || ""),
     clientId: String(formData.get("clientId") || "")
   });
+
+  revalidatePath("/portal");
+}
+
+export async function deleteOwnProjectFile(formData: FormData) {
+  const clientId = String(formData.get("clientId") || "");
+  const fileId = String(formData.get("fileId") || "");
+  if (!fileId) return;
+
+  await deleteClientProjectFile({ fileId, clientId });
 
   revalidatePath("/portal");
 }
