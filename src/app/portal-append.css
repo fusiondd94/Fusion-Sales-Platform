@@ -814,6 +814,103 @@
   font-weight: 600;
 }
 
+/* Uploaded files (portal) */
+.portal-files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1rem;
+}
+
+.portal-file-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--brand-white);
+  border: 1px solid var(--fusion-border, #dfe5ea);
+  border-radius: var(--fusion-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--fusion-shadow-xs);
+  transition: box-shadow var(--fusion-duration-fast) var(--fusion-ease-out),
+    transform var(--fusion-duration-fast) var(--fusion-ease-out);
+}
+
+.portal-file-card:hover {
+  box-shadow: var(--fusion-shadow-card);
+  transform: translateY(-1px);
+}
+
+.portal-file-card__thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 110px;
+  background: var(--fusion-beige-50);
+  color: var(--brand-teal);
+  overflow: hidden;
+}
+
+.portal-file-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.portal-file-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem 0.5rem;
+  flex: 1;
+}
+
+.portal-file-card__body strong {
+  font-size: var(--fusion-text-sm);
+  color: var(--brand-charcoal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-file-card__body span.muted {
+  font-size: var(--fusion-text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-file-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.portal-file-card__delete {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: var(--fusion-radius-md);
+  border: 1px solid var(--fusion-border, #dfe5ea);
+  background: var(--brand-white);
+  color: var(--fusion-text-subtle, #80909b);
+  cursor: pointer;
+  transition: all var(--fusion-duration-fast) var(--fusion-ease-out);
+}
+
+.portal-file-card__delete:hover:not(:disabled) {
+  border-color: #b42318;
+  color: #b42318;
+  background: rgba(180, 35, 24, 0.06);
+}
+
+.portal-file-card__delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Task board (portal) */
 .task-board__columns {
   display: grid;
