@@ -1,7 +1,7 @@
 import { CalendarDays, PlusCircle } from "lucide-react";
 import { createFusionAppointment, updateFusionAppointment } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace, type SalesOpsAppointment } from "@/lib/sales-ops";
-import { EmptyState, PageHeader } from "../crm-ui";
+import { EmptyState, FusionBadge, PageHeader, statusTone } from "../crm-ui";
 
 const appointmentStatuses = ["scheduled", "confirmed", "completed", "cancelled", "no_show"];
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -98,7 +98,7 @@ export default async function FusionCalendarPage() {
                 <input name="appointmentId" type="hidden" value={appointment.id} />
                 <div className="record-edit-heading">
                   <strong>{appointment.title}</strong>
-                  <span className="status-pill">{appointment.status.replace("_", " ")}</span>
+                  <FusionBadge tone={statusTone(appointment.status)}>{appointment.status.replace("_", " ")}</FusionBadge>
                 </div>
                 <div className="record-edit-grid">
                   <label>
