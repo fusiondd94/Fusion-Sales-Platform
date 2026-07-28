@@ -6,6 +6,7 @@ import { addProjectComment, deleteOwnProjectComment, markAllOwnNotificationsRead
 import type { ClientPortalWorkspace } from "@/lib/portal";
 
 const DEFAULT_FRAME_HEIGHT = 1400;
+const DESKTOP_FIT_WIDTH = 1280;
 
 function clampPercent(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -40,6 +41,8 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   const unreadNotifCount = workspace.notifications.filter((notification) => !notification.read_at).length;
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
+  const previewWrapRef = useRef<HTMLDivElement | null>(null);
+  const [previewViewportWidth, setPreviewViewportWidth] = useState(0);
   const previewUrl = workspace.project.preview_url || workspace.project.live_url || "";
   const [currentPageUrl, setCurrentPageUrl] = useState(previewUrl);
   const openComments = useMemo(() => workspace.comments.filter((comment) => comment.status !== "resolved"), [workspace.comments]);
@@ -111,6 +114,29 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
     const targetY = frameTop + (target.marker_y / 100) * frameHeight;
     window.scrollTo({ top: Math.max(targetY - 160, 0), behavior: "smooth" });
   }, [highlightCommentId, frameHeight, workspace.comments, currentPageUrl]);
+
+  useEffect(() => {
+    if (activeTool !== "review") return;
+    const el = previewWrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setPreviewViewportWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeTool]);
+
+  // Desktop previews are rendered at a true desktop width (DESKTOP_FIT_WIDTH)
+  // so the site lays out the same way it would on a real desktop, then the
+  // whole rendered page is scaled down to fit the visible panel width. This
+  // avoids horizontal scrolling while keeping comment-pin placement accurate,
+  // since pins are positioned by percentage against the same (scaled) box.
+  const desktopFitScale =
+    viewport === "desktop" && previewViewportWidth > 0
+      ? Math.min(1, previewViewportWidth / DESKTOP_FIT_WIDTH)
+      : 1;
 
   return (
     <main className="shell client-portal-shell">
@@ -248,7 +274,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
             {workspace.project.client_instructions ? <p className="muted">{workspace.project.client_instructions}</p> : null}
             {commentMode ? <p className="muted comment-mode-hint">Click anywhere on the preview to drop a comment pin at that exact spot.</p> : null}
             {previewUrl ? (
-              <div className={"preview-frame-wrap preview-frame-wrap--" + viewport}>
+              <div className={"preview-frame-wrap preview-frame-wrap--" + viewport} ref={previewWrapRef}>
               <div
                 className={commentMode ? "preview-frame comment-mode" : "preview-frame"}
                 onClick={(event) => {
@@ -260,14 +286,24 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
                   });
                 }}
                 ref={previewFrameRef}
+                style={viewport === "desktop" ? { height: frameHeight * desktopFitScale } : undefined}
               >
-                <iframe
-                  onLoad={handleFrameLoad}
-                  ref={iframeRef}
-                  src={previewUrl}
-                  style={{ height: frameHeight }}
-                  title={`${workspace.project.project_name} preview`}
-                />
+                <div
+                  className="preview-frame-scaler"
+                  style={
+                    viewport === "desktop"
+                      ? { width: DESKTOP_FIT_WIDTH, height: frameHeight, transform: `scale(${desktopFitScale})`, transformOrigin: "top left" }
+                      : undefined
+                  }
+                >
+                  <iframe
+                    onLoad={handleFrameLoad}
+                    ref={iframeRef}
+                    src={previewUrl}
+                    style={{ height: frameHeight, width: viewport === "desktop" ? DESKTOP_FIT_WIDTH : undefined }}
+                    title={`${workspace.project.project_name} preview`}
+                  />
+                </div>
                 <div className="comment-layer" aria-hidden={!commentMode}>
                   {workspace.comments.filter((comment) => comment.marker_x !== null && comment.marker_y !== null && normalizeUrl(comment.page_url) === normalizeUrl(currentPageUrl)).map((comment) => (
                     <span
