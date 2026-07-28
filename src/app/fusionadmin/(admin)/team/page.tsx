@@ -1,7 +1,7 @@
 import { MailPlus, ShieldCheck, UserRoundCog } from "lucide-react";
 import { inviteFusionTeamMember, updateFusionTeamMember } from "@/app/fusionadmin/actions";
 import { getFusionAdminSettings } from "@/lib/crm";
-import { EmptyState, formatDate, FusionDataTable, FusionField, FusionInput, FusionSelect, FusionSubmitButton, PageHeader } from "../crm-ui";
+import { EmptyState, formatDate, FusionBadge, FusionDataTable, FusionField, FusionInput, FusionSelect, FusionSubmitButton, PageHeader, statusTone } from "../crm-ui";
 
 type PageProps = {
   searchParams?: Promise<{ memberId?: string }>;
@@ -71,7 +71,7 @@ export default async function FusionTeamPage({ searchParams }: PageProps) {
                 <td data-label="Name"><a className="fusion-record-link" href={`/fusionadmin/team?memberId=${member.id}#member-editor`}>{member.crm_profiles?.display_name || "Team member"}</a></td>
                 <td data-label="Email">{member.crm_profiles?.email || member.user_id}</td>
                 <td data-label="Title">{member.title || "Not set"}</td>
-                <td data-label="Status"><span className="status-pill">{member.status}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(member.status)}>{member.status}</FusionBadge></td>
                 <td data-label="Added">{formatDate(member.created_at)}</td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/team?memberId=${member.id}#member-editor`}>Edit</a></td>
               </tr>
