@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   BarChart3,
+  Bell,
   BriefcaseBusiness,
   CalendarDays,
   ChevronsLeft,
@@ -12,18 +14,22 @@ import {
   ClipboardList,
   FileText,
   FormInput,
+  Kanban,
   Library,
   LayoutDashboard,
   Mail,
+  MessageCircle,
   MonitorUp,
   Settings,
   UsersRound,
-  UserRoundCog
+  UserRoundCog,
+  Zap
 } from "lucide-react";
-import { signOutFusionAdmin } from "@/app/fusionadmin/actions";
+import { markAllFusionNotificationsRead, markFusionNotificationRead, signOutFusionAdmin } from "@/app/fusionadmin/actions";
 import { FusionAvatar } from "@/app/fusionadmin/(admin)/crm-ui";
 import { AdminFeedbackBoundary, SignOutButton } from "@/components/ui";
 import type { FusionAdminUser } from "@/lib/auth";
+import type { AdminNotification } from "@/lib/portal";
 
 const navSections = [
   {
@@ -52,13 +58,26 @@ const navSections = [
     label: "Operations",
     items: [
       { href: "/fusionadmin/calendar", label: "Calendar", icon: CalendarDays, description: "Meetings" },
-      { href: "/fusionadmin/tasks", label: "Tasks", icon: ClipboardList, description: "Work queue" }
+      { href: "/fusionadmin/tasks", label: "Tasks", icon: ClipboardList, description: "Work queue" },
+      { href: "/fusionadmin/task-board", label: "Task Board", icon: Kanban, description: "Client kanban" }
     ]
   },
   {
     label: "Insights",
     items: [
       { href: "/fusionadmin/reports", label: "Reports", icon: BarChart3, description: "Performance" }
+    ]
+  },
+  {
+    label: "Automation",
+    items: [
+      { href: "/fusionadmin/automations", label: "Automations", icon: Zap, description: "Rules and triggers" }
+    ]
+  },
+  {
+    label: "Messaging",
+    items: [
+      { href: "/fusionadmin/messages", label: "Messages", icon: MessageCircle, description: "Unified inbox" }
     ]
   },
   {
@@ -72,10 +91,20 @@ const navSections = [
 
 const SIDEBAR_STORAGE_KEY = "fusion-admin-sidebar-collapsed";
 
-export function AdminShell({ children, user }: { children: ReactNode; user: FusionAdminUser }) {
-  const pathname = usePathname();
+export function AdminShell({
+  children,
+  notifications,
+  user
+}: {
+  children: ReactNode;
+  notifications: AdminNotification[];
+  user: FusionAdminUser;
+}) {
+  const [notifOpen, setNotifOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const unreadCount = notifications.filter((notification) => !notification.read_at).length;
+  const pathname = usePathname();
 
   useEffect(() => {
     const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
@@ -157,6 +186,40 @@ export function AdminShell({ children, user }: { children: ReactNode; user: Fusi
             <p className="eyebrow">{activeItem.section}</p>
             <h1>{activeItem.label}</h1>
             <span>{activeItem.description}</span>
+          </div>
+          <div className="admin-notif-bell">
+            <button className="ghost-button" onClick={() => setNotifOpen((value) => !value)} type="button">
+              <Bell size={16} />
+              {unreadCount > 0 ? <span className="admin-notif-badge">{unreadCount}</span> : null}
+            </button>
+            {notifOpen ? (
+              <div className="admin-notif-dropdown">
+                <div className="admin-notif-dropdown__heading">
+                  <strong>Notifications</strong>
+                  {unreadCount > 0 ? (
+                    <form action={markAllFusionNotificationsRead}>
+                      <button className="text-link" type="submit">Mark all read</button>
+                    </form>
+                  ) : null}
+                </div>
+                <div className="admin-notif-list">
+                  {notifications.length ? (
+                    notifications.map((notification) => (
+                      <form action={markFusionNotificationRead} key={notification.id}>
+                        <input name="notificationId" type="hidden" value={notification.id} />
+                        <button className={notification.read_at ? "admin-notif-item" : "admin-notif-item admin-notif-item--unread"} type="submit">
+                          <strong>{notification.title}</strong>
+                          {notification.body ? <p>{notification.body}</p> : null}
+                          <span className="muted">{new Date(notification.created_at).toLocaleString()}</span>
+                        </button>
+                      </form>
+                    ))
+                  ) : (
+                    <p className="admin-empty">No notifications yet.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="admin-user-card">
             <FusionAvatar name={user.displayName || user.email} />
