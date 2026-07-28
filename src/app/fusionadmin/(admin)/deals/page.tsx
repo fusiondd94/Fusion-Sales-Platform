@@ -4,12 +4,14 @@ import { getFusionCrmWorkspace } from "@/lib/crm";
 import {
   EmptyState,
   formatCurrency,
+  FusionBadge,
   FusionDataTable,
   FusionField,
   FusionInput,
   FusionSelect,
   FusionSubmitButton,
-  PageHeader
+  PageHeader,
+  statusTone
 } from "../crm-ui";
 
 type PageProps = {
@@ -102,7 +104,7 @@ export default async function FusionDealsPage({ searchParams }: PageProps) {
                 <td data-label="Company">{deal.crm_companies?.company_name || "No company"}</td>
                 <td data-label="Stage">{deal.crm_pipeline_stages?.name || "No stage"}</td>
                 <td data-label="Value">{formatCurrency(deal.value)}</td>
-                <td data-label="Status"><span className="status-pill">{deal.status}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(deal.status)}>{deal.status}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/deals?dealId=${deal.id}#deal-editor`}>Edit</a></td>
               </tr>
             ))}
