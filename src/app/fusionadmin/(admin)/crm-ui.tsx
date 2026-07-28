@@ -81,6 +81,9 @@ const STATUS_TONE_MAP: Record<string, "success" | "warning" | "danger" | "info" 
   done: "success",
   resolved: "success",
   published: "success",
+  success: "success",
+  confirmed: "success",
+  completed: "success",
   qualified: "teal",
   proposal_sent: "teal",
   in_progress: "teal",
@@ -89,18 +92,27 @@ const STATUS_TONE_MAP: Record<string, "success" | "warning" | "danger" | "info" 
   prospect: "info",
   captured: "info",
   checkout_started: "info",
+  invited: "info",
   not_started: "neutral",
   draft: "neutral",
+  scheduled: "neutral",
   review: "warning",
   partial: "warning",
   on_hold: "warning",
   pending: "warning",
+  paused: "warning",
+  skipped: "warning",
   lost: "danger",
   declined: "danger",
   expired: "danger",
   unqualified: "danger",
   inactive: "danger",
-  unpaid: "danger"
+  unpaid: "danger",
+  error: "danger",
+  failed: "danger",
+  cancelled: "danger",
+  no_show: "danger",
+  blocked: "danger"
 };
 
 export function statusTone(status: string | null | undefined): "success" | "warning" | "danger" | "info" | "teal" | "neutral" {
