@@ -4,6 +4,7 @@ import { ALLOWED_TEMPLATE_VARIABLES, getSalesOpsWorkspace, type SalesOpsEmailTem
 import {
   EmptyState,
   formatDate,
+  FusionBadge,
   FusionDataTable,
   FusionField,
   FusionInput,
@@ -11,7 +12,8 @@ import {
   FusionSubmitButton,
   FusionSwitch,
   FusionTextarea,
-  PageHeader
+  PageHeader,
+  statusTone
 } from "../crm-ui";
 
 type PageProps = {
@@ -164,7 +166,7 @@ export default async function FusionEmailTemplatesPage({ searchParams }: PagePro
                   <span className="muted">{template.subject}</span>
                 </td>
                 <td data-label="Category">{template.category}<br /><span className="muted">{template.visibility}</span></td>
-                <td data-label="Status"><span className="status-pill">{template.is_active ? "active" : "inactive"}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(template.is_active ? "active" : "inactive")}>{template.is_active ? "active" : "inactive"}</FusionBadge></td>
                 <td data-label="Updated">{formatDate(template.updated_at)}</td>
                 <td data-label="Action">
                   <a className="secondary-button compact-button table-action-button" href={`${buildTemplateUrl(template.id, filters)}#template-editor`}>
@@ -179,7 +181,7 @@ export default async function FusionEmailTemplatesPage({ searchParams }: PagePro
         <aside className="admin-panel email-template-preview-panel" id="template-preview">
           <div className="panel-heading">
             <h2><Eye size={20} /> Preview</h2>
-            {selectedTemplate ? <span className="status-pill">{selectedTemplate.is_active ? "active" : "inactive"}</span> : null}
+            {selectedTemplate ? <FusionBadge tone={statusTone(selectedTemplate.is_active ? "active" : "inactive")}>{selectedTemplate.is_active ? "active" : "inactive"}</FusionBadge> : null}
           </div>
           {selectedTemplate ? (
             <>
