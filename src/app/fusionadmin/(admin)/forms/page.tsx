@@ -3,6 +3,7 @@ import { createFusionCrmForm, updateFusionCrmForm } from "@/app/fusionadmin/acti
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
 import {
   EmptyState,
+  FusionBadge,
   FusionDataTable,
   FusionField,
   FusionInput,
@@ -10,7 +11,8 @@ import {
   FusionSubmitButton,
   FusionSwitch,
   FusionTextarea,
-  PageHeader
+  PageHeader,
+  statusTone
 } from "../crm-ui";
 
 type PageProps = {
@@ -64,7 +66,7 @@ export default async function FusionFormsPage({ searchParams }: PageProps) {
                 <td data-label="Type">{form.form_type}</td>
                 <td data-label="Slug">{form.form_slug}</td>
                 <td data-label="Published">{form.is_published ? "Published" : "Draft"}</td>
-                <td data-label="Status"><span className="status-pill">{form.is_active ? "active" : "inactive"}</span></td>
+                <td data-label="Status"><FusionBadge tone={statusTone(form.is_active ? "active" : "inactive")}>{form.is_active ? "active" : "inactive"}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/forms?formId=${form.id}#form-editor`}>Edit</a></td>
               </tr>
             ))}
