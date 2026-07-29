@@ -64,7 +64,8 @@ import {
   MessageChannelType,
   MESSAGE_CHANNEL_TYPES,
   saveMessageChannel,
-  sendMessage
+  sendMessage,
+  syncChannelHistory
 } from "@/lib/messages";
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
@@ -989,4 +990,23 @@ export async function cancelMetaConnect() {
   cookieStore.set("meta_oauth_pages", "", { maxAge: 0, path: "/" });
 
   redirect("/fusionadmin/messages/settings");
+}
+
+export async function syncFusionMessageChannelHistory(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const channelType = String(formData.get("channelType") || "") as MessageChannelType;
+  const result = await syncChannelHistory(channelType);
+
+  revalidatePath("/fusionadmin/messages/settings");
+  revalidatePath("/fusionadmin/messages");
+
+  if (!result.ok) {
+    redirect(
+      "/fusionadmin/messages/settings?syncError=" + encodeURIComponent(result.error || "Unable to sync message history.")
+    );
+  }
+
+  redirect("/fusionadmin/messages/settings?synced=" + encodeURIComponent(String(result.imported ?? 0)));
 }
