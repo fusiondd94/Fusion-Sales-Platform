@@ -45,6 +45,10 @@ export type DashboardLead = {
   discount_percent: number;
   status: string;
   created_at: string;
+  contact_id?: string | null;
+  company_id?: string | null;
+  linked_contact_name?: string | null;
+  linked_company_name?: string | null;
 };
 
 export type DashboardTask = {
@@ -248,6 +252,171 @@ async function logActivity(
   });
 }
 
+// --- Lead / Contact / Company sync helpers -------------------------------
+//
+// Leads, Contacts, and Companies used to be independent, free-text records:
+// capturing a new lead never created or linked a Contact or Company, so the
+// same person or business could show up three different ways with nothing
+// connecting them. These helpers find-or-create the matching Contact and
+// Company for a person and link them together. They're called from every
+// place a lead is captured, edited, or converted into a client so the three
+// stay in sync automatically.
+
+async function findOrCreateCompanyIdByName(
+  supabase: SupabaseClient<any>,
+  organizationId: string,
+  companyName: string | null | undefined,
+  actorId: string | null,
+  leadSource?: string
+): Promise<string | null> {
+  const name = companyName?.trim();
+  if (!name) return null;
+
+  const { data, error } = await supabase
+    .from("crm_companies")
+    .upsert(
+      {
+        organization_id: organizationId,
+        company_name: name,
+        lead_source: leadSource?.trim() || undefined,
+        updated_by: actorId,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: "organization_id,company_name", ignoreDuplicates: false }
+    )
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) {
+    console.error("Unable to find or create company for sync.", error);
+    return null;
+  }
+
+  return data.id;
+}
+
+async function findOrCreateContactForPerson(
+  supabase: SupabaseClient<any>,
+  organizationId: string,
+  input: {
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    companyId: string | null;
+    leadSource?: string;
+    actorId?: string | null;
+  }
+): Promise<string | null> {
+  const normalizedEmail = input.email?.trim() ? normalizeEmail(input.email) : null;
+  const normalizedPhone = input.phone?.trim() ? normalizePhone(input.phone) : null;
+  let existing: { id: string; company_id: string | null } | null = null;
+
+  if (normalizedEmail) {
+    const { data } = await supabase
+      .from("crm_contacts")
+      .select("id, company_id")
+      .eq("organization_id", organizationId)
+      .eq("normalized_email", normalizedEmail)
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle<{ id: string; company_id: string | null }>();
+    existing = data || null;
+  }
+
+  if (!existing && normalizedPhone) {
+    const { data } = await supabase
+      .from("crm_contacts")
+      .select("id, company_id")
+      .eq("organization_id", organizationId)
+      .eq("normalized_phone", normalizedPhone)
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle<{ id: string; company_id: string | null }>();
+    existing = data || null;
+  }
+
+  if (existing) {
+    if (!existing.company_id && input.companyId) {
+      await supabase
+        .from("crm_contacts")
+        .update({ company_id: input.companyId, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+    }
+    return existing.id;
+  }
+
+  const names = splitDisplayName(input.name || "Unnamed");
+  const { data, error } = await supabase
+    .from("crm_contacts")
+    .insert({
+      organization_id: organizationId,
+      company_id: input.companyId,
+      first_name: names.firstName,
+      last_name: names.lastName,
+      display_name: names.displayName,
+      email: input.email?.trim() || null,
+      normalized_email: normalizedEmail,
+      phone: input.phone?.trim() || null,
+      normalized_phone: normalizedPhone,
+      lead_source: input.leadSource?.trim() || "Website",
+      created_by: input.actorId || null,
+      updated_by: input.actorId || null
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) {
+    console.error("Unable to find or create contact for sync.", error);
+    return null;
+  }
+
+  return data.id;
+}
+
+async function linkCompanyContact(supabase: SupabaseClient<any>, companyId: string | null, contactId: string | null) {
+  if (!companyId || !contactId) return;
+
+  const { count } = await supabase
+    .from("crm_company_contacts")
+    .select("company_id", { count: "exact", head: true })
+    .eq("company_id", companyId);
+
+  await supabase
+    .from("crm_company_contacts")
+    .upsert(
+      { company_id: companyId, contact_id: contactId, is_primary: !count },
+      { onConflict: "company_id,contact_id", ignoreDuplicates: true }
+    );
+}
+
+async function syncContactAndCompanyForPerson(
+  supabase: SupabaseClient<any>,
+  organizationId: string | null,
+  input: {
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    companyName?: string | null;
+    leadSource?: string;
+    actorId?: string | null;
+  }
+): Promise<{ contactId: string | null; companyId: string | null }> {
+  if (!organizationId) return { contactId: null, companyId: null };
+
+  const companyId = await findOrCreateCompanyIdByName(supabase, organizationId, input.companyName, input.actorId || null, input.leadSource);
+  const contactId = await findOrCreateContactForPerson(supabase, organizationId, {
+    name: input.name,
+    email: input.email,
+    phone: input.phone,
+    companyId,
+    leadSource: input.leadSource,
+    actorId: input.actorId
+  });
+  await linkCompanyContact(supabase, companyId, contactId);
+
+  return { contactId, companyId };
+}
+
 function demoDashboardRecords() {
   return {
     summary: pipelineSummary,
@@ -293,7 +462,7 @@ export async function getFusionDashboardRecords() {
   const [{ data: leads, error: leadsError }, { data: tasks, error: tasksError }] = await Promise.all([
     supabase
       .from("crm_leads")
-      .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, industry, goal, timeline, budget, objection, project_notes, package_name, total_today, monthly_due, discount_percent, status, created_at")
+      .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, industry, goal, timeline, budget, objection, project_notes, package_name, total_today, monthly_due, discount_percent, status, created_at, contact_id, company_id")
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
@@ -352,7 +521,7 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
   const search = params.q?.trim();
   const leadQuery = supabase
     .from("crm_leads")
-    .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, industry, goal, timeline, budget, objection, project_notes, package_name, total_today, monthly_due, discount_percent, status, created_at")
+    .select("id, lead_code, customer_name, customer_email, customer_phone, company, website, industry, goal, timeline, budget, objection, project_notes, package_name, total_today, monthly_due, discount_percent, status, created_at, contact_id, company_id")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -386,7 +555,7 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
     supabase.from("crm_notifications").select("id, title, created_at, read_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(10)
   ]);
 
-  const leads = (leadsResult.data || []) as DashboardLead[];
+  const rawLeads = (leadsResult.data || []) as DashboardLead[];
   const tasks = ((tasksResult.data || []) as Array<DashboardTask & { crm_leads?: { company?: string | null } | null }>).map((task) => ({
     ...task,
     company: task.crm_leads?.company || null
@@ -399,6 +568,12 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
   const contacts = ((contactsResult.data || []) as CrmContact[]).map((contact) => ({
     ...contact,
     crm_companies: contact.company_id ? { company_name: companyNameById.get(contact.company_id) || null } : null
+  }));
+  const contactNameById = new Map(contacts.map((contact) => [contact.id, contact.display_name]));
+  const leads = rawLeads.map((lead) => ({
+    ...lead,
+    linked_contact_name: lead.contact_id ? contactNameById.get(lead.contact_id) || null : null,
+    linked_company_name: lead.company_id ? companyNameById.get(lead.company_id) || null : null
   }));
   const mappedDeals = deals.map((deal) => {
     const stage = deal.stage_id ? stageById.get(deal.stage_id) : null;
@@ -638,9 +813,26 @@ export async function captureLead(payload: SalesPayload) {
   }
 
   const organizationId = await getDefaultOrganizationId(supabase);
+
+  // A new lead should immediately show up as a linked Contact (the person)
+  // and Company (who they represent) instead of living only as free text on
+  // the lead record.
+  const { contactId, companyId } = await syncContactAndCompanyForPerson(supabase, organizationId, {
+    name: payload.customer.name,
+    email: payload.customer.email,
+    phone: payload.customer.phone,
+    companyName: payload.customer.company,
+    leadSource: "Website"
+  });
+
   const { data, error } = await supabase
     .from("crm_leads")
-    .insert({ ...leadInsertPayload(leadCode, payload), organization_id: organizationId })
+    .insert({
+      ...leadInsertPayload(leadCode, payload),
+      organization_id: organizationId,
+      contact_id: contactId,
+      company_id: companyId
+    })
     .select("id, lead_code, status")
     .single<LeadRecord>();
 
@@ -727,6 +919,7 @@ export async function createCrmContact(input: {
     .single<{ id: string }>();
 
   if (error || !data) return { ok: false, error: "Unable to create contact." };
+  await linkCompanyContact(supabase, companyId, data.id);
   await logActivity(supabase, organizationId, input.actorId, "contact.created", "contact", data.id, `Contact created: ${displayName}`);
   return { ok: true };
 }
@@ -765,6 +958,19 @@ export async function createCrmClient(input: {
     return { ok: false, error: createError?.message || "Unable to create the client's portal login." };
   }
 
+  // A manually-created client is still a person and a company — link them to
+  // the same shared Contact/Company records everything else uses, and mark
+  // both as an active client right away.
+  const { contactId, companyId } = await syncContactAndCompanyForPerson(supabase, organizationId, {
+    name,
+    email,
+    companyName: input.company,
+    leadSource: "Manual",
+    actorId: input.actorId
+  });
+  if (contactId) await supabase.from("crm_contacts").update({ lifecycle_status: "client", updated_at: new Date().toISOString() }).eq("id", contactId);
+  if (companyId) await supabase.from("crm_companies").update({ lifecycle_status: "client", updated_at: new Date().toISOString() }).eq("id", companyId);
+
   const { data: client, error: clientError } = await supabase
     .from("crm_clients")
     .insert({
@@ -772,6 +978,8 @@ export async function createCrmClient(input: {
       customer_email: email,
       customer_name: name,
       company: input.company?.trim() || "Not set",
+      contact_id: contactId,
+      company_id: companyId,
       status: "active",
       portal_user_id: created.user.id,
       portal_status: "active",
@@ -969,6 +1177,7 @@ export async function updateCrmContact(input: {
     .single<{ id: string }>();
 
   if (error || !data) return { ok: false, error: "Unable to update contact." };
+  await linkCompanyContact(supabase, companyId, input.contactId);
   await logActivity(supabase, organizationId, input.actorId, "contact.updated", "contact", input.contactId, `Contact updated: ${names.displayName}`);
   return { ok: true };
 }
@@ -1001,6 +1210,7 @@ export async function updateCrmLead(input: {
   const customerName = input.customerName.trim();
   const company = input.company.trim();
   const customerEmail = input.customerEmail.trim();
+  const customerPhone = input.customerPhone?.trim() || null;
   if (!customerName || !company || !customerEmail) {
     return { ok: false, error: "Lead name, company, and email are required." };
   }
@@ -1009,12 +1219,55 @@ export async function updateCrmLead(input: {
   const status = allowedStatuses.has(input.status || "") ? input.status || "captured" : "captured";
   const website = input.website?.trim();
 
+  // Keep this lead's linked Contact and Company records (rather than a
+  // second, disconnected copy of the same person/business) up to date with
+  // whatever the admin just edited.
+  const { data: existingLead } = await supabase
+    .from("crm_leads")
+    .select("contact_id, company_id")
+    .eq("organization_id", organizationId)
+    .eq("id", input.leadId)
+    .single<{ contact_id: string | null; company_id: string | null }>();
+
+  const companyId = await findOrCreateCompanyIdByName(supabase, organizationId, company, input.actorId, "Manual");
+  let contactId = existingLead?.contact_id || null;
+
+  if (contactId) {
+    const names = splitDisplayName(customerName);
+    await supabase
+      .from("crm_contacts")
+      .update({
+        company_id: companyId,
+        first_name: names.firstName,
+        last_name: names.lastName,
+        display_name: names.displayName,
+        email: customerEmail,
+        normalized_email: normalizeEmail(customerEmail),
+        phone: customerPhone,
+        normalized_phone: customerPhone ? normalizePhone(customerPhone) : null,
+        updated_by: input.actorId,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", contactId);
+  } else {
+    contactId = await findOrCreateContactForPerson(supabase, organizationId, {
+      name: customerName,
+      email: customerEmail,
+      phone: customerPhone,
+      companyId,
+      leadSource: "Manual",
+      actorId: input.actorId
+    });
+  }
+
+  await linkCompanyContact(supabase, companyId, contactId);
+
   const { data, error } = await supabase
     .from("crm_leads")
     .update({
       customer_name: customerName,
       customer_email: customerEmail,
-      customer_phone: input.customerPhone?.trim() || null,
+      customer_phone: customerPhone,
       company,
       website: website ? (/^https?:\/\//i.test(website) ? website : `https://${website}`) : null,
       industry: input.industry?.trim() || null,
@@ -1028,6 +1281,8 @@ export async function updateCrmLead(input: {
       monthly_due: Math.max(0, Math.round(input.monthlyDue || 0)),
       discount_percent: Math.min(75, Math.max(0, Math.round(input.discountPercent || 0))),
       status,
+      contact_id: contactId,
+      company_id: companyId,
       updated_at: new Date().toISOString()
     })
     .eq("organization_id", organizationId)
@@ -1179,8 +1434,8 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session) {
       updated_at: now
     })
     .eq("lead_code", leadCode)
-    .select("id, customer_email, customer_name, company")
-    .single<{ id: string; customer_email: string; customer_name: string; company: string }>();
+    .select("id, customer_email, customer_name, company, contact_id, company_id")
+    .single<{ id: string; customer_email: string; customer_name: string; company: string; contact_id: string | null; company_id: string | null }>();
 
   if (leadError || !lead) {
     console.error("Unable to mark Fusion lead as paid.", leadError);
@@ -1194,6 +1449,8 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session) {
       customer_email: lead.customer_email,
       customer_name: lead.customer_name,
       company: lead.company,
+      contact_id: lead.contact_id,
+      company_id: lead.company_id,
       status: "active",
       stripe_customer_id: stripeCustomerId,
       stripe_subscription_id: stripeSubscriptionId
@@ -1204,6 +1461,15 @@ export async function fulfillCheckout(session: Stripe.Checkout.Session) {
   if (clientError) {
     console.error("Unable to create Fusion client record.", clientError);
     return;
+  }
+
+  // The person and company just became a paying client, not just a lead —
+  // reflect that on the shared Contact/Company records too.
+  if (lead.contact_id) {
+    await supabase.from("crm_contacts").update({ lifecycle_status: "client", updated_at: now }).eq("id", lead.contact_id);
+  }
+  if (lead.company_id) {
+    await supabase.from("crm_companies").update({ lifecycle_status: "client", updated_at: now }).eq("id", lead.company_id);
   }
 
   await supabase.from("crm_tasks").insert([
