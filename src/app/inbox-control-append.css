@@ -1,0 +1,195 @@
+/* Inbox channel/folder controls + brand icon badges */
+
+.channel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: #ffffff;
+}
+
+.channel-icon--all {
+  background: var(--brand-teal, #004443);
+}
+
+.channel-icon--whatsapp {
+  background: #25d366;
+}
+
+.channel-icon--messenger {
+  background: linear-gradient(135deg, #00b2ff, #006aff);
+}
+
+.channel-icon--instagram {
+  background: linear-gradient(45deg, #f9ce34, #ee2a7b 55%, #6228d7);
+}
+
+.inbox-folder-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 1rem 0 0.75rem;
+  border-bottom: 1px solid var(--fusion-beige-300, #d2c8bb);
+}
+
+.inbox-folder-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted, #6b6155);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.inbox-folder-tab:hover {
+  color: var(--brand-teal, #004443);
+}
+
+.inbox-folder-tab--active {
+  color: var(--brand-teal, #004443);
+  border-bottom-color: var(--brand-gold, #d3a939);
+}
+
+.inbox-folder-tab__count {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--fusion-beige-100, #f2ece2);
+  color: inherit;
+  font-size: 0.72rem;
+}
+
+.inbox-folder-tab--active .inbox-folder-tab__count {
+  background: rgba(211, 169, 57, 0.2);
+}
+
+.inbox-channel-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+}
+
+.inbox-channel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.4rem;
+  border: 1px solid var(--fusion-beige-300, #d2c8bb);
+  border-radius: 999px;
+  background: var(--brand-white, #ffffff);
+  color: var(--text-body, #33302a);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.inbox-channel-chip:hover {
+  border-color: var(--brand-teal, #004443);
+}
+
+.inbox-channel-chip--active {
+  border-color: var(--brand-teal, #004443);
+  background: rgba(0, 68, 67, 0.06);
+}
+
+.inbox-channel-chip__count {
+  color: var(--text-muted, #6b6155);
+  font-weight: 500;
+}
+
+.inbox-channel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inbox-thread-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.inbox-thread-header__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inbox-thread-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.inbox-thread-actions__danger {
+  color: #b3261e;
+  border-color: rgba(179, 38, 30, 0.35);
+}
+
+.inbox-thread-actions__danger:hover {
+  background: rgba(179, 38, 30, 0.08);
+}
+
+.inbox-reply-disabled {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--fusion-radius-md, 12px);
+  background: var(--fusion-beige-50, #faf8f5);
+  font-size: 0.85rem;
+}
+
+.whatsapp-guide-card {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--fusion-beige-300, #d2c8bb);
+}
+
+.whatsapp-guide-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+.whatsapp-guide-card__header h3 {
+  margin: 0 0 0.2rem;
+  color: var(--brand-teal, #004443);
+}
+
+.whatsapp-guide-card__steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.whatsapp-guide-card__steps a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--brand-teal, #004443);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .inbox-folder-tabs {
+    overflow-x: auto;
+  }
+
+  .inbox-thread-header {
+    flex-direction: column;
+  }
+
+  .inbox-thread-actions {
+    width: 100%;
+  }
+}

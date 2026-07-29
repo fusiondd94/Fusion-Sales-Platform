@@ -5,6 +5,7 @@ import "./design-system-append.css";
 import "./phase2-append.css";
 import "./portal-append.css";
 import "./messages-append.css";
+import "./inbox-control-append.css";
 
 const inter = Inter({
   subsets: ["latin"],
