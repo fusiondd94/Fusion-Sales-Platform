@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { CheckCircle2, ExternalLink, History, LogIn, MessageCircle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, History, LogIn, MessageCircle, ShieldCheck } from "lucide-react";
 import { getMessagingWorkspace } from "@/lib/messages";
 import { MessageChannelForm } from "@/components/MessageChannelForm";
 import { ChannelIcon } from "@/components/ChannelIcon";
+import { WhatsAppEmbeddedSignup } from "@/components/WhatsAppEmbeddedSignup";
 import { PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
 import { FormError } from "@/components/ui";
 import { cancelMetaConnect, connectMetaPage, syncFusionMessageChannelHistory } from "@/app/fusionadmin/actions";
@@ -23,10 +24,20 @@ export default async function MessageSettingsPage({
   const { channels } = await getMessagingWorkspace();
   const { connect, metaError, synced, syncError } = await searchParams;
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+  const metaAppId = process.env.NEXT_PUBLIC_META_APP_ID || "";
+  const whatsappConfigId = process.env.NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID || "";
 
   function webhookUrlFor(channelType: string) {
     if (!appUrl) return "Set NEXT_PUBLIC_APP_URL to see your webhook URL";
     return appUrl + (channelType === "whatsapp" ? "/api/webhooks/whatsapp" : "/api/webhooks/meta");
+  }
+
+  const whatsappChannel = channels.find((channel) => channel.channel_type === "whatsapp");
+  let whatsappExpiryDays: number | null = null;
+  const whatsappExpiresAt = whatsappChannel?.credentials?.tokenExpiresAt;
+  if (whatsappChannel?.status === "connected" && whatsappExpiresAt) {
+    const msLeft = new Date(whatsappExpiresAt).getTime() - Date.now();
+    whatsappExpiryDays = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
   }
 
   let pendingPages: MetaPageOption[] = [];
@@ -173,32 +184,57 @@ export default async function MessageSettingsPage({
           <div>
             <h3>Connect WhatsApp</h3>
             <p className="muted">
-              WhatsApp doesn&apos;t support one-click Facebook login like Messenger and Instagram &mdash; grab three
-              values from Meta&apos;s dashboard and paste them into the WhatsApp card below.
+              Sign in with the Facebook account that manages your WhatsApp Business Account. Meta walks you through
+              picking or creating a WhatsApp number right inside the popup &mdash; no copying IDs or tokens by hand.
             </p>
           </div>
         </div>
-        <ol className="whatsapp-guide-card__steps">
-          <li>
-            Open{" "}
-            <a href="https://developers.facebook.com/apps" rel="noreferrer" target="_blank">
-              Meta for Developers <ExternalLink size={12} />
-            </a>{" "}
-            and select this app.
-          </li>
-          <li>
-            In the left sidebar, go to <strong>WhatsApp &rarr; API Setup</strong>.
-          </li>
-          <li>
-            Copy the <strong>Phone number ID</strong> and <strong>WhatsApp Business Account ID</strong> shown there.
-          </li>
-          <li>
-            Under &quot;Temporary access token,&quot; click <strong>Generate</strong>. For a token that doesn&apos;t
-            expire every 24 hours, create a permanent one instead via <strong>System Users</strong> in Business
-            Settings.
-          </li>
-          <li>Paste all three values into the WhatsApp card below and click Save.</li>
-        </ol>
+
+        {whatsappExpiryDays !== null && whatsappExpiryDays <= 10 ? (
+          <p className={whatsappExpiryDays <= 0 ? "fusion-form-error" : "whatsapp-expiry-warning"} role="status">
+            <AlertTriangle aria-hidden="true" size={16} />
+            <span>
+              {whatsappExpiryDays <= 0
+                ? "Your WhatsApp connection has expired. Reconnect below to keep sending and receiving messages."
+                : `Your WhatsApp connection expires in ${whatsappExpiryDays} day${whatsappExpiryDays === 1 ? "" : "s"}. Reconnect any time before then — it only takes a few seconds.`}
+            </span>
+          </p>
+        ) : null}
+
+        {metaAppId && whatsappConfigId ? (
+          <WhatsAppEmbeddedSignup appId={metaAppId} configId={whatsappConfigId} />
+        ) : (
+          <p className="fusion-form-error">
+            Set NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID to enable one-click WhatsApp connect.
+          </p>
+        )}
+
+        <details className="whatsapp-guide-card__manual">
+          <summary>Prefer to paste your own token, or want one that never expires?</summary>
+          <p className="muted">
+            The button above issues a token that renews every 60 days &mdash; just reconnect when we show the
+            reminder. If you&apos;d rather set up a token that never expires, generate one manually:
+          </p>
+          <ol className="whatsapp-guide-card__steps">
+            <li>
+              Open{" "}
+              <a href="https://developers.facebook.com/apps" rel="noreferrer" target="_blank">
+                Meta for Developers
+              </a>{" "}
+              and select this app.
+            </li>
+            <li>
+              In Business Settings, go to <strong>Users &rarr; System Users</strong>, create or open a system user,
+              and assign your WhatsApp Business Account to it.
+            </li>
+            <li>
+              Click <strong>Generate new token</strong>, choose this app, select the{" "}
+              <code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code> permissions, and
+              set expiration to <strong>Never</strong>.
+            </li>
+            <li>Paste the Phone number ID, WhatsApp Business Account ID, and token into the WhatsApp card below and click Save.</li>
+          </ol>
+        </details>
       </div>
 
       <p className="meta-connect-note muted">Prefer to paste tokens manually for Messenger or Instagram instead? Use the advanced setup below.</p>
