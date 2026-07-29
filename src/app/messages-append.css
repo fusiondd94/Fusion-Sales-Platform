@@ -103,6 +103,47 @@
   font-size: 0.85rem;
 }
 
+.fusion-form-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  border-radius: var(--fusion-radius-md, 12px);
+  background: rgba(34, 139, 87, 0.12);
+  color: #1f7a4d;
+  font-size: 0.85rem;
+}
+
+.meta-sync-panel {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--fusion-beige-300, #d2c8bb);
+}
+
+.meta-sync-panel__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  color: var(--brand-teal, #004443);
+}
+
+.meta-sync-panel__header h3 {
+  margin: 0 0 0.2rem;
+}
+
+.meta-sync-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.meta-sync-panel__actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 @media (max-width: 640px) {
   .meta-connect-card {
     flex-direction: column;
@@ -121,5 +162,13 @@
 
   .meta-page-option button {
     align-self: stretch;
+  }
+
+  .meta-sync-panel__actions {
+    flex-direction: column;
+  }
+
+  .meta-sync-panel__actions button {
+    justify-content: center;
   }
 }
