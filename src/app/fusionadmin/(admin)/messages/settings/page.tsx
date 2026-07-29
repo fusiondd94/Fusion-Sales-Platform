@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { LogIn, MessageCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle2, History, LogIn, MessageCircle, ShieldCheck } from "lucide-react";
 import { getMessagingWorkspace } from "@/lib/messages";
 import { MessageChannelForm } from "@/components/MessageChannelForm";
 import { PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
 import { FormError } from "@/components/ui";
-import { cancelMetaConnect, connectMetaPage } from "@/app/fusionadmin/actions";
+import { cancelMetaConnect, connectMetaPage, syncFusionMessageChannelHistory } from "@/app/fusionadmin/actions";
 
 type MetaPageOption = {
   id: string;
@@ -17,10 +17,10 @@ type MetaPageOption = {
 export default async function MessageSettingsPage({
   searchParams
 }: {
-  searchParams: Promise<{ connect?: string; metaError?: string }>;
+  searchParams: Promise<{ connect?: string; metaError?: string; synced?: string; syncError?: string }>;
 }) {
   const { channels } = await getMessagingWorkspace();
-  const { connect, metaError } = await searchParams;
+  const { connect, metaError, synced, syncError } = await searchParams;
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 
   function webhookUrlFor(channelType: string) {
@@ -41,6 +41,10 @@ export default async function MessageSettingsPage({
     }
   }
 
+  const syncableChannels = channels.filter(
+    (channel) => (channel.channel_type === "messenger" || channel.channel_type === "instagram") && channel.status === "connected"
+  );
+
   return (
     <div className="admin-content">
       <PageHeader
@@ -55,6 +59,18 @@ export default async function MessageSettingsPage({
       />
 
       <FormError message={metaError} />
+      <FormError message={syncError} />
+
+      {synced !== undefined ? (
+        <p className="fusion-form-success" role="status">
+          <CheckCircle2 aria-hidden="true" size={16} />
+          <span>
+            {Number(synced) > 0
+              ? `Imported ${synced} message${Number(synced) === 1 ? "" : "s"} from your existing conversation history.`
+              : "No new messages found to import — you're already up to date."}
+          </span>
+        </p>
+      ) : null}
 
       <div className="meta-connect-card">
         <div className="meta-connect-card__copy">
@@ -121,6 +137,30 @@ export default async function MessageSettingsPage({
               Cancel
             </button>
           </form>
+        </div>
+      ) : null}
+
+      {syncableChannels.length ? (
+        <div className="admin-panel meta-sync-panel">
+          <div className="meta-sync-panel__header">
+            <History size={18} />
+            <div>
+              <h3>Import existing conversations</h3>
+              <p className="muted">
+                Pull in messages that were already sent on Facebook or Instagram before you connected this inbox.
+              </p>
+            </div>
+          </div>
+          <div className="meta-sync-panel__actions">
+            {syncableChannels.map((channel) => (
+              <form action={syncFusionMessageChannelHistory} key={channel.channel_type}>
+                <input name="channelType" type="hidden" value={channel.channel_type} />
+                <button className="secondary-button compact-button" type="submit">
+                  <History size={16} /> Sync {channel.channel_type === "messenger" ? "Messenger" : "Instagram"} history
+                </button>
+              </form>
+            ))}
+          </div>
         </div>
       ) : null}
 
