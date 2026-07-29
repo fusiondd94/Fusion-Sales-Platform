@@ -87,8 +87,22 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   </a>
                   <br />
                   <span className="muted">{lead.lead_code} · {lead.website || "No website"}</span>
+                  {lead.company_id ? (
+                    <>
+                      <br />
+                      <a className="text-link" href={`/fusionadmin/clients?companyId=${lead.company_id}#company-editor`}>View company profile &rarr;</a>
+                    </>
+                  ) : null}
                 </td>
-                <td data-label="Contact">{lead.customer_name}<br /><span className="muted">{lead.customer_email} · {lead.customer_phone}</span></td>
+                <td data-label="Contact">
+                  {lead.contact_id ? (
+                    <a className="fusion-record-link" href={`/fusionadmin/clients?contactId=${lead.contact_id}#contact-editor`}>{lead.customer_name}</a>
+                  ) : (
+                    lead.customer_name
+                  )}
+                  <br />
+                  <span className="muted">{lead.customer_email} · {lead.customer_phone}</span>
+                </td>
                 <td data-label="Offer">{lead.package_name}<br /><span className="muted">{formatCurrency(lead.total_today)} + ${lead.monthly_due}/mo</span></td>
                 <td data-label="Status"><FusionBadge tone={statusTone(lead.status)}>{lead.status}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?leadId=${lead.id}#lead-editor`}>Edit</a></td>
@@ -103,6 +117,19 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               <h2><UsersRound size={20} /> Edit lead</h2>
               <span className="status-pill">{selectedLead.lead_code}</span>
             </div>
+            {selectedLead.contact_id || selectedLead.company_id ? (
+              <p className="muted" style={{ margin: "0 0 0.85rem", fontSize: "0.85rem" }}>
+                Synced with{" "}
+                {selectedLead.contact_id ? (
+                  <a className="text-link" href={`/fusionadmin/clients?contactId=${selectedLead.contact_id}#contact-editor`}>this Contact</a>
+                ) : null}
+                {selectedLead.contact_id && selectedLead.company_id ? " and " : null}
+                {selectedLead.company_id ? (
+                  <a className="text-link" href={`/fusionadmin/clients?companyId=${selectedLead.company_id}#company-editor`}>this Company</a>
+                ) : null}
+                . Saving changes here keeps those records up to date automatically.
+              </p>
+            ) : null}
             <form className="record-edit-card lead-editor-card" action={updateFusionLead} data-track-unsaved="true">
               <input name="leadId" type="hidden" value={selectedLead.id} />
               <div className="record-edit-grid">
@@ -285,7 +312,13 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                   <br />
                   <span className="muted">{contact.email || "No email"} · {contact.phone || "No phone"}</span>
                 </td>
-                <td data-label="Company">{contact.crm_companies?.company_name || "No company"}</td>
+                <td data-label="Company">
+                  {contact.company_id ? (
+                    <a className="text-link" href={`/fusionadmin/clients?companyId=${contact.company_id}#company-editor`}>{contact.crm_companies?.company_name || "No company"}</a>
+                  ) : (
+                    "No company"
+                  )}
+                </td>
                 <td data-label="Status"><FusionBadge tone={statusTone(contact.lifecycle_status)}>{contact.lifecycle_status}</FusionBadge></td>
                 <td data-label="Action"><a className="secondary-button compact-button table-action-button" href={`/fusionadmin/clients?contactId=${contact.id}#contact-editor`}>Edit</a></td>
               </tr>
