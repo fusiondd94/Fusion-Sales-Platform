@@ -1053,3 +1053,72 @@ export async function deleteFusionThreadForever(formData: FormData) {
   if (returnChannel) params.set("channel", returnChannel);
   redirect("/fusionadmin/messages?" + params.toString());
 }
+
+export async function connectWhatsAppEmbeddedSignup(input: {
+  code: string;
+  phoneNumberId?: string;
+  wabaId?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return { ok: false, error: "You are not authorized to do that." };
+
+  if (!input.phoneNumberId || !input.wabaId) {
+    return {
+      ok: false,
+      error:
+        "Meta didn't return a WhatsApp phone number or business account. Please try connecting again and complete every step in the popup, including verifying a phone number."
+    };
+  }
+
+  const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+  const appSecret = process.env.META_APP_SECRET;
+  if (!appId || !appSecret) {
+    return { ok: false, error: "Meta App ID or App Secret is not configured on the server." };
+  }
+
+  try {
+    const tokenRes = await fetch(
+      `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(
+        appSecret
+      )}&code=${encodeURIComponent(input.code)}`
+    );
+    const tokenPayload = await tokenRes.json();
+    if (!tokenRes.ok || !tokenPayload?.access_token) {
+      throw new Error(tokenPayload?.error?.message || "Unable to exchange the WhatsApp signup code for an access token.");
+    }
+    const accessToken = tokenPayload.access_token as string;
+
+    try {
+      await fetch(
+        `https://graph.facebook.com/v21.0/${input.wabaId}/subscribed_apps?access_token=${encodeURIComponent(accessToken)}`,
+        { method: "POST" }
+      );
+    } catch {
+      // Non-fatal: the channel is still saved even if the webhook subscription call fails.
+    }
+
+    const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+
+    const result = await saveMessageChannel({
+      actorId: user.id,
+      channelType: "whatsapp",
+      displayName: "WhatsApp",
+      externalAccountId: input.phoneNumberId,
+      credentials: {
+        phoneNumberId: input.phoneNumberId,
+        wabaId: input.wabaId,
+        accessToken,
+        tokenExpiresAt: expiresAt,
+        connectionMethod: "embedded_signup"
+      }
+    });
+
+    if (result.error) return { ok: false, error: result.error };
+
+    revalidatePath("/fusionadmin/messages/settings");
+    revalidatePath("/fusionadmin/messages");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Something went wrong connecting WhatsApp." };
+  }
+}
