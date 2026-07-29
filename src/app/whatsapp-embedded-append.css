@@ -1,24 +1,8 @@
 /* WhatsApp Embedded Signup connect button + expiry banner */
 
-.whatsapp-embedded-signup {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
+.whatsapp-connect-link {
+  display: inline-flex;
   margin: 0.75rem 0 1rem;
-}
-
-.whatsapp-embedded-signup .spin {
-  animation: whatsapp-spin 0.8s linear infinite;
-}
-
-@keyframes whatsapp-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .whatsapp-expiry-warning {
