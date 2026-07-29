@@ -3,6 +3,8 @@ import { runAutomations } from "@/lib/automations";
 
 export type MessageChannelType = "whatsapp" | "messenger" | "instagram";
 
+export type MessageThreadStatus = "inbox" | "spam" | "trash";
+
 export type MessageChannel = {
   id: string;
   channel_type: MessageChannelType;
@@ -28,6 +30,7 @@ export type MessageThreadRecord = {
   last_message_preview: string | null;
   last_direction: string | null;
   unread_count: number;
+  status: MessageThreadStatus;
   created_at: string;
 };
 
@@ -217,18 +220,57 @@ export async function verifyChannelToken(channelType: MessageChannelType, token:
   return !!data;
 }
 
-export async function getInboxWorkspace(activeThreadId?: string) {
-  const empty = { threads: [] as MessageThreadRecord[], messages: [] as MessageRecord[], activeThread: null as MessageThreadRecord | null };
+export type InboxFolderCounts = Record<MessageThreadStatus, number>;
+export type InboxChannelCounts = Record<"all" | MessageChannelType, number>;
+
+export async function getInboxWorkspace(
+  activeThreadId?: string,
+  filters?: { channelType?: MessageChannelType; folder?: MessageThreadStatus }
+) {
+  const empty = {
+    threads: [] as MessageThreadRecord[],
+    messages: [] as MessageRecord[],
+    activeThread: null as MessageThreadRecord | null,
+    folder: (filters?.folder || "inbox") as MessageThreadStatus,
+    folderCounts: { inbox: 0, spam: 0, trash: 0 } as InboxFolderCounts,
+    channelCounts: { all: 0, whatsapp: 0, messenger: 0, instagram: 0 } as InboxChannelCounts
+  };
   const supabase = getServiceClient();
   if (!supabase) return empty;
 
   const organizationId = await getDefaultOrganizationId(supabase);
   if (!organizationId) return empty;
 
-  const { data: threads } = await supabase
+  const folder: MessageThreadStatus = filters?.folder || "inbox";
+
+  const { data: allThreadMeta } = await supabase
     .from("crm_message_threads")
-    .select("id, channel_id, channel_type, external_thread_id, contact_id, contact_name, contact_handle, last_message_at, last_message_preview, last_direction, unread_count, created_at")
+    .select("channel_type, status")
+    .eq("organization_id", organizationId);
+
+  const folderCounts: InboxFolderCounts = { inbox: 0, spam: 0, trash: 0 };
+  const channelCounts: InboxChannelCounts = { all: 0, whatsapp: 0, messenger: 0, instagram: 0 };
+  for (const row of (allThreadMeta || []) as Array<{ channel_type: MessageChannelType; status: MessageThreadStatus }>) {
+    if (row.status in folderCounts) folderCounts[row.status] += 1;
+    if (row.status === folder) {
+      channelCounts.all += 1;
+      if (row.channel_type in channelCounts) channelCounts[row.channel_type] += 1;
+    }
+  }
+
+  let threadsQuery = supabase
+    .from("crm_message_threads")
+    .select(
+      "id, channel_id, channel_type, external_thread_id, contact_id, contact_name, contact_handle, last_message_at, last_message_preview, last_direction, unread_count, status, created_at"
+    )
     .eq("organization_id", organizationId)
+    .eq("status", folder);
+
+  if (filters?.channelType) {
+    threadsQuery = threadsQuery.eq("channel_type", filters.channelType);
+  }
+
+  const { data: threads } = await threadsQuery
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(100);
 
@@ -252,7 +294,35 @@ export async function getInboxWorkspace(activeThreadId?: string) {
     }
   }
 
-  return { threads: threadList, messages, activeThread };
+  return { threads: threadList, messages, activeThread, folder, folderCounts, channelCounts };
+}
+
+export async function moveThreadFolder(input: {
+  actorId: string;
+  threadId: string;
+  folder: MessageThreadStatus;
+}): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+
+  const { error } = await supabase
+    .from("crm_message_threads")
+    .update({ status: input.folder, updated_at: new Date().toISOString() })
+    .eq("id", input.threadId);
+
+  if (error) return { ok: false, error: "Unable to move conversation: " + error.message };
+  return { ok: true };
+}
+
+export async function permanentlyDeleteThread(input: { actorId: string; threadId: string }): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+
+  await supabase.from("crm_messages").delete().eq("thread_id", input.threadId);
+  const { error } = await supabase.from("crm_message_threads").delete().eq("id", input.threadId);
+
+  if (error) return { ok: false, error: "Unable to delete conversation: " + error.message };
+  return { ok: true };
 }
 
 export async function sendMessage(input: { actorId: string; threadId: string; body: string }): Promise<{ ok: boolean; error?: string }> {

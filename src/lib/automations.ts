@@ -30,7 +30,9 @@ export type AutomationActionType =
   | "update_lead_status"
   | "add_note"
   | "notify_team"
-  | "send_email";
+  | "send_email"
+  | "move_to_spam"
+  | "move_to_trash";
 
 export const AUTOMATION_ACTIONS: Array<{ value: AutomationActionType; label: string; description: string }> = [
   { value: "create_contact", label: "Create contact", description: "Create a Contact (and link/create their Business) from the trigger's name, email, phone, and company." },
@@ -40,7 +42,9 @@ export const AUTOMATION_ACTIONS: Array<{ value: AutomationActionType; label: str
   { value: "update_lead_status", label: "Update lead status", description: "Change the status field on the source lead." },
   { value: "add_note", label: "Add internal note", description: "Log a note visible in the CRM activity feed." },
   { value: "notify_team", label: "Notify team", description: "Create an in-app notification for your team." },
-  { value: "send_email", label: "Send email", description: "Send one of your saved email templates to the contact." }
+  { value: "send_email", label: "Send email", description: "Send one of your saved email templates to the contact." },
+  { value: "move_to_spam", label: "Move message to spam", description: "Route the conversation to the Spam folder in the inbox (Message received trigger only)." },
+  { value: "move_to_trash", label: "Move message to trash", description: "Route the conversation to the Trash folder in the inbox (Message received trigger only)." }
 ];
 
 export type AutomationCondition = {
@@ -396,6 +400,21 @@ async function runAction(
         return { ok: true, detail: `Email sent to ${to}.` };
       }
 
+      case "move_to_spam":
+      case "move_to_trash": {
+        if (context.entityType !== "message" || !context.entityId) {
+          return { ok: false, detail: "This action only applies to the Message received trigger." };
+        }
+        const folder = action.type === "move_to_spam" ? "spam" : "trash";
+        const { error } = await supabase
+          .from("crm_message_threads")
+          .update({ status: folder, updated_at: new Date().toISOString() })
+          .eq("organization_id", organizationId)
+          .eq("id", context.entityId);
+        if (error) return { ok: false, detail: error.message };
+        return { ok: true, detail: `Conversation moved to ${folder}.` };
+      }
+
       default:
         return { ok: false, detail: `Unknown action type: ${action.type}` };
     }
@@ -543,6 +562,10 @@ function describeActionPreview(action: AutomationAction, context: AutomationCont
       if (!context.contact?.email) return "Would send email using the configured template (no sample contact email provided).";
       return "Would send email to " + context.contact.email + " using the configured template.";
     }
+    case "move_to_spam":
+      return context.entityType === "message" ? "Would move this conversation to Spam." : "Would move to Spam (skipped in this sample: trigger is not a message event).";
+    case "move_to_trash":
+      return context.entityType === "message" ? "Would move this conversation to Trash." : "Would move to Trash (skipped in this sample: trigger is not a message event).";
     default:
       return "Would run action: " + action.type + ".";
   }
