@@ -4,7 +4,6 @@ import { AlertTriangle, CheckCircle2, History, LogIn, MessageCircle, ShieldCheck
 import { getMessagingWorkspace } from "@/lib/messages";
 import { MessageChannelForm } from "@/components/MessageChannelForm";
 import { ChannelIcon } from "@/components/ChannelIcon";
-import { WhatsAppEmbeddedSignup } from "@/components/WhatsAppEmbeddedSignup";
 import { PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
 import { FormError } from "@/components/ui";
 import { cancelMetaConnect, connectMetaPage, syncFusionMessageChannelHistory } from "@/app/fusionadmin/actions";
@@ -19,13 +18,11 @@ type MetaPageOption = {
 export default async function MessageSettingsPage({
   searchParams
 }: {
-  searchParams: Promise<{ connect?: string; metaError?: string; synced?: string; syncError?: string }>;
+  searchParams: Promise<{ connect?: string; metaError?: string; synced?: string; syncError?: string; whatsappConnected?: string }>;
 }) {
   const { channels } = await getMessagingWorkspace();
-  const { connect, metaError, synced, syncError } = await searchParams;
+  const { connect, metaError, synced, syncError, whatsappConnected } = await searchParams;
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
-  const metaAppId = process.env.NEXT_PUBLIC_META_APP_ID || "";
-  const whatsappConfigId = process.env.NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID || "";
 
   function webhookUrlFor(channelType: string) {
     if (!appUrl) return "Set NEXT_PUBLIC_APP_URL to see your webhook URL";
@@ -184,11 +181,19 @@ export default async function MessageSettingsPage({
           <div>
             <h3>Connect WhatsApp</h3>
             <p className="muted">
-              Sign in with the Facebook account that manages your WhatsApp Business Account. Meta walks you through
-              picking or creating a WhatsApp number right inside the popup &mdash; no copying IDs or tokens by hand.
+              Sign in with the Facebook account that manages your WhatsApp Business Account. You&apos;ll be taken to
+              Facebook to pick or verify a WhatsApp number, then brought right back here &mdash; no copying IDs or
+              tokens by hand.
             </p>
           </div>
         </div>
+
+        {whatsappConnected !== undefined ? (
+          <p className="fusion-form-success" role="status">
+            <CheckCircle2 aria-hidden="true" size={16} />
+            <span>WhatsApp connected.</span>
+          </p>
+        ) : null}
 
         {whatsappExpiryDays !== null && whatsappExpiryDays <= 10 ? (
           <p className={whatsappExpiryDays <= 0 ? "fusion-form-error" : "whatsapp-expiry-warning"} role="status">
@@ -201,13 +206,9 @@ export default async function MessageSettingsPage({
           </p>
         ) : null}
 
-        {metaAppId && whatsappConfigId ? (
-          <WhatsAppEmbeddedSignup appId={metaAppId} configId={whatsappConfigId} />
-        ) : (
-          <p className="fusion-form-error">
-            Set NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID to enable one-click WhatsApp connect.
-          </p>
-        )}
+        <a className="primary-button compact-button whatsapp-connect-link" href="/api/oauth/whatsapp/start">
+          <LogIn size={16} /> Connect WhatsApp with Facebook
+        </a>
 
         <details className="whatsapp-guide-card__manual">
           <summary>Prefer to paste your own token, or want one that never expires?</summary>
