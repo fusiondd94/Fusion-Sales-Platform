@@ -63,6 +63,9 @@ import {
   disconnectMessageChannel,
   MessageChannelType,
   MESSAGE_CHANNEL_TYPES,
+  MessageThreadStatus,
+  moveThreadFolder,
+  permanentlyDeleteThread,
   saveMessageChannel,
   sendMessage,
   syncChannelHistory
@@ -1009,4 +1012,44 @@ export async function syncFusionMessageChannelHistory(formData: FormData) {
   }
 
   redirect("/fusionadmin/messages/settings?synced=" + encodeURIComponent(String(result.imported ?? 0)));
+}
+
+export async function moveFusionThreadFolder(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const threadId = String(formData.get("threadId") || "");
+  const newFolderRaw = String(formData.get("newFolder") || "");
+  const returnFolder = String(formData.get("returnFolder") || "inbox");
+  const returnChannel = String(formData.get("returnChannel") || "");
+
+  if (threadId && (newFolderRaw === "inbox" || newFolderRaw === "spam" || newFolderRaw === "trash")) {
+    await moveThreadFolder({ actorId: user.id, threadId, folder: newFolderRaw as MessageThreadStatus });
+  }
+
+  revalidatePath("/fusionadmin/messages");
+
+  const params = new URLSearchParams();
+  params.set("folder", returnFolder);
+  if (returnChannel) params.set("channel", returnChannel);
+  redirect("/fusionadmin/messages?" + params.toString());
+}
+
+export async function deleteFusionThreadForever(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const threadId = String(formData.get("threadId") || "");
+  const returnChannel = String(formData.get("returnChannel") || "");
+
+  if (threadId) {
+    await permanentlyDeleteThread({ actorId: user.id, threadId });
+  }
+
+  revalidatePath("/fusionadmin/messages");
+
+  const params = new URLSearchParams();
+  params.set("folder", "trash");
+  if (returnChannel) params.set("channel", returnChannel);
+  redirect("/fusionadmin/messages?" + params.toString());
 }
