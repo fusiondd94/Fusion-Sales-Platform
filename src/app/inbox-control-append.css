@@ -180,6 +180,33 @@
   font-weight: 600;
 }
 
+/* Contact-source channel icon buttons (Contacts table on the Clients page) */
+
+.contact-name-cell {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.contact-channel-icon-link {
+  display: inline-flex;
+  border: none;
+  padding: 0;
+  line-height: 0;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: 999px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.contact-channel-icon-link:hover,
+.contact-channel-icon-link:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px var(--fusion-beige-300, #d2c8bb);
+  outline: none;
+}
+
 @media (max-width: 640px) {
   .inbox-folder-tabs {
     overflow-x: auto;
