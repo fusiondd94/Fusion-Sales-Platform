@@ -10,6 +10,7 @@ import {
   updateFusionContact,
   updateFusionLead
 } from "@/app/fusionadmin/actions";
+import { ChannelIcon, ChannelIconType } from "@/components/ChannelIcon";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { getAdminPortalClients } from "@/lib/portal";
 import {
@@ -26,6 +27,12 @@ import {
   PageHeader,
   statusTone
 } from "../crm-ui";
+
+const CHANNEL_LABELS: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  messenger: "Messenger",
+  instagram: "Instagram"
+};
 
 type PageProps = {
   searchParams?: Promise<{ q?: string; status?: string; leadId?: string; companyId?: string; contactId?: string; clientId?: string }>;
@@ -308,7 +315,19 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
             {crm.contacts.map((contact) => (
               <tr key={contact.id}>
                 <td data-label="Contact">
-                  <a className="fusion-record-link" href={`/fusionadmin/clients?contactId=${contact.id}#contact-editor`}>{contact.display_name}</a>
+                  <span className="contact-name-cell">
+                    <a className="fusion-record-link" href={`/fusionadmin/clients?contactId=${contact.id}#contact-editor`}>{contact.display_name}</a>
+                    {contact.message_threads?.map((thread) => (
+                      <a
+                        key={thread.id}
+                        className="contact-channel-icon-link"
+                        href={`/fusionadmin/messages?folder=${thread.status}&channel=${thread.channel_type}&thread=${thread.id}`}
+                        title={`Reached out via ${CHANNEL_LABELS[thread.channel_type]} — open conversation`}
+                      >
+                        <ChannelIcon size={16} type={thread.channel_type as ChannelIconType} />
+                      </a>
+                    ))}
+                  </span>
                   <br />
                   <span className="muted">{contact.email || "No email"} · {contact.phone || "No phone"}</span>
                 </td>
