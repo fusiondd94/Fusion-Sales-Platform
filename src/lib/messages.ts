@@ -52,6 +52,12 @@ export type InboundMessagePayload = {
   contactHandle?: string;
 };
 
+export type ChannelHistorySyncResult = {
+  ok: boolean;
+  error?: string;
+  imported?: number;
+};
+
 const CHANNEL_LABELS: Record<MessageChannelType, string> = {
   whatsapp: "WhatsApp",
   messenger: "Messenger",
@@ -516,4 +522,185 @@ async function findOrCreateContactForMessage(
     .single<{ id: string }>();
 
   return created?.id || null;
+}
+
+export async function syncChannelHistory(channelType: MessageChannelType): Promise<ChannelHistorySyncResult> {
+  if (channelType !== "messenger" && channelType !== "instagram") {
+    return { ok: false, error: "Message history sync is only available for Messenger and Instagram." };
+  }
+
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data: channelRow } = await supabase
+    .from("crm_message_channels")
+    .select("id, status, external_account_id, credentials")
+    .eq("organization_id", organizationId)
+    .eq("channel_type", channelType)
+    .maybeSingle<{ id: string; status: string; external_account_id: string | null; credentials: Record<string, string> }>();
+
+  if (!channelRow || channelRow.status !== "connected") {
+    return { ok: false, error: "Connect this channel before syncing message history." };
+  }
+
+  const accessToken = channelRow.credentials?.accessToken;
+  const accountId = channelRow.external_account_id;
+  if (!accessToken || !accountId) {
+    return { ok: false, error: "Missing an access token or account ID for this channel." };
+  }
+
+  let imported = 0;
+  let url =
+    "https://graph.facebook.com/v19.0/" + accountId + "/conversations" +
+    "?fields=participants,messages.limit(200){id,message,from,created_time}" +
+    "&limit=50" +
+    (channelType === "instagram" ? "&platform=instagram" : "") +
+    "&access_token=" + encodeURIComponent(accessToken);
+
+  try {
+    let pageCount = 0;
+    while (url && pageCount < 20) {
+      pageCount++;
+      const response = await fetch(url);
+      const payload = await response.json().catch(() => ({}) as Record<string, unknown>);
+
+      if (!response.ok) {
+        return { ok: false, error: extractGraphError(payload), imported };
+      }
+
+      const conversations = ((payload as { data?: unknown[] }).data || []) as Array<{
+        id: string;
+        participants?: { data?: Array<{ id: string; name?: string; username?: string }> };
+        messages?: { data?: Array<{ id: string; message?: string; from?: { id: string; name?: string }; created_time: string }> };
+      }>;
+
+      for (const conversation of conversations) {
+        const otherParticipant = (conversation.participants?.data || []).find((participant) => participant.id !== accountId);
+        const externalThreadId = otherParticipant?.id || conversation.id;
+        const contactName = otherParticipant?.name || otherParticipant?.username || null;
+
+        const messages = [...(conversation.messages?.data || [])].sort(
+          (a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime()
+        );
+
+        for (const message of messages) {
+          const wasImported = await importHistoricalMessage(supabase, organizationId, channelRow.id, channelType, {
+            externalThreadId,
+            externalMessageId: message.id,
+            body: message.message || "",
+            createdAt: message.created_time,
+            direction: message.from?.id === accountId ? "outbound" : "inbound",
+            contactName
+          });
+          if (wasImported) imported++;
+        }
+      }
+
+      url = ((payload as { paging?: { next?: string } }).paging || {}).next || "";
+    }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unexpected error syncing message history.", imported };
+  }
+
+  return { ok: true, imported };
+}
+
+async function importHistoricalMessage(
+  supabase: SupabaseClient<any>,
+  organizationId: string,
+  channelId: string,
+  channelType: MessageChannelType,
+  input: {
+    externalThreadId: string;
+    externalMessageId: string;
+    body: string;
+    createdAt: string;
+    direction: "inbound" | "outbound";
+    contactName: string | null;
+  }
+): Promise<boolean> {
+  if (!input.body.trim()) return false;
+
+  const { data: existingMessage } = await supabase
+    .from("crm_messages")
+    .select("id")
+    .eq("external_message_id", input.externalMessageId)
+    .maybeSingle<{ id: string }>();
+  if (existingMessage) return false;
+
+  const { data: existingThread } = await supabase
+    .from("crm_message_threads")
+    .select("id, contact_id")
+    .eq("channel_id", channelId)
+    .eq("external_thread_id", input.externalThreadId)
+    .maybeSingle<{ id: string; contact_id: string | null }>();
+
+  let threadId = existingThread?.id || "";
+  let contactId = existingThread?.contact_id || null;
+
+  if (!contactId) {
+    const displayName = input.contactName || CHANNEL_LABELS[channelType] + " contact";
+    const { data: created } = await supabase
+      .from("crm_contacts")
+      .insert({
+        organization_id: organizationId,
+        first_name: displayName.split(/\s+/)[0] || displayName,
+        display_name: displayName,
+        lead_source: CHANNEL_LABELS[channelType],
+        contact_type: "prospect",
+        lifecycle_status: "new"
+      })
+      .select("id")
+      .single<{ id: string }>();
+    contactId = created?.id || null;
+  }
+
+  if (!threadId) {
+    const { data: newThread } = await supabase
+      .from("crm_message_threads")
+      .insert({
+        organization_id: organizationId,
+        channel_id: channelId,
+        channel_type: channelType,
+        external_thread_id: input.externalThreadId,
+        contact_id: contactId,
+        contact_name: input.contactName,
+        last_message_at: input.createdAt,
+        last_message_preview: input.body.slice(0, 140),
+        last_direction: input.direction,
+        unread_count: 0
+      })
+      .select("id")
+      .single<{ id: string }>();
+    threadId = newThread?.id || "";
+  } else {
+    await supabase
+      .from("crm_message_threads")
+      .update({
+        contact_id: contactId,
+        contact_name: input.contactName,
+        last_message_at: input.createdAt,
+        last_message_preview: input.body.slice(0, 140),
+        last_direction: input.direction,
+        updated_at: input.createdAt
+      })
+      .eq("id", threadId);
+  }
+
+  if (!threadId) return false;
+
+  await supabase.from("crm_messages").insert({
+    organization_id: organizationId,
+    thread_id: threadId,
+    direction: input.direction,
+    external_message_id: input.externalMessageId,
+    body: input.body,
+    status: input.direction === "inbound" ? "received" : "sent",
+    sender_label: input.direction === "inbound" ? input.contactName || "Contact" : "Agent",
+    created_at: input.createdAt
+  });
+
+  return true;
 }
