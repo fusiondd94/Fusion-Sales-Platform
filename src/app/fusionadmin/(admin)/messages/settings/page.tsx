@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { CheckCircle2, History, LogIn, MessageCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ExternalLink, History, LogIn, MessageCircle, ShieldCheck } from "lucide-react";
 import { getMessagingWorkspace } from "@/lib/messages";
 import { MessageChannelForm } from "@/components/MessageChannelForm";
+import { ChannelIcon } from "@/components/ChannelIcon";
 import { PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
 import { FormError } from "@/components/ui";
 import { cancelMetaConnect, connectMetaPage, syncFusionMessageChannelHistory } from "@/app/fusionadmin/actions";
@@ -164,9 +165,43 @@ export default async function MessageSettingsPage({
         </div>
       ) : null}
 
-      <p className="meta-connect-note muted">
-        Need WhatsApp, or prefer to paste tokens manually? Use the advanced setup below.
-      </p>
+      <div className="admin-panel whatsapp-guide-card">
+        <div className="whatsapp-guide-card__header">
+          <span className="whatsapp-guide-card__icon">
+            <ChannelIcon size={30} type="whatsapp" />
+          </span>
+          <div>
+            <h3>Connect WhatsApp</h3>
+            <p className="muted">
+              WhatsApp doesn&apos;t support one-click Facebook login like Messenger and Instagram &mdash; grab three
+              values from Meta&apos;s dashboard and paste them into the WhatsApp card below.
+            </p>
+          </div>
+        </div>
+        <ol className="whatsapp-guide-card__steps">
+          <li>
+            Open{" "}
+            <a href="https://developers.facebook.com/apps" rel="noreferrer" target="_blank">
+              Meta for Developers <ExternalLink size={12} />
+            </a>{" "}
+            and select this app.
+          </li>
+          <li>
+            In the left sidebar, go to <strong>WhatsApp &rarr; API Setup</strong>.
+          </li>
+          <li>
+            Copy the <strong>Phone number ID</strong> and <strong>WhatsApp Business Account ID</strong> shown there.
+          </li>
+          <li>
+            Under &quot;Temporary access token,&quot; click <strong>Generate</strong>. For a token that doesn&apos;t
+            expire every 24 hours, create a permanent one instead via <strong>System Users</strong> in Business
+            Settings.
+          </li>
+          <li>Paste all three values into the WhatsApp card below and click Save.</li>
+        </ol>
+      </div>
+
+      <p className="meta-connect-note muted">Prefer to paste tokens manually for Messenger or Instagram instead? Use the advanced setup below.</p>
 
       <div className="message-channel-grid">
         {channels.map((channel) => (
