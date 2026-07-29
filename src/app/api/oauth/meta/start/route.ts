@@ -2,14 +2,6 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { requireFusionAdmin } from "@/lib/auth";
 
-const META_OAUTH_SCOPES = [
-  "pages_show_list",
-  "pages_messaging",
-  "pages_manage_metadata",
-  "instagram_basic",
-  "instagram_manage_messages"
-].join(",");
-
 export async function GET() {
   const user = await requireFusionAdmin();
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
@@ -19,11 +11,12 @@ export async function GET() {
   }
 
   const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+  const configId = process.env.META_LOGIN_CONFIG_ID;
 
-  if (!appId || !appUrl) {
+  if (!appId || !appUrl || !configId) {
     return NextResponse.redirect(
       `${appUrl}/fusionadmin/messages/settings?metaError=${encodeURIComponent(
-        "Set NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_APP_URL before connecting Facebook."
+        "Set NEXT_PUBLIC_META_APP_ID, META_LOGIN_CONFIG_ID, and NEXT_PUBLIC_APP_URL before connecting Facebook."
       )}`
     );
   }
@@ -35,7 +28,7 @@ export async function GET() {
   dialogUrl.searchParams.set("client_id", appId);
   dialogUrl.searchParams.set("redirect_uri", redirectUri);
   dialogUrl.searchParams.set("state", state);
-  dialogUrl.searchParams.set("scope", META_OAUTH_SCOPES);
+  dialogUrl.searchParams.set("config_id", configId);
   dialogUrl.searchParams.set("response_type", "code");
 
   const response = NextResponse.redirect(dialogUrl.toString());
