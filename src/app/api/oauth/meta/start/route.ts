@@ -6,10 +6,8 @@ const META_OAUTH_SCOPES = [
   "pages_show_list",
   "pages_messaging",
   "pages_manage_metadata",
-  "pages_read_engagement",
   "instagram_basic",
-  "instagram_manage_messages",
-  "business_management"
+  "instagram_manage_messages"
 ].join(",");
 
 export async function GET() {
