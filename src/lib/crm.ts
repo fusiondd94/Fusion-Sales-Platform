@@ -75,6 +75,12 @@ export type CrmCompany = {
   created_at: string;
 };
 
+export type CrmContactThread = {
+  id: string;
+  channel_type: "whatsapp" | "messenger" | "instagram";
+  status: string;
+};
+
 export type CrmContact = {
   id: string;
   company_id: string | null;
@@ -88,6 +94,7 @@ export type CrmContact = {
   lead_source: string | null;
   next_follow_up_at: string | null;
   crm_companies?: { company_name?: string | null } | null;
+  message_threads?: CrmContactThread[];
 };
 
 export type CrmDeal = {
@@ -540,7 +547,8 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
     activitiesResult,
     stagesResult,
     settingsResult,
-    notificationsResult
+    notificationsResult,
+    contactThreadsResult
   ] = await Promise.all([
     supabase.from("crm_organizations").select("name, default_currency, default_time_zone").eq("id", organizationId).single(),
     leadQuery,
@@ -552,7 +560,11 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
     supabase.from("crm_activities").select("id, action_type, entity_type, summary, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(30),
     supabase.from("crm_pipeline_stages").select("id, name, stage_order, probability, is_won, is_lost").eq("organization_id", organizationId).eq("is_active", true).order("stage_order", { ascending: true }),
     supabase.from("crm_app_settings").select("lead_statuses, lead_sources, task_types, lost_reasons, logo_url, primary_color, accent_color").eq("organization_id", organizationId).single(),
-    supabase.from("crm_notifications").select("id, title, created_at, read_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(10)
+    supabase.from("crm_notifications").select("id, title, created_at, read_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(10),
+    // Every conversation thread linked to a contact, so we can show the
+    // channel (WhatsApp/Messenger/Instagram) they reached out on next to
+    // their name and jump straight back into that conversation.
+    supabase.from("crm_message_threads").select("id, contact_id, channel_type, status").eq("organization_id", organizationId).not("contact_id", "is", null)
   ]);
 
   const rawLeads = (leadsResult.data || []) as DashboardLead[];
@@ -565,9 +577,17 @@ export async function getFusionCrmWorkspace(params: CrmSearchParams = {}) {
   const stages = (stagesResult.data || []) as CrmStage[];
   const companyNameById = new Map(companies.map((company) => [company.id, company.company_name]));
   const stageById = new Map(stages.map((stage) => [stage.id, stage]));
+  const threadsByContactId = new Map<string, CrmContactThread[]>();
+  for (const thread of (contactThreadsResult.data || []) as Array<{ id: string; contact_id: string | null; channel_type: CrmContactThread["channel_type"]; status: string }>) {
+    if (!thread.contact_id) continue;
+    const existing = threadsByContactId.get(thread.contact_id) || [];
+    existing.push({ id: thread.id, channel_type: thread.channel_type, status: thread.status });
+    threadsByContactId.set(thread.contact_id, existing);
+  }
   const contacts = ((contactsResult.data || []) as CrmContact[]).map((contact) => ({
     ...contact,
-    crm_companies: contact.company_id ? { company_name: companyNameById.get(contact.company_id) || null } : null
+    crm_companies: contact.company_id ? { company_name: companyNameById.get(contact.company_id) || null } : null,
+    message_threads: threadsByContactId.get(contact.id) || []
   }));
   const contactNameById = new Map(contacts.map((contact) => [contact.id, contact.display_name]));
   const leads = rawLeads.map((lead) => ({
