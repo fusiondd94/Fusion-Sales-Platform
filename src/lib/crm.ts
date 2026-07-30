@@ -1202,6 +1202,145 @@ export async function updateCrmContact(input: {
   return { ok: true };
 }
 
+// The same person can reach out through more than one channel — a phone
+// call, a Facebook message, an Instagram DM, a WhatsApp text — and each of
+// those can create its own Contact record before anyone realizes they're
+// the same person. This merges a duplicate into a chosen primary contact:
+// every lead, client, deal, task, appointment, proposal, and conversation
+// thread pointing at the duplicate is re-pointed at the primary, any
+// company link is combined without creating a conflicting row, missing
+// fields on the primary are filled in from the duplicate, and the
+// duplicate is soft-deleted so it disappears everywhere without losing its
+// history.
+export async function mergeCrmContacts(input: {
+  actorId: string;
+  primaryContactId: string;
+  duplicateContactId: string;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { primaryContactId, duplicateContactId } = input;
+  if (!primaryContactId || !duplicateContactId) return { ok: false, error: "Choose a contact to merge in." };
+  if (primaryContactId === duplicateContactId) return { ok: false, error: "Choose a different contact to merge — it can't merge into itself." };
+
+  type FullContact = {
+    id: string;
+    company_id: string | null;
+    display_name: string;
+    email: string | null;
+    normalized_email: string | null;
+    phone: string | null;
+    normalized_phone: string | null;
+    job_title: string | null;
+    lifecycle_status: string;
+    next_follow_up_at: string | null;
+  };
+
+  const [{ data: primary }, { data: duplicate }] = await Promise.all([
+    supabase
+      .from("crm_contacts")
+      .select("id, company_id, display_name, email, normalized_email, phone, normalized_phone, job_title, lifecycle_status, next_follow_up_at")
+      .eq("organization_id", organizationId)
+      .eq("id", primaryContactId)
+      .is("deleted_at", null)
+      .maybeSingle<FullContact>(),
+    supabase
+      .from("crm_contacts")
+      .select("id, company_id, display_name, email, normalized_email, phone, normalized_phone, job_title, lifecycle_status, next_follow_up_at")
+      .eq("organization_id", organizationId)
+      .eq("id", duplicateContactId)
+      .is("deleted_at", null)
+      .maybeSingle<FullContact>()
+  ]);
+
+  if (!primary || !duplicate) return { ok: false, error: "One of those contacts could not be found." };
+
+  const nowIso = new Date().toISOString();
+  const lifecycleRank: Record<string, number> = { new: 0, prospect: 1, qualified: 2, inactive: 1, client: 3 };
+  const mergedLifecycle =
+    (lifecycleRank[duplicate.lifecycle_status] ?? 0) > (lifecycleRank[primary.lifecycle_status] ?? 0)
+      ? duplicate.lifecycle_status
+      : primary.lifecycle_status;
+
+  await supabase
+    .from("crm_contacts")
+    .update({
+      company_id: primary.company_id || duplicate.company_id || null,
+      email: primary.email || duplicate.email || null,
+      normalized_email: primary.normalized_email || duplicate.normalized_email || null,
+      phone: primary.phone || duplicate.phone || null,
+      normalized_phone: primary.normalized_phone || duplicate.normalized_phone || null,
+      job_title: primary.job_title || duplicate.job_title || null,
+      lifecycle_status: mergedLifecycle,
+      next_follow_up_at: primary.next_follow_up_at || duplicate.next_follow_up_at || null,
+      updated_by: input.actorId,
+      updated_at: nowIso
+    })
+    .eq("id", primaryContactId);
+
+  // Every record that simply has a contact_id column can be re-pointed directly.
+  const linkedTables = ["crm_leads", "crm_clients", "crm_deals", "crm_message_threads", "crm_appointments", "crm_proposals", "crm_tasks"];
+  for (const table of linkedTables) {
+    await supabase.from(table).update({ contact_id: primaryContactId }).eq("contact_id", duplicateContactId);
+  }
+
+  // crm_company_contacts has a composite (company_id, contact_id) primary key, so a straight
+  // re-point could collide with a link that already exists for the primary contact. Drop the
+  // ones that would collide and re-point the rest.
+  const { data: duplicateLinks } = await supabase
+    .from("crm_company_contacts")
+    .select("company_id")
+    .eq("contact_id", duplicateContactId);
+
+  for (const link of (duplicateLinks || []) as Array<{ company_id: string }>) {
+    const { data: existingLink } = await supabase
+      .from("crm_company_contacts")
+      .select("company_id")
+      .eq("company_id", link.company_id)
+      .eq("contact_id", primaryContactId)
+      .maybeSingle();
+
+    if (existingLink) {
+      await supabase.from("crm_company_contacts").delete().eq("company_id", link.company_id).eq("contact_id", duplicateContactId);
+    } else {
+      await supabase
+        .from("crm_company_contacts")
+        .update({ contact_id: primaryContactId })
+        .eq("company_id", link.company_id)
+        .eq("contact_id", duplicateContactId);
+    }
+  }
+
+  // Keep the activity trail and any notes about the duplicate contact intact by re-pointing them.
+  await supabase.from("crm_activities").update({ entity_id: primaryContactId }).eq("entity_type", "contact").eq("entity_id", duplicateContactId);
+  await supabase.from("crm_notes").update({ entity_id: primaryContactId }).eq("entity_type", "contact").eq("entity_id", duplicateContactId);
+
+  await supabase
+    .from("crm_contacts")
+    .update({
+      deleted_at: nowIso,
+      updated_by: input.actorId,
+      updated_at: nowIso,
+      display_name: `${duplicate.display_name} (merged into ${primary.display_name})`
+    })
+    .eq("id", duplicateContactId);
+
+  await logActivity(
+    supabase,
+    organizationId,
+    input.actorId,
+    "contact.merged",
+    "contact",
+    primaryContactId,
+    `Merged "${duplicate.display_name}" into "${primary.display_name}"`
+  );
+
+  return { ok: true };
+}
+
 export async function updateCrmLead(input: {
   actorId: string;
   leadId: string;

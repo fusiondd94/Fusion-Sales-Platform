@@ -444,16 +444,49 @@ function extractGraphError(payload: unknown): string {
   return error?.message || "Meta API error.";
 }
 
+// Messenger and Instagram webhooks only ever send the sender's numeric
+// PSID/IGSID, never a name — unlike WhatsApp, which includes a profile name
+// right in the webhook payload. Look the sender up via the Graph API using
+// the connected channel's access token so real conversations show a real
+// name/username instead of a generic "Messenger contact" placeholder.
+async function resolveChannelProfileName(
+  channelType: MessageChannelType,
+  externalId: string,
+  accessToken: string | undefined
+): Promise<{ name: string | null; handle: string | null }> {
+  if (!accessToken || channelType === "whatsapp") return { name: null, handle: null };
+
+  try {
+    const fields = channelType === "instagram" ? "name,username" : "first_name,last_name,name";
+    const response = await fetch(
+      `https://graph.facebook.com/v19.0/${externalId}?fields=${fields}&access_token=${encodeURIComponent(accessToken)}`
+    );
+    const body = await response.json().catch(() => ({}) as Record<string, unknown>);
+    if (!response.ok) return { name: null, handle: null };
+
+    if (channelType === "instagram") {
+      const p = body as { name?: string; username?: string };
+      return { name: p.name || p.username || null, handle: p.username || null };
+    }
+
+    const p = body as { first_name?: string; last_name?: string; name?: string };
+    const name = p.name || [p.first_name, p.last_name].filter(Boolean).join(" ") || null;
+    return { name, handle: null };
+  } catch {
+    return { name: null, handle: null };
+  }
+}
+
 export async function ingestInboundMessage(payload: InboundMessagePayload): Promise<{ ok: boolean; error?: string }> {
   const supabase = getServiceClient();
   if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
 
   const { data: channel } = await supabase
     .from("crm_message_channels")
-    .select("id, organization_id")
+    .select("id, organization_id, credentials")
     .eq("channel_type", payload.channelType)
     .eq("external_account_id", payload.externalAccountId)
-    .maybeSingle<{ id: string; organization_id: string }>();
+    .maybeSingle<{ id: string; organization_id: string; credentials: Record<string, string> }>();
 
   if (!channel) return { ok: false, error: "No connected channel matches this account." };
 
@@ -466,12 +499,25 @@ export async function ingestInboundMessage(payload: InboundMessagePayload): Prom
     .eq("external_thread_id", payload.externalThreadId)
     .maybeSingle<{ id: string; contact_id: string | null; unread_count: number }>();
 
+  let resolvedName = payload.contactName || null;
+  let resolvedHandle = payload.contactHandle || null;
+  if (!resolvedName) {
+    const profile = await resolveChannelProfileName(payload.channelType, payload.externalThreadId, channel.credentials?.accessToken);
+    resolvedName = profile.name;
+    resolvedHandle = resolvedHandle || profile.handle;
+  }
+  const resolvedPayload: InboundMessagePayload = {
+    ...payload,
+    contactName: resolvedName || undefined,
+    contactHandle: resolvedHandle || undefined
+  };
+
   let contactId = existingThread?.contact_id || null;
   if (!contactId) {
-    contactId = await findOrCreateContactForMessage(supabase, organizationId, payload);
+    contactId = await findOrCreateContactForMessage(supabase, organizationId, resolvedPayload);
   }
 
-  const contactName = payload.contactName || payload.contactHandle || CHANNEL_LABELS[payload.channelType] + " contact";
+  const contactName = resolvedName || resolvedHandle || CHANNEL_LABELS[payload.channelType] + " contact";
   const nowIso = new Date().toISOString();
   let threadId = existingThread?.id || "";
 
@@ -485,7 +531,7 @@ export async function ingestInboundMessage(payload: InboundMessagePayload): Prom
         external_thread_id: payload.externalThreadId,
         contact_id: contactId,
         contact_name: contactName,
-        contact_handle: payload.contactHandle || null,
+        contact_handle: resolvedHandle || null,
         last_message_at: nowIso,
         last_message_preview: payload.body.slice(0, 140),
         last_direction: "inbound",
@@ -500,6 +546,7 @@ export async function ingestInboundMessage(payload: InboundMessagePayload): Prom
       .update({
         contact_id: contactId,
         contact_name: contactName,
+        contact_handle: resolvedHandle || null,
         last_message_at: nowIso,
         last_message_preview: payload.body.slice(0, 140),
         last_direction: "inbound",
@@ -507,6 +554,31 @@ export async function ingestInboundMessage(payload: InboundMessagePayload): Prom
         updated_at: nowIso
       })
       .eq("id", threadId);
+
+    // The thread already had a contact before — if we only just now managed to
+    // resolve their real name (this message succeeded where an earlier one
+    // didn't), carry it over to the contact record too, but only if the
+    // contact still has the generic placeholder name an admin hasn't touched.
+    if (contactId && resolvedName) {
+      const placeholder = CHANNEL_LABELS[payload.channelType] + " contact";
+      const { data: existingContact } = await supabase
+        .from("crm_contacts")
+        .select("display_name")
+        .eq("id", contactId)
+        .maybeSingle<{ display_name: string }>();
+      if (existingContact && (existingContact.display_name === placeholder || existingContact.display_name === resolvedHandle)) {
+        const nameParts = resolvedName.split(/\s+/).filter(Boolean);
+        await supabase
+          .from("crm_contacts")
+          .update({
+            first_name: nameParts[0] || resolvedName,
+            last_name: nameParts.length > 1 ? nameParts.slice(1).join(" ") : null,
+            display_name: resolvedName,
+            updated_at: nowIso
+          })
+          .eq("id", contactId);
+      }
+    }
   }
 
   if (!threadId) return { ok: false, error: "Unable to create conversation thread." };
@@ -773,4 +845,77 @@ async function importHistoricalMessage(
   });
 
   return true;
+}
+
+export type ContactNameBackfillResult = { ok: boolean; checked: number; updated: number; error?: string };
+
+// One-off cleanup for conversations that came in before name resolution
+// existed (or before a channel's token could resolve a given sender) — finds
+// every Messenger/Instagram thread still showing the generic "<Channel>
+// contact" placeholder and looks the sender up again via the Graph API.
+export async function backfillContactNames(): Promise<ContactNameBackfillResult> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, checked: 0, updated: 0, error: "Supabase CRM is not configured." };
+
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, checked: 0, updated: 0, error: "CRM organization is not configured." };
+
+  const { data: channels } = await supabase
+    .from("crm_message_channels")
+    .select("id, channel_type, credentials")
+    .eq("organization_id", organizationId)
+    .in("channel_type", ["messenger", "instagram"]);
+
+  const channelById = new Map(
+    ((channels || []) as Array<{ id: string; channel_type: MessageChannelType; credentials: Record<string, string> }>).map((c) => [c.id, c])
+  );
+
+  const { data: threads } = await supabase
+    .from("crm_message_threads")
+    .select("id, channel_id, channel_type, external_thread_id, contact_id, contact_name")
+    .eq("organization_id", organizationId)
+    .in("channel_type", ["messenger", "instagram"]);
+
+  let checked = 0;
+  let updated = 0;
+
+  for (const thread of (threads || []) as Array<{
+    id: string;
+    channel_id: string;
+    channel_type: MessageChannelType;
+    external_thread_id: string;
+    contact_id: string | null;
+    contact_name: string | null;
+  }>) {
+    const placeholder = CHANNEL_LABELS[thread.channel_type] + " contact";
+    if (thread.contact_name !== placeholder) continue;
+    checked++;
+
+    const channel = channelById.get(thread.channel_id);
+    const profile = await resolveChannelProfileName(thread.channel_type, thread.external_thread_id, channel?.credentials?.accessToken);
+    if (!profile.name) continue;
+
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from("crm_message_threads")
+      .update({ contact_name: profile.name, contact_handle: profile.handle || null, updated_at: nowIso })
+      .eq("id", thread.id);
+
+    if (thread.contact_id) {
+      const nameParts = profile.name.split(/\s+/).filter(Boolean);
+      await supabase
+        .from("crm_contacts")
+        .update({
+          first_name: nameParts[0] || profile.name,
+          last_name: nameParts.length > 1 ? nameParts.slice(1).join(" ") : null,
+          display_name: profile.name,
+          updated_at: nowIso
+        })
+        .eq("id", thread.contact_id);
+    }
+
+    updated++;
+  }
+
+  return { ok: true, checked, updated };
 }
