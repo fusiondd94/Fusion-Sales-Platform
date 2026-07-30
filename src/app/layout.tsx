@@ -7,6 +7,7 @@ import "./portal-append.css";
 import "./messages-append.css";
 import "./inbox-control-append.css";
 import "./whatsapp-embedded-append.css";
+import "./content-append.css";
 
 const inter = Inter({
   subsets: ["latin"],
