@@ -1,4 +1,5 @@
-import { FileText, PlusCircle } from "lucide-react";
+import Link from "next/link";
+import { FileText, PlusCircle, SquarePen } from "lucide-react";
 import { createFusionProposal, updateFusionProposalStatus } from "@/app/fusionadmin/actions";
 import { getSalesOpsWorkspace } from "@/lib/sales-ops";
 import { EmptyState, formatCurrency, formatDate, FusionBadge, FusionDataTable, FusionSubmitButton, PageHeader, statusTone } from "../crm-ui";
@@ -24,16 +25,29 @@ export default async function FusionProposalsPage() {
             aria-label="Proposal pipeline"
             columns={[
               { header: "Proposal", priority: "primary" },
+              { header: "Recipient" },
               { header: "Status" },
               { header: "Total" },
               { header: "Recurring" },
-              { header: "Expires" }
+              { header: "Expires" },
+              { header: "" }
             ]}
             empty={!salesOps.proposals.length ? <EmptyState>No proposals yet.</EmptyState> : null}
           >
             {salesOps.proposals.map((proposal) => (
               <tr key={proposal.id}>
                 <td data-label="Proposal">{proposal.proposal_title}<br /><span className="muted">{proposal.proposal_number}</span></td>
+                <td data-label="Recipient">
+                  {proposal.contact?.display_name || proposal.company?.company_name ? (
+                    <>
+                      {proposal.contact?.display_name ? <span>{proposal.contact.display_name}</span> : null}
+                      {proposal.contact?.display_name && proposal.company?.company_name ? <br /> : null}
+                      {proposal.company?.company_name ? <span className="muted">{proposal.company.company_name}</span> : null}
+                    </>
+                  ) : (
+                    <span className="muted">Not assigned</span>
+                  )}
+                </td>
                 <td data-label="Status">
                   <FusionBadge tone={statusTone(proposal.status)}>{proposal.status}</FusionBadge>
                   <form action={updateFusionProposalStatus} className="inline-status-form">
@@ -51,6 +65,11 @@ export default async function FusionProposalsPage() {
                 <td data-label="Total">{formatCurrency(proposal.grand_total)}<br /><span className="muted">Profit {formatCurrency(proposal.estimated_gross_profit)}</span></td>
                 <td data-label="Recurring">{formatCurrency(proposal.recurring_monthly_total)}/mo</td>
                 <td data-label="Expires">{formatDate(proposal.expiration_date)}</td>
+                <td data-label="">
+                  <Link className="ghost-button compact-button" href={`/fusionadmin/proposals/${proposal.id}/edit`}>
+                    <SquarePen size={14} /> Edit
+                  </Link>
+                </td>
               </tr>
             ))}
           </FusionDataTable>
@@ -74,6 +93,18 @@ export default async function FusionProposalsPage() {
             </select>
             <input aria-label="Discount value" min="0" name="discountValue" placeholder="Discount value" type="number" defaultValue={0} />
             <input aria-label="Expiration date" name="expirationDate" type="date" />
+            <select aria-label="Contact recipient" name="contactId" defaultValue="">
+              <option value="">No contact selected</option>
+              {salesOps.contacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>{contact.display_name}{contact.email ? ` (${contact.email})` : ""}</option>
+              ))}
+            </select>
+            <select aria-label="Client / company recipient" name="companyId" defaultValue="">
+              <option value="">No client selected</option>
+              {salesOps.companies.map((company) => (
+                <option key={company.id} value={company.id}>{company.company_name}</option>
+              ))}
+            </select>
             <FusionSubmitButton pendingLabel="Creating...">Create proposal</FusionSubmitButton>
           </form>
         </article>
