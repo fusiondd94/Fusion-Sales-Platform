@@ -708,6 +708,33 @@ export async function updateCrmBrandSettings(input: {
   return { ok: true };
 }
 
+// Uploads a brand logo file to the public "brand-assets" Storage bucket and
+// returns its public URL, so it can be saved directly into crm_app_settings.
+// Mirrors uploadContentMedia in lib/content.ts (public bucket + getPublicUrl)
+// since a logo needs a plain, publicly reachable URL wherever it's rendered.
+export async function uploadCrmBrandLogo(input: {
+  organizationId: string;
+  fileName: string;
+  contentType: string;
+  data: ArrayBuffer;
+}) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase storage is not configured." };
+
+  const safeName = input.fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const path = `${input.organizationId}/logo-${Date.now()}-${safeName}`;
+
+  const { error } = await supabase.storage.from("brand-assets").upload(path, input.data, {
+    contentType: input.contentType || "application/octet-stream",
+    upsert: false
+  });
+
+  if (error) return { ok: false, error: "Unable to upload logo: " + error.message };
+
+  const { data: publicUrlData } = supabase.storage.from("brand-assets").getPublicUrl(path);
+  return { ok: true, url: publicUrlData.publicUrl };
+}
+
 export async function updateCrmServicePackage(input: {
   actorId: string;
   packageId: string;
@@ -738,6 +765,23 @@ export async function updateCrmServicePackage(input: {
 
   if (error) return { ok: false, error: "Unable to update package pricing." };
   await logActivity(supabase, organizationId, input.actorId, "settings.pricing_updated", "service_package", input.packageId, `Pricing updated: ${input.packageName}`);
+  return { ok: true };
+}
+
+export async function deleteCrmServicePackage(input: { actorId: string; packageId: string }) {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { error } = await supabase
+    .from("crm_service_packages")
+    .delete()
+    .eq("organization_id", organizationId)
+    .eq("id", input.packageId);
+
+  if (error) return { ok: false, error: "Unable to delete package." };
+  await logActivity(supabase, organizationId, input.actorId, "settings.package_deleted", "service_package", input.packageId, "Service package deleted");
   return { ok: true };
 }
 
