@@ -84,7 +84,7 @@ export default async function FusionContentCalendarPage({
         title="Content calendar"
         description="Plan posts once and they publish automatically to Facebook, Instagram, and WhatsApp at the time you set."
         action={
-          <Link className="secondary-button compact-button" href="/fusionadmin/messages/settings">
+          <Link className="secondary-button compact-button" href="/fusionadmin/settings/connections">
             <MessageCircle size={16} /> Manage channels
           </Link>
         }
@@ -96,7 +96,7 @@ export default async function FusionContentCalendarPage({
         <p className="fusion-form-error" role="status">
           <AlertTriangle aria-hidden="true" size={16} />
           <span>
-            No channels are connected yet. <Link href="/fusionadmin/messages/settings">Connect Facebook, Instagram, or WhatsApp</Link> before scheduling posts.
+            No channels are connected yet. <Link href="/fusionadmin/settings/connections">Connect Facebook, Instagram, or WhatsApp</Link> before scheduling posts.
           </span>
         </p>
       ) : null}
