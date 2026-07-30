@@ -1,9 +1,10 @@
-import { Building2, CheckCircle2, Search, Trash2, UserRoundPlus, UsersRound } from "lucide-react";
+import { Building2, CheckCircle2, GitMerge, Search, Trash2, UserRoundPlus, UsersRound } from "lucide-react";
 import {
   assignFusionClientTask,
   createFusionClient,
   createFusionContact,
   deleteFusionProjectComment,
+  mergeFusionContacts,
   resolveFusionProjectComment,
   updateFusionClientProject,
   updateFusionCompany,
@@ -11,6 +12,7 @@ import {
   updateFusionLead
 } from "@/app/fusionadmin/actions";
 import { ChannelIcon, ChannelIconType } from "@/components/ChannelIcon";
+import { FormError } from "@/components/ui";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { getAdminPortalClients } from "@/lib/portal";
 import {
@@ -35,7 +37,16 @@ const CHANNEL_LABELS: Record<string, string> = {
 };
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string; status?: string; leadId?: string; companyId?: string; contactId?: string; clientId?: string }>;
+  searchParams?: Promise<{
+    q?: string;
+    status?: string;
+    leadId?: string;
+    companyId?: string;
+    contactId?: string;
+    clientId?: string;
+    merged?: string;
+    mergeError?: string;
+  }>;
 };
 
 export default async function FusionClientsPage({ searchParams }: PageProps) {
@@ -68,6 +79,14 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
           </form>
         }
       />
+
+      <FormError message={filters.mergeError} />
+      {filters.merged !== undefined ? (
+        <p className="fusion-form-success" role="status">
+          <CheckCircle2 aria-hidden="true" size={16} />
+          <span>Contacts merged. Every conversation, lead, deal, and task from the duplicate now lives on this contact.</span>
+        </p>
+      ) : null}
 
       <section className="admin-two-column">
         <article className="admin-panel panel-span-2">
@@ -381,6 +400,38 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
               <div className="fusion-form-actions fusion-form-actions--end">
                 <a className="ghost-button compact-button" href="/fusionadmin/clients">Close</a>
                 <FusionSubmitButton className="compact-button" pendingLabel="Saving contact...">Save contact</FusionSubmitButton>
+              </div>
+            </form>
+          ) : null}
+
+          {selectedContact && crm.contacts.length > 1 ? (
+            <form action={mergeFusionContacts} data-track-unsaved="true" style={{ marginTop: "1.5rem" }}>
+              <input name="primaryContactId" type="hidden" value={selectedContact.id} />
+              <h3 style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.35rem" }}>
+                <GitMerge size={17} /> Merge a duplicate into this contact
+              </h3>
+              <p className="muted" style={{ marginTop: 0 }}>
+                The same person can reach out by phone, Facebook, Instagram, and WhatsApp separately, creating more
+                than one contact record. Pick the duplicate below — its conversations, leads, deals, and tasks all
+                move onto {selectedContact.display_name}, and the duplicate record is removed. This can&apos;t be undone.
+              </p>
+              <div className="fusion-form-section__grid">
+                <FusionField className="fusion-field--full" label="Duplicate contact to merge in" required>
+                  <FusionSelect defaultValue="" name="duplicateContactId" required>
+                    <option disabled value="">Select a contact&hellip;</option>
+                    {crm.contacts
+                      .filter((contact) => contact.id !== selectedContact.id)
+                      .map((contact) => (
+                        <option key={contact.id} value={contact.id}>
+                          {contact.display_name} — {contact.email || contact.phone || "no contact info"}
+                          {contact.lead_source ? ` (${contact.lead_source})` : ""}
+                        </option>
+                      ))}
+                  </FusionSelect>
+                </FusionField>
+              </div>
+              <div className="fusion-form-actions fusion-form-actions--end">
+                <FusionSubmitButton className="compact-button" pendingLabel="Merging...">Merge contacts</FusionSubmitButton>
               </div>
             </form>
           ) : null}
