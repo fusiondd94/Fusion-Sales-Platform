@@ -32,6 +32,7 @@ import {
   updateSalesAppointment,
   updateSalesCrmForm,
   updateSalesEmailTemplate,
+  updateSalesProposal,
   updateSalesProposalStatus,
   updateSalesService
 } from "@/lib/sales-ops";
@@ -484,12 +485,38 @@ export async function createFusionProposal(formData: FormData) {
     quantity: Number(formData.get("quantity") || 1),
     discountType: enumValue(formData.get("discountType"), ["none", "fixed", "percent"] as const, "none"),
     discountValue: Number(formData.get("discountValue") || 0),
-    expirationDate: String(formData.get("expirationDate") || "")
+    expirationDate: String(formData.get("expirationDate") || ""),
+    contactId: String(formData.get("contactId") || ""),
+    companyId: String(formData.get("companyId") || "")
   });
 
   revalidatePath("/fusionadmin");
   revalidatePath("/fusionadmin/proposals");
   revalidatePath("/fusionadmin/reports");
+}
+
+export async function updateFusionProposal(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const proposalId = String(formData.get("proposalId") || "");
+
+  await updateSalesProposal({
+    actorId: user.id,
+    proposalId,
+    proposalTitle: String(formData.get("proposalTitle") || ""),
+    contactId: String(formData.get("contactId") || ""),
+    companyId: String(formData.get("companyId") || ""),
+    quantity: Number(formData.get("quantity") || 1),
+    discountType: enumValue(formData.get("discountType"), ["none", "fixed", "percent"] as const, "none"),
+    discountValue: Number(formData.get("discountValue") || 0),
+    expirationDate: String(formData.get("expirationDate") || ""),
+    status: enumValue(formData.get("status"), ["draft", "sent", "accepted", "declined", "expired"] as const, "draft")
+  });
+
+  revalidatePath("/fusionadmin/proposals");
+  revalidatePath("/fusionadmin/reports");
+  redirect("/fusionadmin/proposals");
 }
 
 export async function createFusionAppointment(formData: FormData) {
