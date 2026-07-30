@@ -248,3 +248,122 @@
   flex-direction: column;
   gap: 0.5rem;
 }
+
+/* AdminShell: brand logo, collapsible menu sections, user dropdown */
+
+.admin-brand .brand-mark--logo,
+.login-brand .brand-mark--logo {
+  background: var(--brand-white, #fff);
+  padding: 0.3rem;
+  object-fit: contain;
+}
+
+.admin-menu-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.5rem 0.4rem 0.5rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-menu-section-toggle span {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.admin-menu-section-toggle svg {
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.admin-menu-section-toggle[data-collapsed="true"] svg {
+  transform: rotate(-90deg);
+}
+
+.admin-menu-section-toggle:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.admin-user-menu {
+  position: relative;
+}
+
+.admin-user-card--button {
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-user-card--button .chevron {
+  transition: transform 150ms ease;
+  color: var(--fusion-text-muted, #667783);
+  flex-shrink: 0;
+  margin-left: 0.15rem;
+}
+
+.admin-user-menu[data-open="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+.admin-user-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 220px;
+  background: var(--brand-white, #fff);
+  border: 1px solid var(--fusion-border, #dfe5ea);
+  border-radius: var(--fusion-radius-lg, 12px);
+  box-shadow: var(--fusion-shadow-card-hover, 0 16px 40px rgba(0, 0, 0, 0.12));
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  z-index: 40;
+}
+
+.admin-user-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--fusion-radius-md, 8px);
+  color: var(--brand-charcoal, #36454f);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+a.admin-user-dropdown__item:hover {
+  background: var(--fusion-beige-100, #f2ede4);
+  color: var(--brand-teal, #004443);
+}
+
+.admin-user-dropdown__divider {
+  height: 1px;
+  background: var(--fusion-border, #dfe5ea);
+  margin: 0.3rem 0.2rem;
+}
+
+.admin-user-dropdown__item--signout {
+  padding: 0;
+}
+
+.admin-user-dropdown__item--signout form {
+  width: 100%;
+}
+
+.admin-user-dropdown__item--signout .ghost-button {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0.55rem 0.65rem;
+  color: var(--fusion-danger, #b42318);
+}
+
+.admin-user-dropdown__item--signout .ghost-button:hover {
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--fusion-danger, #b42318);
+}
