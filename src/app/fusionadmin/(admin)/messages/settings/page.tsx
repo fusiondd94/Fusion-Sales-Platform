@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { AlertTriangle, CheckCircle2, History, LogIn, MessageCircle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, History, LogIn, MessageCircle, RefreshCcw, ShieldCheck, UserRoundSearch } from "lucide-react";
 import { getMessagingWorkspace } from "@/lib/messages";
 import { MessageChannelForm } from "@/components/MessageChannelForm";
 import { ChannelIcon } from "@/components/ChannelIcon";
 import { PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
 import { FormError } from "@/components/ui";
-import { cancelMetaConnect, connectMetaPage, syncFusionMessageChannelHistory } from "@/app/fusionadmin/actions";
+import { cancelMetaConnect, connectMetaPage, refreshFusionChannelContactNames, syncFusionMessageChannelHistory } from "@/app/fusionadmin/actions";
 
 type MetaPageOption = {
   id: string;
@@ -18,10 +18,18 @@ type MetaPageOption = {
 export default async function MessageSettingsPage({
   searchParams
 }: {
-  searchParams: Promise<{ connect?: string; metaError?: string; synced?: string; syncError?: string; whatsappConnected?: string }>;
+  searchParams: Promise<{
+    connect?: string;
+    metaError?: string;
+    synced?: string;
+    syncError?: string;
+    whatsappConnected?: string;
+    namesRefreshed?: string;
+    nameRefreshError?: string;
+  }>;
 }) {
   const { channels } = await getMessagingWorkspace();
-  const { connect, metaError, synced, syncError, whatsappConnected } = await searchParams;
+  const { connect, metaError, synced, syncError, whatsappConnected, namesRefreshed, nameRefreshError } = await searchParams;
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 
   function webhookUrlFor(channelType: string) {
@@ -69,6 +77,7 @@ export default async function MessageSettingsPage({
 
       <FormError message={metaError} />
       <FormError message={syncError} />
+      <FormError message={nameRefreshError} />
 
       {synced !== undefined ? (
         <p className="fusion-form-success" role="status">
@@ -77,6 +86,17 @@ export default async function MessageSettingsPage({
             {Number(synced) > 0
               ? `Imported ${synced} message${Number(synced) === 1 ? "" : "s"} from your existing conversation history.`
               : "No new messages found to import — you're already up to date."}
+          </span>
+        </p>
+      ) : null}
+
+      {namesRefreshed !== undefined ? (
+        <p className="fusion-form-success" role="status">
+          <CheckCircle2 aria-hidden="true" size={16} />
+          <span>
+            {Number(namesRefreshed) > 0
+              ? `Updated ${namesRefreshed} contact name${Number(namesRefreshed) === 1 ? "" : "s"} from Messenger/Instagram.`
+              : "No placeholder names found — everything's already up to date."}
           </span>
         </p>
       ) : null}
@@ -169,6 +189,29 @@ export default async function MessageSettingsPage({
                 </button>
               </form>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {syncableChannels.length ? (
+        <div className="admin-panel meta-sync-panel">
+          <div className="meta-sync-panel__header">
+            <UserRoundSearch size={18} />
+            <div>
+              <h3>Fix placeholder contact names</h3>
+              <p className="muted">
+                Messenger and Instagram don&apos;t always include a name on every message, so a contact can show up as
+                &quot;Facebook user&quot; or &quot;Instagram contact&quot;. This looks up the real name or username for
+                any conversation still showing a placeholder.
+              </p>
+            </div>
+          </div>
+          <div className="meta-sync-panel__actions">
+            <form action={refreshFusionChannelContactNames}>
+              <button className="secondary-button compact-button" type="submit">
+                <RefreshCcw size={16} /> Refresh contact names
+              </button>
+            </form>
           </div>
         </div>
       ) : null}
