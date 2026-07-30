@@ -72,6 +72,16 @@ import {
   sendMessage,
   syncChannelHistory
 } from "@/lib/messages";
+import {
+  cancelContentPost,
+  ContentPlatform,
+  createContentPost,
+  deleteContentPost,
+  getOrganizationIdForContent,
+  publishPostNow,
+  updateContentPost,
+  uploadContentMedia
+} from "@/lib/content";
 
 function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T) {
   const text = String(value || "");
@@ -1168,5 +1178,100 @@ export async function connectWhatsAppEmbeddedSignup(input: {
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Something went wrong connecting WhatsApp." };
+  }
+}
+
+export async function createFusionContentPost(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const organizationId = await getOrganizationIdForContent();
+  const platforms = formData.getAll("platforms").map(String) as ContentPlatform[];
+  const caption = String(formData.get("caption") || "");
+  const title = String(formData.get("title") || "");
+  const scheduledAt = String(formData.get("scheduledAt") || "");
+
+  const files = formData.getAll("media").filter((entry): entry is File => entry instanceof File && entry.size > 0);
+  const mediaUrls: string[] = [];
+
+  if (organizationId) {
+    for (const file of files) {
+      const buffer = await file.arrayBuffer();
+      const uploadResult = await uploadContentMedia({
+        organizationId,
+        fileName: file.name,
+        contentType: file.type,
+        data: buffer
+      });
+      if (uploadResult.ok && uploadResult.url) mediaUrls.push(uploadResult.url);
+    }
+  }
+
+  const contentType = mediaUrls.length === 0 ? "text" : mediaUrls.length === 1 ? "image" : "carousel";
+
+  const result = await createContentPost({
+    actorId: user.id,
+    title,
+    caption,
+    contentType,
+    mediaUrls,
+    platforms,
+    scheduledAt
+  });
+
+  revalidatePath("/fusionadmin/content");
+
+  if (!result.ok) {
+    redirect("/fusionadmin/content?contentError=" + encodeURIComponent(result.error || "Unable to schedule post."));
+  }
+}
+
+export async function updateFusionContentPost(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const platforms = formData.getAll("platforms").map(String) as ContentPlatform[];
+
+  const result = await updateContentPost({
+    actorId: user.id,
+    postId: String(formData.get("postId") || ""),
+    title: String(formData.get("title") || ""),
+    caption: String(formData.get("caption") || ""),
+    platforms,
+    scheduledAt: String(formData.get("scheduledAt") || "")
+  });
+
+  revalidatePath("/fusionadmin/content");
+
+  if (!result.ok) {
+    redirect("/fusionadmin/content?contentError=" + encodeURIComponent(result.error || "Unable to save changes."));
+  }
+}
+
+export async function deleteFusionContentPost(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await deleteContentPost({ postId: String(formData.get("postId") || "") });
+  revalidatePath("/fusionadmin/content");
+}
+
+export async function cancelFusionContentPost(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await cancelContentPost({ actorId: user.id, postId: String(formData.get("postId") || "") });
+  revalidatePath("/fusionadmin/content");
+}
+
+export async function publishFusionContentPostNow(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const result = await publishPostNow(String(formData.get("postId") || ""));
+  revalidatePath("/fusionadmin/content");
+
+  if (!result.ok) {
+    redirect("/fusionadmin/content?contentError=" + encodeURIComponent(result.error || "Unable to publish this post."));
   }
 }
