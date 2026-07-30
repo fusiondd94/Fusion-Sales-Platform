@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${appUrl}/fusionadmin`);
   }
 
-  const settingsUrl = `${appUrl}/fusionadmin/messages/settings`;
+  const settingsUrl = `${appUrl}/fusionadmin/settings/connections`;
 
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
