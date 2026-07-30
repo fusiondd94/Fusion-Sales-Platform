@@ -11,6 +11,7 @@ import {
   createCrmNote,
   createCrmTask,
   inviteCrmTeamMember,
+  mergeCrmContacts,
   updateCrmBrandSettings,
   updateCrmCompany,
   updateCrmContact,
@@ -60,6 +61,7 @@ import {
 } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  backfillContactNames,
   disconnectMessageChannel,
   MessageChannelType,
   MESSAGE_CHANNEL_TYPES,
@@ -203,6 +205,35 @@ export async function updateFusionContact(formData: FormData) {
 
   revalidatePath("/fusionadmin");
   revalidatePath("/fusionadmin/clients");
+}
+
+export async function mergeFusionContacts(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const primaryContactId = String(formData.get("primaryContactId") || "");
+  const duplicateContactId = String(formData.get("duplicateContactId") || "");
+
+  const result = await mergeCrmContacts({
+    actorId: user.id,
+    primaryContactId,
+    duplicateContactId
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+
+  if (!result.ok) {
+    redirect(
+      "/fusionadmin/clients?contactId=" +
+        encodeURIComponent(primaryContactId) +
+        "&mergeError=" +
+        encodeURIComponent(result.error || "Unable to merge contacts.") +
+        "#contact-editor"
+    );
+  }
+
+  redirect("/fusionadmin/clients?contactId=" + encodeURIComponent(primaryContactId) + "&merged=1#contact-editor");
 }
 
 export async function updateFusionLead(formData: FormData) {
@@ -1012,6 +1043,23 @@ export async function syncFusionMessageChannelHistory(formData: FormData) {
   }
 
   redirect("/fusionadmin/messages/settings?synced=" + encodeURIComponent(String(result.imported ?? 0)));
+}
+
+export async function refreshFusionChannelContactNames(_formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  const result = await backfillContactNames();
+
+  revalidatePath("/fusionadmin/messages/settings");
+  revalidatePath("/fusionadmin/messages");
+  revalidatePath("/fusionadmin/clients");
+
+  if (!result.ok) {
+    redirect("/fusionadmin/messages/settings?nameRefreshError=" + encodeURIComponent(result.error || "Unable to refresh contact names."));
+  }
+
+  redirect("/fusionadmin/messages/settings?namesRefreshed=" + encodeURIComponent(String(result.updated)));
 }
 
 export async function moveFusionThreadFolder(formData: FormData) {
