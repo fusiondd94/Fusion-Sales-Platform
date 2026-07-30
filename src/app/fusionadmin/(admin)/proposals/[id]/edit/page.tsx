@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, FileText } from "lucide-react";
 import { updateFusionProposal } from "@/app/fusionadmin/actions";
 import { getSalesProposalForEdit } from "@/lib/sales-ops";
-import { formatCurrency, FusionSubmitButton, PageHeader } from "../../crm-ui";
+import { formatCurrency, FusionSubmitButton, PageHeader } from "@/app/fusionadmin/(admin)/crm-ui";
 
 export default async function FusionProposalEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
