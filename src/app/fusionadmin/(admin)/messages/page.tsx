@@ -64,7 +64,7 @@ export default async function MessagesInboxPage({
         title="Inbox"
         description="WhatsApp, Messenger, and Instagram conversations in one place."
         action={
-          <Link className="secondary-button compact-button" href="/fusionadmin/messages/settings">
+          <Link className="secondary-button compact-button" href="/fusionadmin/settings/connections">
             <Settings size={16} /> Channel settings
           </Link>
         }
