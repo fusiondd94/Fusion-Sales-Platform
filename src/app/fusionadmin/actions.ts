@@ -10,6 +10,7 @@ import {
   createCrmDeal,
   createCrmNote,
   createCrmTask,
+  deleteCrmServicePackage,
   inviteCrmTeamMember,
   mergeCrmContacts,
   updateCrmBrandSettings,
@@ -19,7 +20,8 @@ import {
   updateCrmLead,
   updateCrmServicePackage,
   updateCrmTask,
-  updateCrmTeamMember
+  updateCrmTeamMember,
+  uploadCrmBrandLogo
 } from "@/lib/crm";
 import {
   createSalesAppointment,
@@ -91,6 +93,13 @@ function enumValue<T extends string>(value: FormDataEntryValue | null, allowed: 
 function optionalEnumValue<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[]) {
   const text = String(value || "");
   return allowed.includes(text as T) ? text as T : "";
+}
+
+function normalizeHexColor(raw: string, fallback: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return fallback;
+  const withHash = trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+  return /^#[0-9A-Fa-f]{6}$/.test(withHash) ? withHash : fallback;
 }
 
 export async function signInFusionAdmin(_: unknown, formData: FormData) {
@@ -358,11 +367,36 @@ export async function updateFusionBrandSettings(formData: FormData) {
   const user = await requireFusionAdmin();
   if (!user.isAllowed) return;
 
+  let logoUrl = String(formData.get("logoUrl") || "");
+  const logoFile = formData.get("logoFile");
+  if (logoFile instanceof File && logoFile.size > 0) {
+    const organizationId = await getOrganizationIdForContent();
+    if (organizationId) {
+      const buffer = await logoFile.arrayBuffer();
+      const uploadResult = await uploadCrmBrandLogo({
+        organizationId,
+        fileName: logoFile.name,
+        contentType: logoFile.type,
+        data: buffer
+      });
+      if (uploadResult.ok && uploadResult.url) logoUrl = uploadResult.url;
+    }
+  }
+
+  const primaryColor = normalizeHexColor(
+    String(formData.get("primaryColorHex") || ""),
+    String(formData.get("primaryColor") || "#31d7ff")
+  );
+  const accentColor = normalizeHexColor(
+    String(formData.get("accentColorHex") || ""),
+    String(formData.get("accentColor") || "#f5b84b")
+  );
+
   await updateCrmBrandSettings({
     actorId: user.id,
-    logoUrl: String(formData.get("logoUrl") || ""),
-    primaryColor: String(formData.get("primaryColor") || ""),
-    accentColor: String(formData.get("accentColor") || "")
+    logoUrl,
+    primaryColor,
+    accentColor
   });
 
   revalidatePath("/fusionadmin/settings");
@@ -380,6 +414,18 @@ export async function updateFusionServicePackage(formData: FormData) {
     setupPrice: Number(formData.get("setupPrice") || 0),
     monthlyPrice: Number(formData.get("monthlyPrice") || 0),
     isActive: formData.get("isActive") === "on"
+  });
+
+  revalidatePath("/fusionadmin/settings");
+}
+
+export async function deleteFusionServicePackage(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await deleteCrmServicePackage({
+    actorId: user.id,
+    packageId: String(formData.get("packageId") || "")
   });
 
   revalidatePath("/fusionadmin/settings");
@@ -948,8 +994,8 @@ export async function saveFusionMessageChannel(
 
   if (result.error) return { error: result.error };
 
-  revalidatePath("/fusionadmin/messages/settings");
-  redirect("/fusionadmin/messages/settings");
+  revalidatePath("/fusionadmin/settings/connections");
+  redirect("/fusionadmin/settings/connections");
 }
 
 export async function disconnectFusionMessageChannel(formData: FormData) {
@@ -959,8 +1005,8 @@ export async function disconnectFusionMessageChannel(formData: FormData) {
   const channelType = String(formData.get("channelType") || "") as MessageChannelType;
   await disconnectMessageChannel({ actorId: user.id, channelType });
 
-  revalidatePath("/fusionadmin/messages/settings");
-  redirect("/fusionadmin/messages/settings");
+  revalidatePath("/fusionadmin/settings/connections");
+  redirect("/fusionadmin/settings/connections");
 }
 
 export async function sendFusionMessage(
@@ -1022,8 +1068,8 @@ export async function connectMetaPage(formData: FormData) {
   const cookieStore = await cookies();
   cookieStore.set("meta_oauth_pages", "", { maxAge: 0, path: "/" });
 
-  revalidatePath("/fusionadmin/messages/settings");
-  redirect("/fusionadmin/messages/settings");
+  revalidatePath("/fusionadmin/settings/connections");
+  redirect("/fusionadmin/settings/connections");
 }
 
 export async function cancelMetaConnect() {
@@ -1033,7 +1079,7 @@ export async function cancelMetaConnect() {
   const cookieStore = await cookies();
   cookieStore.set("meta_oauth_pages", "", { maxAge: 0, path: "/" });
 
-  redirect("/fusionadmin/messages/settings");
+  redirect("/fusionadmin/settings/connections");
 }
 
 export async function syncFusionMessageChannelHistory(formData: FormData) {
@@ -1043,16 +1089,16 @@ export async function syncFusionMessageChannelHistory(formData: FormData) {
   const channelType = String(formData.get("channelType") || "") as MessageChannelType;
   const result = await syncChannelHistory(channelType);
 
-  revalidatePath("/fusionadmin/messages/settings");
+  revalidatePath("/fusionadmin/settings/connections");
   revalidatePath("/fusionadmin/messages");
 
   if (!result.ok) {
     redirect(
-      "/fusionadmin/messages/settings?syncError=" + encodeURIComponent(result.error || "Unable to sync message history.")
+      "/fusionadmin/settings/connections?syncError=" + encodeURIComponent(result.error || "Unable to sync message history.")
     );
   }
 
-  redirect("/fusionadmin/messages/settings?synced=" + encodeURIComponent(String(result.imported ?? 0)));
+  redirect("/fusionadmin/settings/connections?synced=" + encodeURIComponent(String(result.imported ?? 0)));
 }
 
 export async function refreshFusionChannelContactNames(_formData: FormData) {
@@ -1061,15 +1107,15 @@ export async function refreshFusionChannelContactNames(_formData: FormData) {
 
   const result = await backfillContactNames();
 
-  revalidatePath("/fusionadmin/messages/settings");
+  revalidatePath("/fusionadmin/settings/connections");
   revalidatePath("/fusionadmin/messages");
   revalidatePath("/fusionadmin/clients");
 
   if (!result.ok) {
-    redirect("/fusionadmin/messages/settings?nameRefreshError=" + encodeURIComponent(result.error || "Unable to refresh contact names."));
+    redirect("/fusionadmin/settings/connections?nameRefreshError=" + encodeURIComponent(result.error || "Unable to refresh contact names."));
   }
 
-  redirect("/fusionadmin/messages/settings?namesRefreshed=" + encodeURIComponent(String(result.updated)));
+  redirect("/fusionadmin/settings/connections?namesRefreshed=" + encodeURIComponent(String(result.updated)));
 }
 
 export async function moveFusionThreadFolder(formData: FormData) {
@@ -1173,7 +1219,7 @@ export async function connectWhatsAppEmbeddedSignup(input: {
 
     if (result.error) return { ok: false, error: result.error };
 
-    revalidatePath("/fusionadmin/messages/settings");
+    revalidatePath("/fusionadmin/settings/connections");
     revalidatePath("/fusionadmin/messages");
     return { ok: true };
   } catch (error) {
