@@ -706,6 +706,8 @@ body {
 
 .admin-sidebar-footer .ghost-button {
   color: rgba(255, 255, 255, 0.75);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.16);
   justify-content: flex-start;
 }
 
