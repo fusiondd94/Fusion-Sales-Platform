@@ -15,7 +15,7 @@ export async function GET() {
 
   if (!appId || !appUrl || !configId) {
     return NextResponse.redirect(
-      `${appUrl}/fusionadmin/messages/settings?metaError=${encodeURIComponent(
+      `${appUrl}/fusionadmin/settings/connections?metaError=${encodeURIComponent(
         "Set NEXT_PUBLIC_META_APP_ID, NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID, and NEXT_PUBLIC_APP_URL before connecting WhatsApp."
       )}`
     );
