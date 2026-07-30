@@ -290,6 +290,10 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+.admin-app[data-sidebar-collapsed="true"] .admin-menu-section-toggle {
+  display: none;
+}
+
 .admin-user-menu {
   position: relative;
 }
