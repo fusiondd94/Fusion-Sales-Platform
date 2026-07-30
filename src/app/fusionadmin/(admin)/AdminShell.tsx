@@ -52,7 +52,7 @@ const navSections = [
     items: [
       { href: "/fusionadmin/services", label: "Services", icon: Library, description: "Offer catalog" },
       { href: "/fusionadmin/proposals", label: "Proposals", icon: FileText, description: "Quotes and packages" },
-      { href: "/fusionadmin/email-templates", label: "Email", icon: Mail, description: "Templates" },
+      { href: "/fusionadmin/email", label: "Email", icon: Mail, description: "Campaigns & templates" },
       { href: "/fusionadmin/forms", label: "Forms", icon: FormInput, description: "Lead capture" }
     ]
   },
