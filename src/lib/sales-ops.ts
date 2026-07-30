@@ -48,7 +48,23 @@ export type SalesOpsProposal = {
   recurring_monthly_total: number;
   estimated_gross_profit: number;
   estimated_gross_margin: number;
+  contact_id: string | null;
+  company_id: string | null;
+  contact: { id: string; display_name: string; email: string | null } | null;
+  company: { id: string; company_name: string } | null;
   created_at: string;
+};
+
+export type SalesOpsContactOption = {
+  id: string;
+  display_name: string;
+  email: string | null;
+  company_id: string | null;
+};
+
+export type SalesOpsCompanyOption = {
+  id: string;
+  company_name: string;
 };
 
 export type SalesOpsAppointment = {
@@ -218,7 +234,9 @@ const proposalSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(100).default(1),
   discountType: z.enum(["none", "fixed", "percent"]).default("none"),
   discountValue: z.coerce.number().int().min(0).default(0),
-  expirationDate: z.string().optional()
+  expirationDate: z.string().optional(),
+  contactId: z.string().uuid().optional().or(z.literal("")),
+  companyId: z.string().uuid().optional().or(z.literal(""))
 });
 
 const appointmentSchema = z.object({
@@ -260,6 +278,8 @@ export async function getSalesOpsWorkspace() {
       categories: [] as SalesOpsServiceCategory[],
       services: [] as SalesOpsService[],
       proposals: [] as SalesOpsProposal[],
+      contacts: [] as SalesOpsContactOption[],
+      companies: [] as SalesOpsCompanyOption[],
       appointments: [] as SalesOpsAppointment[],
       appointmentTypes: [] as Array<{ id: string; name: string }>,
       leadSources: [] as SalesOpsLeadSource[],
@@ -285,6 +305,8 @@ export async function getSalesOpsWorkspace() {
       categories: [] as SalesOpsServiceCategory[],
       services: [] as SalesOpsService[],
       proposals: [] as SalesOpsProposal[],
+      contacts: [] as SalesOpsContactOption[],
+      companies: [] as SalesOpsCompanyOption[],
       appointments: [] as SalesOpsAppointment[],
       appointmentTypes: [] as Array<{ id: string; name: string }>,
       leadSources: [] as SalesOpsLeadSource[],
@@ -308,6 +330,8 @@ export async function getSalesOpsWorkspace() {
     categoriesResult,
     servicesResult,
     proposalsResult,
+    contactsResult,
+    companiesResult,
     appointmentsResult,
     appointmentTypesResult,
     leadSourcesResult,
@@ -318,7 +342,9 @@ export async function getSalesOpsWorkspace() {
   ] = await Promise.all([
     supabase.from("crm_service_categories").select("id, name, slug").eq("organization_id", organizationId).is("deleted_at", null).order("display_order", { ascending: true }),
     supabase.from("crm_services").select("id, category_id, service_name, sku, slug, short_description, billing_type, pricing_model, base_price, minimum_price, maximum_price, internal_estimated_cost, default_quantity, is_taxable, recurring_interval, setup_fee, discount_eligible, is_active, is_featured, public_visibility").eq("organization_id", organizationId).is("deleted_at", null).order("display_order", { ascending: true }).limit(100),
-    supabase.from("crm_proposals").select("id, proposal_number, proposal_title, status, currency, issue_date, expiration_date, subtotal, discount_total, tax_total, grand_total, recurring_monthly_total, estimated_gross_profit, estimated_gross_margin, created_at").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
+    supabase.from("crm_proposals").select("id, proposal_number, proposal_title, status, currency, issue_date, expiration_date, subtotal, discount_total, tax_total, grand_total, recurring_monthly_total, estimated_gross_profit, estimated_gross_margin, contact_id, company_id, created_at, contact:crm_contacts(id, display_name, email), company:crm_companies(id, company_name)").eq("organization_id", organizationId).is("deleted_at", null).order("created_at", { ascending: false }).limit(50),
+    supabase.from("crm_contacts").select("id, display_name, email, company_id").eq("organization_id", organizationId).order("display_name", { ascending: true }).limit(500),
+    supabase.from("crm_companies").select("id, company_name").eq("organization_id", organizationId).order("company_name", { ascending: true }).limit(500),
     supabase.from("crm_appointments").select("id, appointment_type_id, title, starts_at, ends_at, status, time_zone, location, meeting_url").eq("organization_id", organizationId).is("deleted_at", null).order("starts_at", { ascending: true }).limit(50),
     supabase.from("crm_appointment_types").select("id, name").eq("organization_id", organizationId).eq("is_active", true).order("name", { ascending: true }),
     supabase.from("crm_lead_sources").select("id, name, slug, is_paid, default_channel").eq("organization_id", organizationId).eq("is_active", true).order("display_order", { ascending: true }),
@@ -329,7 +355,7 @@ export async function getSalesOpsWorkspace() {
   ]);
 
   const deals = dealsResult.data || [];
-  const proposals = (proposalsResult.data || []) as SalesOpsProposal[];
+  const proposals = (proposalsResult.data || []) as unknown as SalesOpsProposal[];
   const appointments = (appointmentsResult.data || []) as SalesOpsAppointment[];
   const forms = (formsResult.data || []) as SalesOpsCrmForm[];
   const totalPipelineValue = deals
@@ -346,6 +372,8 @@ export async function getSalesOpsWorkspace() {
     categories: (categoriesResult.data || []) as SalesOpsServiceCategory[],
     services: (servicesResult.data || []) as SalesOpsService[],
     proposals,
+    contacts: (contactsResult.data || []) as SalesOpsContactOption[],
+    companies: (companiesResult.data || []) as SalesOpsCompanyOption[],
     appointments,
     appointmentTypes: (appointmentTypesResult.data || []) as Array<{ id: string; name: string }>,
     leadSources: (leadSourcesResult.data || []) as SalesOpsLeadSource[],
@@ -362,6 +390,38 @@ export async function getSalesOpsWorkspace() {
       weightedPipelineValue,
       wonRevenue
     }
+  };
+}
+
+export async function getSalesProposalForEdit(proposalId: string) {
+  const supabase = getServiceClient();
+  if (!supabase) return { proposal: null, item: null, contacts: [] as SalesOpsContactOption[], companies: [] as SalesOpsCompanyOption[] };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { proposal: null, item: null, contacts: [] as SalesOpsContactOption[], companies: [] as SalesOpsCompanyOption[] };
+
+  const [proposalResult, itemResult, contactsResult, companiesResult] = await Promise.all([
+    supabase
+      .from("crm_proposals")
+      .select("id, proposal_number, proposal_title, status, currency, issue_date, expiration_date, subtotal, discount_type, discount_value, discount_total, tax_total, grand_total, recurring_monthly_total, estimated_gross_profit, estimated_gross_margin, contact_id, company_id, created_at")
+      .eq("organization_id", organizationId)
+      .eq("id", proposalId)
+      .is("deleted_at", null)
+      .single(),
+    supabase
+      .from("crm_proposal_items")
+      .select("id, item_name, quantity, unit_price, internal_unit_cost, discount_type, discount_value, billing_type, recurring_interval")
+      .eq("proposal_id", proposalId)
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("crm_contacts").select("id, display_name, email, company_id").eq("organization_id", organizationId).order("display_name", { ascending: true }).limit(500),
+    supabase.from("crm_companies").select("id, company_name").eq("organization_id", organizationId).order("company_name", { ascending: true }).limit(500)
+  ]);
+
+  return {
+    proposal: proposalResult.data || null,
+    item: itemResult.data || null,
+    contacts: (contactsResult.data || []) as SalesOpsContactOption[],
+    companies: (companiesResult.data || []) as SalesOpsCompanyOption[]
   };
 }
 
@@ -442,6 +502,8 @@ export async function createSalesProposal(input: z.input<typeof proposalSchema>)
       organization_id: organizationId,
       proposal_number: proposalNumber,
       proposal_title: value.proposalTitle,
+      contact_id: value.contactId || null,
+      company_id: value.companyId || null,
       assigned_user_id: value.actorId,
       expiration_date: value.expirationDate || null,
       subtotal: lineSubtotal,
@@ -486,6 +548,107 @@ export async function createSalesProposal(input: z.input<typeof proposalSchema>)
 
   if (itemError) return { ok: false, error: "Proposal was created, but line item snapshot failed." };
   await logActivity(supabase, organizationId, value.actorId, "proposal.created", "proposal", proposal.id, `Proposal created: ${value.proposalTitle}`, { total: lineTotal });
+  return { ok: true, id: proposal.id };
+}
+
+const updateProposalSchema = z.object({
+  actorId: z.string().uuid(),
+  proposalId: z.string().uuid(),
+  proposalTitle: z.string().trim().min(2).max(180),
+  contactId: z.string().uuid().optional().or(z.literal("")),
+  companyId: z.string().uuid().optional().or(z.literal("")),
+  quantity: z.coerce.number().int().min(1).max(100).default(1),
+  discountType: z.enum(["none", "fixed", "percent"]).default("none"),
+  discountValue: z.coerce.number().int().min(0).default(0),
+  expirationDate: z.string().optional(),
+  status: z.enum(["draft", "sent", "accepted", "declined", "expired"]).default("draft")
+});
+
+export async function updateSalesProposal(input: z.input<typeof updateProposalSchema>) {
+  const parsed = updateProposalSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Proposal information is not valid." };
+  const value = parsed.data;
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "CRM organization is not configured." };
+
+  const { data: item, error: itemFetchError } = await supabase
+    .from("crm_proposal_items")
+    .select("id, unit_price, internal_unit_cost, billing_type, recurring_interval")
+    .eq("proposal_id", value.proposalId)
+    .limit(1)
+    .maybeSingle<{ id: string; unit_price: number; internal_unit_cost: number; billing_type: string; recurring_interval: string | null }>();
+
+  if (itemFetchError || !item) return { ok: false, error: "Proposal line item could not be found." };
+
+  const lineSubtotal = cents(item.unit_price) * value.quantity;
+  const lineDiscount = value.discountType === "fixed"
+    ? Math.min(lineSubtotal, cents(value.discountValue))
+    : value.discountType === "percent"
+      ? Math.min(lineSubtotal, percentDiscount(lineSubtotal, value.discountValue * 100))
+      : 0;
+  const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
+  const internalCost = cents(item.internal_unit_cost) * value.quantity;
+  const profit = lineTotal - internalCost;
+
+  const { data: proposal, error: proposalError } = await supabase
+    .from("crm_proposals")
+    .update({
+      proposal_title: value.proposalTitle,
+      contact_id: value.contactId || null,
+      company_id: value.companyId || null,
+      expiration_date: value.expirationDate || null,
+      subtotal: lineSubtotal,
+      discount_type: value.discountType,
+      discount_value: value.discountValue,
+      discount_total: lineDiscount,
+      grand_total: lineTotal,
+      recurring_monthly_total: item.billing_type === "recurring" && item.recurring_interval === "monthly" ? lineTotal : 0,
+      internal_estimated_cost: internalCost,
+      estimated_gross_profit: profit,
+      estimated_gross_margin: grossMargin(profit, lineTotal),
+      status: value.status,
+      updated_by: value.actorId,
+      updated_at: new Date().toISOString()
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", value.proposalId)
+    .is("deleted_at", null)
+    .select("id, proposal_number, proposal_title, grand_total")
+    .single<{ id: string; proposal_number: string; proposal_title: string; grand_total: number }>();
+
+  if (proposalError || !proposal) return { ok: false, error: "Unable to update proposal." };
+
+  await supabase
+    .from("crm_proposal_items")
+    .update({
+      quantity: value.quantity,
+      discount_type: value.discountType,
+      discount_value: value.discountValue,
+      line_subtotal: lineSubtotal,
+      line_discount: lineDiscount,
+      line_total: lineTotal
+    })
+    .eq("id", item.id);
+
+  await logActivity(supabase, organizationId, value.actorId, "proposal.updated", "proposal", proposal.id, `Proposal updated: ${value.proposalTitle}`);
+
+  if (value.status === "sent" || value.status === "accepted") {
+    await runAutomations({
+      trigger: value.status === "sent" ? "proposal.sent" : "proposal.signed",
+      entityType: "proposal",
+      entityId: proposal.id,
+      organizationId,
+      actorId: value.actorId,
+      proposal: {
+        title: proposal.proposal_title,
+        number: proposal.proposal_number,
+        total: proposal.grand_total
+      }
+    });
+  }
+
   return { ok: true };
 }
 
