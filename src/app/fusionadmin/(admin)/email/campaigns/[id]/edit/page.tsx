@@ -5,7 +5,7 @@ import { sendFusionEmailCampaign, updateFusionEmailCampaign } from "@/app/fusion
 import { getCampaignForEdit } from "@/lib/email-marketing";
 import { DEFAULT_CAMPAIGN_BLOCKS } from "@/lib/email-blocks";
 import { EmailCampaignBuilder } from "@/components/EmailCampaignBuilder";
-import { formatDate, FusionBadge, FusionDataTable, EmptyState, PageHeader, statusTone } from "../../../crm-ui";
+import { formatDate, FusionBadge, FusionDataTable, EmptyState, PageHeader, statusTone } from "@/app/fusionadmin/(admin)/crm-ui";
 
 export default async function FusionEmailCampaignEditPage({
   params,
