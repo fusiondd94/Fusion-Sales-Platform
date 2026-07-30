@@ -204,3 +204,47 @@
 .content-delete-button {
   color: #b91c1c;
 }
+
+/* Settings: Connections summary, brand logo upload, hex color pairing */
+
+.brand-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-logo-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: var(--fusion-surface-muted, #f7f8fa);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.color-input-pair {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.color-input-pair input[type="color"] {
+  width: 44px;
+  height: 36px;
+  padding: 2px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.color-input-pair input[type="text"],
+.color-input-pair input:not([type="color"]) {
+  flex: 1;
+  min-width: 0;
+}
+
+.price-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
