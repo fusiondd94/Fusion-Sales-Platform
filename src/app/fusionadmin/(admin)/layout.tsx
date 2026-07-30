@@ -3,6 +3,7 @@ import { LogOut, ShieldAlert } from "lucide-react";
 import { signOutFusionAdmin } from "@/app/fusionadmin/actions";
 import { requireFusionAdmin } from "@/lib/auth";
 import { getAdminNotifications } from "@/lib/portal";
+import { getFusionAdminSettings } from "@/lib/crm";
 import { AdminShell } from "./AdminShell";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +33,9 @@ export default async function FusionAdminLayout({ children }: { children: ReactN
     );
   }
 
-  const notifications = await getAdminNotifications();
+  const [notifications, admin] = await Promise.all([getAdminNotifications(), getFusionAdminSettings()]);
   return (
-    <AdminShell notifications={notifications} user={user}>
+    <AdminShell notifications={notifications} user={user} logoUrl={admin.settings?.logo_url ?? null}>
       {children}
     </AdminShell>
   );
