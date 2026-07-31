@@ -14,7 +14,7 @@ export default async function GetStartedPage() {
   const initialState = token ? await loadQuestionnaireState(token) : null;
 
   return (
-    <main className="shell questionnaire-page">
+    <main className="shell shell-light questionnaire-page">
       <nav className="nav">
         <a className="brand" href="/">
           <span className="brand-mark">FDD</span>
