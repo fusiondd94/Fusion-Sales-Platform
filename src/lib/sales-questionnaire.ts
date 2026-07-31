@@ -115,7 +115,8 @@ export type SubmitAnswerResult =
 export type SubmitBudgetResult =
   | {
       ok: true;
-      parseResult: BudgetParseResult;
+      /** Never "invalid" here - an invalid parse short-circuits to the ok:false branch below. */
+      parseResult: Exclude<BudgetParseResult, { kind: "invalid" }>;
       assessment: BudgetAssessmentResult | null;
       requiredPortalCostEstimate: number | null;
       state: QuestionnaireState;
