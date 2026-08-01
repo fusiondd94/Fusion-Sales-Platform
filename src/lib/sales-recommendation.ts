@@ -25,6 +25,7 @@ import {
   type RecommendationResult,
   type ServicePackageLite
 } from "@/lib/recommendation-engine";
+import { ensureShareTokenForSession } from "@/lib/sales-result";
 
 // ---------------------------------------------------------------------------
 // Supabase client (duplicated small helper, matching the existing pattern in
@@ -272,6 +273,13 @@ export async function generateRecommendationForSession(
     console.error("Unable to persist recommendation.", recError);
     return { ok: false, reason: "Unable to save the recommendation." };
   }
+
+  // Phase 6: make sure a shareable /results/[token] link exists for this
+  // session as soon as a recommendation does, so it's ready to hand to the
+  // client (via text/email, or copied from the admin CRM lead view)
+  // without a separate provisioning step. Never blocks recommendation
+  // generation if it fails for some reason.
+  await ensureShareTokenForSession(state.session.id);
 
   const alternatives = result.paths.filter((p) => p.kind !== "recommended");
   if (alternatives.length) {
