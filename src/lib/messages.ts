@@ -919,3 +919,333 @@ export async function backfillContactNames(): Promise<ContactNameBackfillResult>
 
   return { ok: true, checked, updated };
 }
+
+// --- WhatsApp Coexistence ingestion -----------------------------------------
+//
+// A number onboarded with Coexistence keeps working in the customer's
+// WhatsApp Business mobile app alongside our Cloud API integration. Meta
+// mirrors that activity to us through three extra webhook fields:
+//   - smb_app_state_sync: the business's phone contacts (so we can attach
+//     real names/leads even for people who never messaged through Cloud API)
+//   - smb_message_echoes: messages the business sends from the mobile app,
+//     which we must mirror into the same thread so the inbox stays complete
+//   - history: a one-time backfill of up to 180 days of prior chat history,
+//     delivered in phased/chunked webhooks after onboarding
+//
+// These three helpers are intentionally separate from ingestInboundMessage
+// because none of them represent a new inbound message from a WhatsApp user
+// arriving through Cloud API — they are sync/mirror events with their own
+// direction and dedupe rules, and historical imports must not fire
+// "message.received" automations for messages that are days or months old.
+
+export type SmbStateSyncEntry = {
+  fullName?: string;
+  firstName?: string;
+  phoneNumber: string;
+  action: "add" | "remove";
+};
+
+export async function applySmbStateSync(entries: SmbStateSyncEntry[]): Promise<{ ok: boolean; updated: number; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, updated: 0, error: "Supabase CRM is not configured." };
+  const organizationId = await getDefaultOrganizationId(supabase);
+  if (!organizationId) return { ok: false, updated: 0, error: "CRM organization is not configured." };
+
+  let updated = 0;
+
+  for (const entry of entries) {
+    if (entry.action === "remove") continue;
+
+    const normalizedPhone = entry.phoneNumber.replace(/[^\d+]/g, "");
+    if (!normalizedPhone) continue;
+
+    const displayName = entry.fullName || entry.firstName || normalizedPhone;
+
+    const { data: existing } = await supabase
+      .from("crm_contacts")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("phone", normalizedPhone)
+      .is("deleted_at", null)
+      .maybeSingle<{ id: string }>();
+
+    if (existing) {
+      await supabase
+        .from("crm_contacts")
+        .update({
+          display_name: displayName,
+          first_name: entry.firstName || displayName,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", existing.id);
+      updated++;
+      continue;
+    }
+
+    const { error } = await supabase.from("crm_contacts").insert({
+      organization_id: organizationId,
+      first_name: entry.firstName || displayName,
+      display_name: displayName,
+      phone: normalizedPhone,
+      normalized_phone: normalizedPhone,
+      lead_source: "WhatsApp",
+      contact_type: "prospect",
+      lifecycle_status: "new"
+    });
+    if (!error) updated++;
+  }
+
+  return { ok: true, updated };
+}
+
+export type SmbMessageEchoPayload = {
+  externalAccountId: string;
+  externalThreadId: string;
+  externalMessageId?: string;
+  body: string;
+  sentAt?: string;
+};
+
+export async function ingestSmbMessageEcho(payload: SmbMessageEchoPayload): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+
+  const { data: channel } = await supabase
+    .from("crm_message_channels")
+    .select("id, organization_id")
+    .eq("channel_type", "whatsapp")
+    .eq("external_account_id", payload.externalAccountId)
+    .maybeSingle<{ id: string; organization_id: string }>();
+
+  if (!channel) return { ok: false, error: "No connected WhatsApp channel matches this account." };
+
+  if (payload.externalMessageId) {
+    const { data: existingMessage } = await supabase
+      .from("crm_messages")
+      .select("id")
+      .eq("external_message_id", payload.externalMessageId)
+      .maybeSingle<{ id: string }>();
+    if (existingMessage) return { ok: true };
+  }
+
+  const organizationId = channel.organization_id;
+  const nowIso = payload.sentAt || new Date().toISOString();
+
+  const { data: existingThread } = await supabase
+    .from("crm_message_threads")
+    .select("id, contact_id")
+    .eq("channel_id", channel.id)
+    .eq("external_thread_id", payload.externalThreadId)
+    .maybeSingle<{ id: string; contact_id: string | null }>();
+
+  let threadId = existingThread?.id || "";
+  let contactId = existingThread?.contact_id || null;
+
+  if (!contactId) {
+    contactId = await findOrCreateContactForMessage(supabase, organizationId, {
+      channelType: "whatsapp",
+      externalAccountId: payload.externalAccountId,
+      externalThreadId: payload.externalThreadId,
+      body: payload.body,
+      contactHandle: payload.externalThreadId
+    });
+  }
+
+  if (!threadId) {
+    const { data: newThread } = await supabase
+      .from("crm_message_threads")
+      .insert({
+        organization_id: organizationId,
+        channel_id: channel.id,
+        channel_type: "whatsapp",
+        external_thread_id: payload.externalThreadId,
+        contact_id: contactId,
+        last_message_at: nowIso,
+        last_message_preview: payload.body.slice(0, 140),
+        last_direction: "outbound",
+        unread_count: 0
+      })
+      .select("id")
+      .single<{ id: string }>();
+    threadId = newThread?.id || "";
+  } else {
+    await supabase
+      .from("crm_message_threads")
+      .update({
+        contact_id: contactId,
+        last_message_at: nowIso,
+        last_message_preview: payload.body.slice(0, 140),
+        last_direction: "outbound",
+        updated_at: nowIso
+      })
+      .eq("id", threadId);
+  }
+
+  if (!threadId) return { ok: false, error: "Unable to create conversation thread." };
+
+  await supabase.from("crm_messages").insert({
+    organization_id: organizationId,
+    thread_id: threadId,
+    direction: "outbound",
+    external_message_id: payload.externalMessageId || null,
+    body: payload.body,
+    status: "sent",
+    sender_label: "WhatsApp Business App"
+  });
+
+  return { ok: true };
+}
+
+export type HistoryThreadMessage = {
+  from: string;
+  id: string;
+  timestamp: string;
+  type: string;
+  text?: { body?: string };
+};
+
+export type HistoryThread = {
+  id: string;
+  messages: HistoryThreadMessage[];
+};
+
+export async function ingestHistoryThreads(
+  externalAccountId: string,
+  businessPhoneNumber: string,
+  threads: HistoryThread[]
+): Promise<{ ok: boolean; imported: number; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, imported: 0, error: "Supabase CRM is not configured." };
+
+  const { data: channel } = await supabase
+    .from("crm_message_channels")
+    .select("id, organization_id")
+    .eq("channel_type", "whatsapp")
+    .eq("external_account_id", externalAccountId)
+    .maybeSingle<{ id: string; organization_id: string }>();
+
+  if (!channel) return { ok: false, imported: 0, error: "No connected WhatsApp channel matches this account." };
+
+  const organizationId = channel.organization_id;
+  let imported = 0;
+
+  for (const thread of threads) {
+    const externalThreadId = thread.id;
+
+    for (const message of thread.messages) {
+      if (message.type !== "text" || !message.text?.body) continue;
+
+      const direction: "inbound" | "outbound" = message.from === businessPhoneNumber ? "outbound" : "inbound";
+      const timestampMs = Number(message.timestamp) * 1000;
+      const createdAt = Number.isFinite(timestampMs) && timestampMs > 0 ? new Date(timestampMs).toISOString() : new Date().toISOString();
+
+      const { data: existingMessage } = await supabase
+        .from("crm_messages")
+        .select("id")
+        .eq("external_message_id", message.id)
+        .maybeSingle<{ id: string }>();
+      if (existingMessage) continue;
+
+      const { data: existingThread } = await supabase
+        .from("crm_message_threads")
+        .select("id, contact_id")
+        .eq("channel_id", channel.id)
+        .eq("external_thread_id", externalThreadId)
+        .maybeSingle<{ id: string; contact_id: string | null }>();
+
+      let threadId = existingThread?.id || "";
+      let contactId = existingThread?.contact_id || null;
+
+      if (!contactId) {
+        contactId = await findOrCreateContactForMessage(supabase, organizationId, {
+          channelType: "whatsapp",
+          externalAccountId,
+          externalThreadId,
+          body: message.text.body,
+          contactHandle: externalThreadId
+        });
+      }
+
+      if (!threadId) {
+        const { data: newThread } = await supabase
+          .from("crm_message_threads")
+          .insert({
+            organization_id: organizationId,
+            channel_id: channel.id,
+            channel_type: "whatsapp",
+            external_thread_id: externalThreadId,
+            contact_id: contactId,
+            last_message_at: createdAt,
+            last_message_preview: message.text.body.slice(0, 140),
+            last_direction: direction,
+            unread_count: 0
+          })
+          .select("id")
+          .single<{ id: string }>();
+        threadId = newThread?.id || "";
+      } else {
+        await supabase
+          .from("crm_message_threads")
+          .update({
+            contact_id: contactId,
+            last_message_at: createdAt,
+            last_message_preview: message.text.body.slice(0, 140),
+            last_direction: direction,
+            updated_at: createdAt
+          })
+          .eq("id", threadId);
+      }
+
+      if (!threadId) continue;
+
+      await supabase.from("crm_messages").insert({
+        organization_id: organizationId,
+        thread_id: threadId,
+        direction,
+        external_message_id: message.id,
+        body: message.text.body,
+        status: direction === "inbound" ? "received" : "sent",
+        sender_label: direction === "inbound" ? "Contact" : "WhatsApp Business App (history)",
+        created_at: createdAt
+      });
+
+      imported++;
+    }
+  }
+
+  return { ok: true, imported };
+}
+
+export async function triggerSmbAppDataSync(businessPhoneNumberId: string, accessToken: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const contactsResponse = await fetch(
+      `https://graph.facebook.com/v21.0/${businessPhoneNumberId}/smb_app_data`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + accessToken },
+        body: JSON.stringify({ messaging_product: "whatsapp", sync_type: "smb_app_state_sync" })
+      }
+    );
+    if (!contactsResponse.ok) {
+      const payload = await contactsResponse.json().catch(() => ({}) as Record<string, unknown>);
+      return { ok: false, error: extractGraphError(payload) };
+    }
+
+    const historyResponse = await fetch(
+      `https://graph.facebook.com/v21.0/${businessPhoneNumberId}/smb_app_data`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + accessToken },
+        body: JSON.stringify({ messaging_product: "whatsapp", sync_type: "history" })
+      }
+    );
+    if (!historyResponse.ok) {
+      const payload = await historyResponse.json().catch(() => ({}) as Record<string, unknown>);
+      return { ok: false, error: extractGraphError(payload) };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unexpected error triggering SMB App Data sync." };
+  }
+}
