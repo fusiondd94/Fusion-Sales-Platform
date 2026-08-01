@@ -397,7 +397,7 @@ export async function requestCallFromResults(
   const method = preferredContactMethod && validMethods.has(preferredContactMethod) ? preferredContactMethod : null;
 
   const consultation = await createConsultationRequest(session.session_token, "schedule_call_from_results", method, session.organization_id);
-  if (!consultation.ok) return consultation;
+  if (!consultation.ok) return { ok: false, reason: consultation.reason || "Unable to save your request. Please try again." };
 
   await supabase.from("sales_website_recommendations").update({ call_requested_at: new Date().toISOString() }).eq("id", recommendation.id);
 
