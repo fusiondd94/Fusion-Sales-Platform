@@ -43,7 +43,19 @@ export const FEASIBILITY_STATUSES = [
 ] as const;
 export type FeasibilityStatus = (typeof FEASIBILITY_STATUSES)[number];
 
-export type PortalCategory = "domain" | "hosting" | "ssl" | "email" | "microsoft_365" | "email_marketing" | "backup" | "security" | "other";
+export type PortalCategory =
+  | "domain"
+  | "hosting"
+  | "managed_wordpress_hosting"
+  | "ssl"
+  | "managed_ssl"
+  | "email"
+  | "microsoft_365"
+  | "email_marketing"
+  | "backup"
+  | "security"
+  | "seo"
+  | "other";
 
 export type PortalProductLite = {
   id: string;
@@ -54,6 +66,15 @@ export type PortalProductLite = {
   price_unit: "one_time" | "monthly" | "annual";
   is_required_default: boolean;
   portal_url: string;
+  /** Phase 4: true when this product already bundles a free/included SSL
+   * certificate (e.g. Deluxe+ hosting tiers), so a separate standalone SSL
+   * line item should not also be charged. Optional/undefined for any older
+   * catalog rows or test fixtures predating Phase 4 - treated as false. */
+  includes_ssl?: boolean;
+  /** Phase 4: true when this product already bundles professional email. */
+  includes_email?: boolean;
+  /** Phase 4: true when this product already bundles automated backups. */
+  includes_backup?: boolean;
 };
 
 export type ServicePackageLite = {
@@ -136,6 +157,10 @@ export type RecommendationResult = {
   assumptions: string[];
   missingInformation: string[];
   recommendedNextAction: string;
+  /** Phase 4: admin-configurable disclaimer for the estimated portal-product
+   * costs above (taxes, ICANN fees, renewal rates, promotions - all
+   * confirmed at checkout, not guaranteed by this estimate). */
+  portalPricingDisclaimer: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -235,6 +260,10 @@ function pickBasePackageIndex(purpose: string, complexityScore: number, tierCoun
 const PORTAL_OWNERSHIP_KEY: Partial<Record<PortalCategory, { ownedKey: string; transferKey?: string }>> = {
   domain: { ownedKey: "has_existing_domain", transferKey: "domain_transferable" },
   hosting: { ownedKey: "has_existing_hosting", transferKey: "hosting_transferable" },
+  // Managed WordPress hosting is an alternative flavor of the same "hosting"
+  // ownership question from the Phase 2 questionnaire - there isn't a
+  // separate WordPress-specific ownership question yet.
+  managed_wordpress_hosting: { ownedKey: "has_existing_hosting", transferKey: "hosting_transferable" },
   ssl: { ownedKey: "has_existing_ssl" },
   email: { ownedKey: "has_existing_professional_email" }
 };
@@ -244,6 +273,36 @@ const PORTAL_INTEREST_KEY: Partial<Record<PortalCategory, string>> = {
   microsoft_365: "needs_microsoft_365",
   email_marketing: "needs_email_marketing"
 };
+
+function ownsAndTransferable(answers: AnswerMap, product: PortalProductLite): { owns: boolean; transferable: boolean; transferKnown: boolean } {
+  const ownership = PORTAL_OWNERSHIP_KEY[product.category];
+  const ownedAnswer = ownership ? str(answers[ownership.ownedKey]) : "";
+  const transferAnswer = ownership?.transferKey ? str(answers[ownership.transferKey]) : "";
+  const owns = ownedAnswer === "yes";
+  const transferKnown = !ownership?.transferKey || transferAnswer !== "";
+  const transferable = !ownership?.transferKey || transferAnswer !== "no";
+  return { owns, transferable, transferKnown };
+}
+
+/**
+ * Phase 4: categories that a required, not-already-owned bundle product can
+ * satisfy for free (e.g. Deluxe+ hosting bundling a free SSL certificate).
+ * Only *required* products the client doesn't already own count toward the
+ * bundle - a client's own external hosting can't be assumed to bundle
+ * anything Fusion didn't sell them.
+ */
+function computeBundleCoverage(answers: AnswerMap, catalog: PortalProductLite[]): Partial<Record<PortalCategory, boolean>> {
+  const coverage: Partial<Record<PortalCategory, boolean>> = {};
+  for (const product of catalog) {
+    if (!product.is_required_default) continue;
+    const { owns, transferable } = ownsAndTransferable(answers, product);
+    if (owns && transferable) continue;
+    if (product.includes_ssl) coverage.ssl = true;
+    if (product.includes_email) coverage.email = true;
+    if (product.includes_backup) coverage.backup = true;
+  }
+  return coverage;
+}
 
 function classifyPortalProducts(
   answers: AnswerMap,
@@ -261,13 +320,10 @@ function classifyPortalProducts(
   const assumptions: string[] = [];
   let requiredPortalCost = 0;
 
+  const bundleCoverage = computeBundleCoverage(answers, catalog);
+
   for (const product of catalog) {
-    const ownership = PORTAL_OWNERSHIP_KEY[product.category];
-    const ownedAnswer = ownership ? str(answers[ownership.ownedKey]) : "";
-    const transferAnswer = ownership?.transferKey ? str(answers[ownership.transferKey]) : "";
-    const owns = ownedAnswer === "yes";
-    const transferKnown = !ownership?.transferKey || transferAnswer !== "";
-    const transferable = !ownership?.transferKey || transferAnswer !== "no";
+    const { owns, transferable, transferKnown } = ownsAndTransferable(answers, product);
 
     if (owns && transferable) {
       clientProvided.push({
@@ -288,6 +344,22 @@ function classifyPortalProducts(
     }
 
     if (product.is_required_default) {
+      if (bundleCoverage[product.category]) {
+        // Already bundled for free with a required hosting-type product -
+        // don't also charge the standalone line item (Phase 4: avoid
+        // double-counting included SSL/email/backup).
+        clientProvided.push({
+          key: product.product_key,
+          label: product.product_name,
+          kind: "client_provided",
+          isRequired: false,
+          estimatedCost: 0,
+          linkedPortalProductId: product.id,
+          notes: "Included at no extra cost with the recommended hosting plan."
+        });
+        continue;
+      }
+
       const cost = firstYearCost(product);
       requiredPortalCost += cost;
       required.push({
@@ -605,6 +677,7 @@ export function buildRecommendation(input: RecommendationEngineInput): Recommend
     confidenceScore,
     assumptions,
     missingInformation,
-    recommendedNextAction: NEXT_ACTION_BY_STATUS[feasibilityStatus]
+    recommendedNextAction: NEXT_ACTION_BY_STATUS[feasibilityStatus],
+    portalPricingDisclaimer: businessRules.portalPricingDisclaimerText
   };
 }
