@@ -551,7 +551,7 @@ function RecommendationSummaryView({
         </div>
         <div className="metric">
           <span className="muted">Estimated required launch products</span>
-          <strong>${recommendation.requiredPortalCost.toLocaleString()}</strong>
+          <strong>~${recommendation.requiredPortalCost.toLocaleString()}</strong>
         </div>
         <div className="metric">
           <span className="muted">Estimated design allocation</span>
@@ -586,6 +586,10 @@ function RecommendationSummaryView({
 
       {recommendation.missingInformation.length > 0 ? (
         <p className="muted">A few more details would sharpen this plan - our team may follow up with a couple of quick questions.</p>
+      ) : null}
+
+      {recommendation.portalPricingDisclaimer ? (
+        <p className="muted">{recommendation.portalPricingDisclaimer}</p>
       ) : null}
     </section>
   );
