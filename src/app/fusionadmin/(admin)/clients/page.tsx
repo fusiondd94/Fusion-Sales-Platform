@@ -15,6 +15,7 @@ import { ChannelIcon, ChannelIconType } from "@/components/ChannelIcon";
 import { FormError } from "@/components/ui";
 import { getFusionCrmWorkspace } from "@/lib/crm";
 import { getAdminPortalClients } from "@/lib/portal";
+import { getShareUrlForLead } from "@/lib/sales-result";
 import {
   EmptyState,
   formatCurrency,
@@ -64,6 +65,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
   const selectedCompany = crm.companies.find((company) => company.id === filters.companyId);
   const selectedContact = crm.contacts.find((contact) => contact.id === filters.contactId);
   const selectedPortalClient = portalClients.find((client) => client.id === filters.clientId);
+  const selectedLeadShareUrl = selectedLead ? await getShareUrlForLead(selectedLead.id) : null;
 
   return (
     <div className="admin-content">
@@ -156,6 +158,16 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                 . Saving changes here keeps those records up to date automatically.
               </p>
             ) : null}
+            {selectedLeadShareUrl ? (
+            <p className="muted lead-share-link" style={{ margin: "0 0 0.85rem", fontSize: "0.85rem" }}>
+              Shareable results page:{" "}
+              <a className="text-link" href={selectedLeadShareUrl} rel="noreferrer" target="_blank">{selectedLeadShareUrl}</a>
+            </p>
+            ) : (
+            <p className="muted" style={{ margin: "0 0 0.85rem", fontSize: "0.85rem" }}>
+            No shareable results page yet - this lead has not finished the questionnaire, so a recommendation has not been generated.
+            </p>
+          )}
             <form className="record-edit-card lead-editor-card" action={updateFusionLead} data-track-unsaved="true">
               <input name="leadId" type="hidden" value={selectedLead.id} />
               <div className="record-edit-grid">
