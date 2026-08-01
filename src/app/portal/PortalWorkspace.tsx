@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CheckCircle2, Circle, Clock, Download, Eye, File as FileIcon, FileUp, GripVertical, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, Smartphone, Tablet, Trash2, X } from "lucide-react";
-import { addProjectComment, deleteOwnProjectComment, deleteOwnProjectFile, markAllOwnNotificationsRead, markOwnNotificationRead, reorderOwnBoardTasks, signOutClientPortal, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
+import { Bell, CheckCircle2, Circle, Clock, Download, Eye, File as FileIcon, FileUp, GripVertical, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, ShieldCheck, Smartphone, Tablet, Trash2, X } from "lucide-react";
+import { addProjectComment, adminVerifyPurchaseAction, deleteOwnProjectComment, deleteOwnProjectFile, markAllOwnNotificationsRead, markOwnNotificationRead, reorderOwnBoardTasks, signOutClientPortal, submitPurchaseConfirmationAction, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
+import { statusLabel, type LaunchChecklistItem } from "@/lib/launch-requirements";
 
 const DEFAULT_FRAME_HEIGHT = 1400;
 const DESKTOP_FIT_WIDTH = 1280;
@@ -36,7 +37,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commentsTab, setCommentsTab] = useState<"active" | "resolved">("active");
-  const [activeTool, setActiveTool] = useState<"review" | "uploads" | "dashboard" | "tasks">("review");
+  const [activeTool, setActiveTool] = useState<"review" | "uploads" | "dashboard" | "tasks" | "launch">("review");
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadNotifCount = workspace.notifications.filter((notification) => !notification.read_at).length;
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -58,6 +59,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
   const visibleComments = commentsTab === "active" ? openComments : resolvedComments;
   const selectedClientId = workspace.client.id.startsWith("admin-preview-") ? "" : workspace.client.id;
   const canSubmitPortalWork = workspace.project.id !== "admin-preview-project";
+  const outstandingLaunchCount = workspace.launchChecklist.filter((item) => item.isRequired && !item.isVerifiedGreen).length;
 
   function handleFrameLoad() {
     try {
@@ -235,6 +237,10 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
             </button>
             <button className={activeTool === "tasks" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("tasks")} type="button">
               <ListChecks size={16} /> <span>Tasks</span>
+            </button>
+            <button className={activeTool === "launch" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("launch")} type="button">
+              <ShieldCheck size={16} /> <span>Launch Requirements</span>
+              {outstandingLaunchCount > 0 ? <span className="portal-notif-badge" style={{ position: "static" }}>{outstandingLaunchCount}</span> : null}
             </button>
           </div>
 
@@ -501,6 +507,8 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
             </div>
           ) : activeTool === "dashboard" ? (
             <DashboardView workspace={workspace} />
+          ) : activeTool === "launch" ? (
+            <LaunchRequirementsView canSubmitPortalWork={canSubmitPortalWork} isAdminPreview={Boolean(workspace.isAdminPreview)} selectedClientId={selectedClientId} workspace={workspace} />
           ) : (
             <TasksView workspace={workspace} />
           )}
@@ -567,6 +575,143 @@ function DashboardView({ workspace }: { workspace: ClientPortalWorkspace }) {
         </div>
         {workspace.project.client_instructions ? <p className="muted">{workspace.project.client_instructions}</p> : null}
       </article>
+    </div>
+  );
+}
+
+function formatEstimatedCost(item: LaunchChecklistItem) {
+  if (item.estimatedCost === null) return null;
+  const amount = `$${item.estimatedCost}`;
+  const unit = item.priceUnit === "monthly" ? "/mo" : item.priceUnit === "annual" ? "/yr" : "";
+  return `${amount}${unit}`;
+}
+
+/**
+ * Phase 5: "Website Launch Requirements" checklist. Every item comes
+ * straight from workspace.launchChecklist (built by
+ * src/lib/launch-requirements.ts buildLaunchChecklist()) - this component
+ * only renders what it's given. It never computes or infers a green
+ * checkmark itself; item.isVerifiedGreen is the single source of truth, and
+ * "Purchase through Fusion" / "I already bought this" only ever reach
+ * verification_pending until a Fusion admin verifies the purchase.
+ */
+function LaunchRequirementsView({
+  workspace,
+  selectedClientId,
+  canSubmitPortalWork,
+  isAdminPreview
+}: {
+  workspace: ClientPortalWorkspace;
+  selectedClientId: string;
+  canSubmitPortalWork: boolean;
+  isAdminPreview: boolean;
+}) {
+  const items = workspace.launchChecklist;
+  const requiredOutstanding = items.filter((item) => item.isRequired && !item.isVerifiedGreen).length;
+
+  return (
+    <div className="portal-side-stack portal-launch-view">
+      <article className="admin-panel">
+        <div className="panel-heading">
+          <h2><ShieldCheck size={20} /> Website Launch Requirements</h2>
+          <span className={requiredOutstanding > 0 ? "status-pill status-pill--needs_selection" : "status-pill status-pill--purchased"}>
+            {requiredOutstanding > 0 ? `${requiredOutstanding} required item${requiredOutstanding === 1 ? "" : "s"} outstanding` : "All required items ready"}
+          </span>
+        </div>
+        <p className="muted">
+          These are the domain, hosting, email, and other portal products your project needs. Purchases are made separately
+          through the Fusion client portal at portal.fddynamics.com - a green checkmark only appears once Fusion has
+          verified the purchase.
+        </p>
+
+        {items.length ? (
+          <div className="launch-checklist-grid">
+            {items.map((item) => (
+              <LaunchChecklistCard
+                canSubmitPortalWork={canSubmitPortalWork}
+                isAdminPreview={isAdminPreview}
+                item={item}
+                key={item.requirementKey}
+                selectedClientId={selectedClientId}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="launch-checklist-empty">
+            <p>No launch requirements yet. Once your website recommendation is finalized, the products your project needs will appear here.</p>
+          </div>
+        )}
+      </article>
+    </div>
+  );
+}
+
+function LaunchChecklistCard({
+  item,
+  selectedClientId,
+  canSubmitPortalWork,
+  isAdminPreview
+}: {
+  item: LaunchChecklistItem;
+  selectedClientId: string;
+  canSubmitPortalWork: boolean;
+  isAdminPreview: boolean;
+}) {
+  const priceText = formatEstimatedCost(item);
+  const canSelfReport = canSubmitPortalWork && Boolean(item.portalProductId) && !item.isVerifiedGreen && item.status !== "verification_pending" && item.status !== "action_required" && item.status !== "not_required";
+  const canAdminVerify = isAdminPreview && Boolean(item.portalProductId) && !item.isVerifiedGreen && item.status !== "not_required";
+
+  return (
+    <div className={item.isVerifiedGreen ? "launch-checklist-card launch-checklist-card--green" : "launch-checklist-card"}>
+      <div className="launch-checklist-card__head">
+        <div>
+          <h3>{item.productName}</h3>
+          <p className="launch-checklist-card__category">{item.category.replace(/_/g, " ")}{item.isRequired ? " · Required" : " · Optional"}</p>
+        </div>
+        <span className={`status-pill status-pill--${item.status}`}>
+          {item.isVerifiedGreen ? <CheckCircle2 size={13} /> : item.status === "action_required" ? null : <Clock size={13} />} {statusLabel(item.status)}
+        </span>
+      </div>
+
+      <p className="launch-checklist-card__reason">{item.reason}</p>
+
+      {priceText ? (
+        <p className="launch-checklist-card__price">
+          {priceText}
+          {item.taxIncluded ? <span className="muted">tax included</span> : null}
+          {item.icannFeeApplies ? <span className="muted">+ ICANN fee</span> : null}
+        </p>
+      ) : null}
+
+      {item.renewalPriceNote ? <p className="launch-checklist-card__notes">{item.renewalPriceNote}</p> : null}
+      {item.verification?.notes ? <p className="launch-checklist-card__notes">Note: {item.verification.notes}</p> : null}
+      {item.verification?.externalReferenceId ? <p className="launch-checklist-card__notes">Order reference: {item.verification.externalReferenceId}</p> : null}
+
+      {item.portalUrl && !item.isVerifiedGreen && item.status !== "not_required" ? (
+        <div className="launch-checklist-card__actions">
+          <a className="secondary-button compact-button" href={item.portalUrl} rel="noreferrer" target="_blank">
+            Purchase through Fusion
+          </a>
+        </div>
+      ) : null}
+
+      {canSelfReport ? (
+        <form action={submitPurchaseConfirmationAction} className="launch-checklist-card__admin-verify">
+          <input name="clientId" type="hidden" value={selectedClientId} />
+          <input name="portalProductId" type="hidden" value={item.portalProductId || ""} />
+          <input name="externalReferenceId" placeholder="Order # (optional)" type="text" />
+          <button className="secondary-button compact-button" type="submit">I already bought this - notify Fusion</button>
+        </form>
+      ) : null}
+
+      {canAdminVerify ? (
+        <form action={adminVerifyPurchaseAction} className="launch-checklist-card__admin-verify">
+          <input name="clientId" type="hidden" value={selectedClientId} />
+          <input name="portalProductId" type="hidden" value={item.portalProductId || ""} />
+          <input name="externalReferenceId" placeholder="Order # to record" type="text" />
+          <button className="primary-button compact-button" type="submit">Admin: mark verified</button>
+        </form>
+      ) : null}
     </div>
   );
 }
