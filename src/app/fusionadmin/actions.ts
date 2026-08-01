@@ -73,7 +73,8 @@ moveThreadFolder,
 permanentlyDeleteThread,
 saveMessageChannel,
 sendMessage,
-syncChannelHistory
+syncChannelHistory,
+  triggerSmbAppDataSync,
 } from "@/lib/messages";
 import {
 cancelContentPost,
@@ -1262,6 +1263,9 @@ if (result.error) return { ok: false, error: result.error };
 
 revalidatePath("/fusionadmin/settings/connections");
 revalidatePath("/fusionadmin/messages");
+  if (input.isCoexistence) {
+    await triggerSmbAppDataSync(input.phoneNumberId, accessToken);
+  }
 return { ok: true };
 } catch (error) {
 return { ok: false, error: error instanceof Error ? error.message : "Something went wrong connecting WhatsApp." };
