@@ -1,0 +1,61 @@
+/**
+ * src/app/results/[token]/results.css
+ *
+ * Scoped, additive stylesheet for the Phase 6 shareable result page.
+ * Deliberately a dedicated file imported only by this route (rather than
+ * appended to the large shared src/app/globals.css) so it cannot collide
+ * with globals.css's existing dark-theme and light-theme .status-pill /
+ * .form-grid rules - mirrors the same "small additive file" approach used
+ * for src/app/portal-append.css in Phase 5.
+ */
+
+.decision-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1.1rem;
+  margin: 1rem 0;
+  border-radius: 4px;
+  font-size: 0.92rem;
+}
+
+.decision-banner--accepted {
+  border: 1px solid rgba(66, 217, 163, 0.45);
+  background: #123a2b;
+  color: #9ff5c7;
+}
+
+.decision-banner--declined {
+  border: 1px solid rgba(255, 107, 138, 0.45);
+  background: #351727;
+  color: #ffd9e2;
+}
+
+.result-actions {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(175, 212, 240, 0.18);
+}
+
+.result-actions h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.result-actions .flow-actions {
+  margin-top: 0.9rem;
+}
+
+.form-grid select {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid rgba(175, 212, 240, 0.32);
+  background: #0c1728;
+  color: var(--text);
+  padding: 0.8rem;
+  outline: none;
+}
+
+.form-grid select:focus {
+  border-color: rgba(49, 215, 255, 0.85);
+}
