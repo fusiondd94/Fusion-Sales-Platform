@@ -1197,6 +1197,26 @@ export async function markAllAdminNotificationsRead() {
 }
 
 /**
+ * sales_portal_product_selections requires organization_id and
+ * estimated_price (both NOT NULL with no default), which the checklist UI
+ * doesn't have on hand when a client or admin acts on a product. Resolves
+ * both from the catalog/org lookup so submitPortalProductConfirmation() and
+ * adminVerifyPortalProductPurchase() never send an incomplete insert.
+ */
+async function resolveSelectionInsertDefaults(portalProductId: string) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return null;
+
+  const [organizationId, { data: product }] = await Promise.all([
+    getDefaultOrganizationId(),
+    supabase.from("sales_portal_products").select("estimated_price").eq("id", portalProductId).single<{ estimated_price: number }>()
+  ]);
+
+  if (!organizationId || !product) return null;
+  return { organizationId, estimatedPrice: Number(product.estimated_price || 0) };
+}
+
+/**
  * Client-facing "I bought this" confirmation. This NEVER produces a verified
  * checkmark on its own - it records a pending self-report that a Fusion
  * admin must independently confirm via adminVerifyPortalProductPurchase().
@@ -1228,11 +1248,16 @@ export async function submitPortalProductConfirmation(input: {
       .eq("id", selectionId);
     if (error) return { ok: false, error: "Unable to update your selection." };
   } else {
+    const defaults = await resolveSelectionInsertDefaults(input.portalProductId);
+    if (!defaults) return { ok: false, error: "That product could not be found." };
+
     const { data: inserted, error } = await supabase
       .from("sales_portal_product_selections")
       .insert({
+        organization_id: defaults.organizationId,
         client_id: input.clientId,
         portal_product_id: input.portalProductId,
+        estimated_price: defaults.estimatedPrice,
         status: "purchase_started",
         selected_at: new Date().toISOString()
       })
@@ -1292,11 +1317,16 @@ export async function adminVerifyPortalProductPurchase(input: {
       .eq("id", selectionId);
     if (error) return { ok: false, error: "Unable to update the selection." };
   } else {
+    const defaults = await resolveSelectionInsertDefaults(input.portalProductId);
+    if (!defaults) return { ok: false, error: "That product could not be found." };
+
     const { data: inserted, error } = await supabase
       .from("sales_portal_product_selections")
       .insert({
+        organization_id: defaults.organizationId,
         client_id: input.clientId,
         portal_product_id: input.portalProductId,
+        estimated_price: defaults.estimatedPrice,
         status: "purchased",
         selected_at: new Date().toISOString()
       })
