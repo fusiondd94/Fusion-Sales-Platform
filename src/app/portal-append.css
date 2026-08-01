@@ -1027,3 +1027,129 @@
     max-height: none;
   }
 }
+
+/* ---------- Website Launch Requirements (Phase 5) ---------- */
+/* Additional status-pill color variants for the 10-value launch checklist
+   vocabulary. Purely additive - the base .status-pill and the variants
+   above (paid/resolved/active/completed etc.) are untouched. */
+.status-pill--purchased,
+.status-pill--connected,
+.status-pill--already_owned {
+  background: rgba(15, 91, 63, 0.12);
+  color: #0f5b3f;
+}
+
+.status-pill--verification_pending,
+.status-pill--purchase_started,
+.status-pill--selected,
+.status-pill--recommended {
+  background: rgba(211, 169, 57, 0.16);
+  color: #8a5a12;
+}
+
+.status-pill--action_required,
+.status-pill--needs_selection {
+  background: rgba(180, 35, 24, 0.1);
+  color: #b42318;
+}
+
+.status-pill--not_required {
+  background: var(--fusion-beige-100);
+  color: var(--fusion-text-muted, #667783);
+}
+
+.launch-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 0.85rem;
+}
+
+.launch-checklist-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--brand-white);
+  border: 1px solid var(--fusion-border, #dfe5ea);
+  border-radius: var(--fusion-radius-lg);
+  padding: 1rem 1.1rem;
+  box-shadow: var(--fusion-shadow-xs);
+}
+
+.launch-checklist-card--green {
+  border-color: rgba(15, 91, 63, 0.35);
+}
+
+.launch-checklist-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.launch-checklist-card__head h3 {
+  font-size: var(--fusion-text-sm);
+  color: var(--brand-charcoal);
+  margin: 0;
+}
+
+.launch-checklist-card__category {
+  font-size: var(--fusion-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fusion-text-subtle, #80909b);
+  margin: 0.1rem 0 0;
+}
+
+.launch-checklist-card__reason {
+  font-size: var(--fusion-text-sm);
+  color: var(--fusion-text-muted, #667783);
+}
+
+.launch-checklist-card__price {
+  font-size: var(--fusion-text-sm);
+  font-weight: 700;
+  color: var(--brand-charcoal);
+}
+
+.launch-checklist-card__price span.muted {
+  font-weight: 400;
+  font-size: var(--fusion-text-xs);
+  margin-left: 0.35rem;
+}
+
+.launch-checklist-card__notes {
+  font-size: var(--fusion-text-xs);
+  color: var(--fusion-text-subtle, #80909b);
+}
+
+.launch-checklist-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--fusion-border, #dfe5ea);
+}
+
+.launch-checklist-card__admin-verify {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--brand-gold);
+}
+
+.launch-checklist-card__admin-verify input {
+  border-radius: var(--fusion-radius-md);
+  border: 1px solid var(--fusion-border, #dfe5ea);
+  padding: 0.45rem 0.6rem;
+  font-size: var(--fusion-text-xs);
+}
+
+.launch-checklist-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--fusion-text-subtle, #80909b);
+}
