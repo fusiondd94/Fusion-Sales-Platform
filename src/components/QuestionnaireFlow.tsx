@@ -6,13 +6,32 @@ import type { AnswerValue, QuestionDefinition } from "@/lib/questionnaire-schema
 import { QUESTION_DEFINITIONS } from "@/lib/questionnaire-schema";
 import type { ConsultationReason, QuestionnaireState } from "@/lib/sales-questionnaire";
 import type { BudgetAssessmentResult, NextStep, NextStepAction } from "@/lib/sales-rules";
+import type { FeasibilityStatus, RecommendationPath } from "@/lib/recommendation-engine";
+import type { StoredRecommendation } from "@/lib/sales-recommendation";
 import {
+  generateRecommendationAction,
   requestConsultationAction,
   saveForLaterAction,
   startQuestionnaireAction,
   submitAnswerAction,
   submitBudgetAction
 } from "@/app/get-started/actions";
+
+const FEASIBILITY_LABELS: Record<FeasibilityStatus, string> = {
+  READY_TO_PROCEED: "Ready to proceed",
+  READY_WITH_REDUCED_SCOPE: "Ready with a smaller starting scope",
+  PAYMENT_PLAN_RECOMMENDED: "A payment plan can bridge the gap",
+  PHASED_BUILD_RECOMMENDED: "A phased build is recommended",
+  CONSULTATION_REQUIRED: "Let's talk it through together",
+  BUDGET_INSUFFICIENT: "Below our starting budget - here's what's still possible",
+  INFORMATION_INCOMPLETE: "A few more details will sharpen this plan"
+};
+
+const PATH_LABELS: Record<RecommendationPath["kind"], string> = {
+  recommended: "Recommended",
+  growth: "Growth option",
+  starter_phased: "Starter / phased option"
+};
 
 type BudgetNotice = {
   assessment: BudgetAssessmentResult;
@@ -49,6 +68,8 @@ export function QuestionnaireFlow({ initialState }: { initialState: Questionnair
   const [reviewKey, setReviewKey] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<Record<string, "sending" | "sent" | "error">>({});
   const [savedForLater, setSavedForLater] = useState(false);
+  const [recommendation, setRecommendation] = useState<StoredRecommendation | null>(null);
+  const [recommendationStatus, setRecommendationStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   const visitedRef = useRef<string[]>([]);
   const prevKeyRef = useRef<string | null>(null);
@@ -76,6 +97,21 @@ export function QuestionnaireFlow({ initialState }: { initialState: Questionnair
     setError(null);
   }, [state?.nextQuestion?.key, reviewKey]);
 
+  useEffect(() => {
+    if (!state || state.session.status !== "completed") return;
+    if (recommendationStatus !== "idle") return;
+    setRecommendationStatus("loading");
+    generateRecommendationAction().then((result) => {
+      if (result.ok) {
+        setRecommendation(result.recommendation);
+        setRecommendationStatus("ready");
+      } else {
+        setRecommendationStatus("error");
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.session.status, recommendationStatus]);
+
   if (!state) {
     return (
       <section className="flow-panel questionnaire-loading">
@@ -88,20 +124,10 @@ export function QuestionnaireFlow({ initialState }: { initialState: Questionnair
 
   if (state.session.status === "completed" && !budgetNotice && !specialAck) {
     return (
-      <section className="flow-panel questionnaire-complete">
-        <p className="eyebrow">All set</p>
-        <h2>Thanks - your website plan is on its way.</h2>
-        <p className="muted">
-          We have everything we need to put together a clear, honest recommendation for your project. A member of the
-          Fusion team will follow up shortly with your personalized plan.
-        </p>
-        <div className="metric-grid">
-          <div className="metric">
-            <ShieldCheck size={19} />
-            <span className="muted">Your answers are saved and linked to your lead record.</span>
-          </div>
-        </div>
-      </section>
+      <RecommendationSummaryView
+        status={recommendationStatus}
+        recommendation={recommendation}
+      />
     );
   }
 
@@ -472,6 +498,95 @@ function BudgetNoticeView({
           Continue planning my website <ArrowRight size={17} />
         </button>
       </div>
+    </section>
+  );
+}
+
+function RecommendationSummaryView({
+  status,
+  recommendation
+}: {
+  status: "idle" | "loading" | "ready" | "error";
+  recommendation: StoredRecommendation | null;
+}) {
+  if (status === "loading" || status === "idle") {
+    return (
+      <section className="flow-panel building-plan">
+        <p className="eyebrow">Almost there</p>
+        <h2>Putting together your website plan…</h2>
+        <p className="muted">Reviewing your answers against Fusion&apos;s packages and launch requirements.</p>
+      </section>
+    );
+  }
+
+  if (status === "error" || !recommendation) {
+    return (
+      <section className="flow-panel questionnaire-complete">
+        <p className="eyebrow">All set</p>
+        <h2>Thanks - your website plan is on its way.</h2>
+        <p className="muted">
+          We have everything we need to put together a clear, honest recommendation for your project. A member of the
+          Fusion team will follow up shortly with your personalized plan.
+        </p>
+        <div className="metric-grid">
+          <div className="metric">
+            <ShieldCheck size={19} />
+            <span className="muted">Your answers are saved and linked to your lead record.</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="flow-panel questionnaire-complete">
+      <p className="eyebrow">Your website plan</p>
+      <h2>{FEASIBILITY_LABELS[recommendation.feasibilityStatus]}</h2>
+      <p className="muted">{recommendation.recommendedNextAction}</p>
+
+      <div className="metric-grid">
+        <div className="metric">
+          <span className="muted">Total planned budget</span>
+          <strong>${recommendation.totalPlannedBudget.toLocaleString()}</strong>
+        </div>
+        <div className="metric">
+          <span className="muted">Estimated required launch products</span>
+          <strong>${recommendation.requiredPortalCost.toLocaleString()}</strong>
+        </div>
+        <div className="metric">
+          <span className="muted">Estimated design allocation</span>
+          <strong>${recommendation.designAllocation.toLocaleString()}</strong>
+        </div>
+        {recommendation.budgetGap > 0 ? (
+          <div className="metric">
+            <span className="muted">Budget gap</span>
+            <strong>${recommendation.budgetGap.toLocaleString()}</strong>
+          </div>
+        ) : (
+          <div className="metric">
+            <span className="muted">Remaining cushion</span>
+            <strong>${recommendation.remainingCushion.toLocaleString()}</strong>
+          </div>
+        )}
+      </div>
+
+      <div className="next-steps-grid">
+        {recommendation.paths.map((path) => (
+          <div className="next-step-card" key={path.kind}>
+            <h3>{PATH_LABELS[path.kind]}</h3>
+            <p className="muted">{path.packageName || "Custom scope"}</p>
+            <p className="muted">{path.reason}</p>
+            <span className="status-pill">
+              <ShieldCheck size={15} /> ${path.totalDesignCost.toLocaleString()}
+              {path.monthlyCost ? ` + $${path.monthlyCost.toLocaleString()}/mo` : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {recommendation.missingInformation.length > 0 ? (
+        <p className="muted">A few more details would sharpen this plan - our team may follow up with a couple of quick questions.</p>
+      ) : null}
     </section>
   );
 }
