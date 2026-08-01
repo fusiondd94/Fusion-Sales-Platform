@@ -50,4 +50,3 @@ export default async function SharedResultPage({ params }: { params: Promise<{ t
           </main>
         );
 }
-</main>
