@@ -29,7 +29,7 @@ export function WhatsAppEmbeddedSignup({ appId, configId }: { appId: string; con
   const [sdkState, setSdkState] = useState<SdkState>("loading");
   const [status, setStatus] = useState<SignupStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const signupDataRef = useRef<{ phoneNumberId?: string; wabaId?: string }>({});
+  const signupDataRef = useRef<{ phoneNumberId?: string; wabaId?: string; isCoexistence?: boolean }>({});
 
   // Preload the Facebook SDK as soon as this card mounts, well before the user
   // clicks anything. If we wait until the click handler to load it, the
@@ -92,7 +92,8 @@ export function WhatsAppEmbeddedSignup({ appId, configId }: { appId: string; con
       if (data.event === "FINISH" || String(data.event || "").startsWith("FINISH")) {
         signupDataRef.current = {
           phoneNumberId: data.data?.phone_number_id,
-          wabaId: data.data?.waba_id
+          wabaId: data.data?.waba_id,
+          isCoexistence: data.event === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING"
         };
       }
 
@@ -138,8 +139,8 @@ export function WhatsAppEmbeddedSignup({ appId, configId }: { appId: string; con
         }
 
         setStatus("connecting");
-        const { phoneNumberId, wabaId } = signupDataRef.current;
-        const result = await connectWhatsAppEmbeddedSignup({ code, phoneNumberId, wabaId });
+        const { phoneNumberId, wabaId, isCoexistence } = signupDataRef.current;
+        const result = await connectWhatsAppEmbeddedSignup({ code, phoneNumberId, wabaId, isCoexistence });
 
         if (!result.ok) {
           setStatus("error");
@@ -156,7 +157,7 @@ export function WhatsAppEmbeddedSignup({ appId, configId }: { appId: string; con
         override_default_response_type: true,
         extras: {
           setup: {},
-          featureType: "",
+          featureType: "whatsapp_business_app_onboarding",
           sessionInfoVersion: "3"
         }
       }
