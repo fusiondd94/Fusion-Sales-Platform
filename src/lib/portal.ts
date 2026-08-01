@@ -1,6 +1,14 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { getAdminEmails, getFusionAdminUser } from "@/lib/auth";
 import { sendCrmEmail } from "@/lib/email";
+import {
+  buildLaunchChecklist,
+  type LaunchChecklistItem,
+  type PortalProductInfo,
+  type RequirementSource,
+  type SelectionSource,
+  type VerificationSource
+} from "@/lib/launch-requirements";
 
 export type ClientProject = {
   id: string;
@@ -86,6 +94,7 @@ export type ClientPortalWorkspace = {
   tasks: ClientTask[];
   sections: TaskSection[];
   notifications: PortalNotification[];
+  launchChecklist: LaunchChecklistItem[];
   isAdminPreview?: boolean;
   availableClients?: Array<{
     id: string;
@@ -204,6 +213,137 @@ function adminPreviewProject(): ClientProject {
   };
 }
 
+/**
+ * Resolves the latest draft website recommendation for a client (via
+ * crm_clients.lead_id -> sales_website_recommendations.lead_id), loads its
+ * product requirements, portal product catalog info, and any purchase
+ * selections/verifications recorded for the client, then hands everything
+ * to the pure launch-requirements module to derive display statuses. Never
+ * trusts a bare "purchased" selection - see launch-requirements.ts.
+ */
+async function loadLaunchChecklist(clientId: string): Promise<LaunchChecklistItem[]> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return [];
+
+  const { data: client } = await supabase
+    .from("crm_clients")
+    .select("lead_id")
+    .eq("id", clientId)
+    .single<{ lead_id: string | null }>();
+
+  if (!client?.lead_id) return [];
+
+  const { data: recommendation } = await supabase
+    .from("sales_website_recommendations")
+    .select("id")
+    .eq("lead_id", client.lead_id)
+    .eq("status", "draft")
+    .order("version", { ascending: false })
+    .limit(1)
+    .single<{ id: string }>();
+
+  if (!recommendation?.id) return [];
+
+  const { data: requirementRows } = await supabase
+    .from("sales_product_requirements")
+    .select("requirement_key, requirement_type, is_required, notes, linked_portal_product_id")
+    .eq("recommendation_id", recommendation.id)
+    .in("requirement_type", ["portal_product", "client_provided"]);
+
+  const requirements: RequirementSource[] = (requirementRows || []).map((row) => ({
+    requirementKey: row.requirement_key,
+    requirementType: row.requirement_type,
+    isRequired: Boolean(row.is_required),
+    notes: row.notes,
+    portalProductId: row.linked_portal_product_id
+  }));
+
+  const portalProductIds = Array.from(
+    new Set(requirements.map((requirement) => requirement.portalProductId).filter((id): id is string => Boolean(id)))
+  );
+
+  const portalProducts = new Map<string, PortalProductInfo>();
+  if (portalProductIds.length) {
+    const { data: productRows } = await supabase
+      .from("sales_portal_products")
+      .select(
+        "id, product_key, product_name, category, estimated_price, price_unit, portal_url, recommended_use_cases, renewal_price_note, tax_included, icann_fee_applies"
+      )
+      .in("id", portalProductIds)
+      .eq("is_active", true);
+
+    for (const row of productRows || []) {
+      portalProducts.set(row.id, {
+        id: row.id,
+        productKey: row.product_key,
+        productName: row.product_name,
+        category: row.category,
+        estimatedPrice: Number(row.estimated_price || 0),
+        priceUnit: row.price_unit,
+        portalUrl: row.portal_url,
+        recommendedUseCases: row.recommended_use_cases || [],
+        renewalPriceNote: row.renewal_price_note,
+        taxIncluded: Boolean(row.tax_included),
+        icannFeeApplies: Boolean(row.icann_fee_applies)
+      });
+    }
+  }
+
+  const selectionsByPortalProductId = new Map<string, SelectionSource>();
+  if (portalProductIds.length) {
+    const { data: selectionRows } = await supabase
+      .from("sales_portal_product_selections")
+      .select("id, portal_product_id, status, selected_at")
+      .eq("client_id", clientId)
+      .in("portal_product_id", portalProductIds);
+
+    for (const row of selectionRows || []) {
+      selectionsByPortalProductId.set(row.portal_product_id, {
+        id: row.id,
+        portalProductId: row.portal_product_id,
+        status: row.status,
+        selectedAt: row.selected_at
+      });
+    }
+  }
+
+  const selectionIds = Array.from(selectionsByPortalProductId.values()).map((selection) => selection.id);
+  const verificationsBySelectionId = new Map<string, VerificationSource>();
+  if (selectionIds.length) {
+    const { data: verificationRows } = await supabase
+      .from("sales_purchase_verifications")
+      .select(
+        "id, portal_product_selection_id, verification_method, verified, verified_by, verified_at, status, external_reference_id, evidence_notes, expires_at"
+      )
+      .eq("client_id", clientId)
+      .in("portal_product_selection_id", selectionIds)
+      .order("created_at", { ascending: false });
+
+    for (const row of verificationRows || []) {
+      if (verificationsBySelectionId.has(row.portal_product_selection_id)) continue;
+      verificationsBySelectionId.set(row.portal_product_selection_id, {
+        id: row.id,
+        portalProductSelectionId: row.portal_product_selection_id,
+        verificationMethod: row.verification_method,
+        verified: Boolean(row.verified),
+        verifiedBy: row.verified_by,
+        verifiedAt: row.verified_at,
+        status: row.status,
+        externalReferenceId: row.external_reference_id,
+        evidenceNotes: row.evidence_notes,
+        expiresAt: row.expires_at
+      });
+    }
+  }
+
+  return buildLaunchChecklist({
+    requirements,
+    portalProducts,
+    selectionsByPortalProductId,
+    verificationsBySelectionId
+  });
+}
+
 async function buildPortalWorkspace(input: {
   user: {
     id: string;
@@ -221,7 +361,7 @@ async function buildPortalWorkspace(input: {
   const project = await ensureClientProject(input.client.id, input.actorId || input.user.id);
   if (!project) return null;
 
-  const [{ data: comments }, { data: files }, { data: tasks }, { data: sections }, { data: notifications }] = await Promise.all([
+  const [{ data: comments }, { data: files }, { data: tasks }, { data: sections }, { data: notifications }, launchChecklist] = await Promise.all([
     supabase
       .from("crm_project_comments")
       .select("id, author_user_id, author_name, author_role, body, page_url, marker_x, marker_y, status, created_at")
@@ -252,7 +392,8 @@ async function buildPortalWorkspace(input: {
       .eq("client_id", input.client.id)
       .eq("audience", "client")
       .order("created_at", { ascending: false })
-      .limit(50)
+      .limit(50),
+    loadLaunchChecklist(input.client.id)
   ]);
 
   const signedFiles = await Promise.all((files || []).map(async (file) => ({
@@ -274,6 +415,7 @@ async function buildPortalWorkspace(input: {
     tasks: (tasks || []) as ClientTask[],
     sections: (sections || []) as TaskSection[],
     notifications: (notifications || []) as PortalNotification[],
+    launchChecklist,
     isAdminPreview: input.isAdminPreview,
     availableClients: input.availableClients
   };
@@ -321,6 +463,7 @@ export async function getClientPortalWorkspace(clientId?: string): Promise<Clien
         tasks: [],
         sections: [],
         notifications: [],
+        launchChecklist: [],
         isAdminPreview: true,
         availableClients
       };
@@ -1050,5 +1193,144 @@ export async function markAllAdminNotificationsRead() {
     .is("read_at", null);
 
   if (error) return { ok: false, error: "Unable to update notifications." };
+  return { ok: true };
+}
+
+/**
+ * Client-facing "I bought this" confirmation. This NEVER produces a verified
+ * checkmark on its own - it records a pending self-report that a Fusion
+ * admin must independently confirm via adminVerifyPortalProductPurchase().
+ * See launch-requirements.ts deriveStatus() for the enforced invariant.
+ */
+export async function submitPortalProductConfirmation(input: {
+  clientId: string;
+  portalProductId: string;
+  externalReferenceId?: string;
+  notes?: string;
+}) {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.clientId || !input.portalProductId) return { ok: false, error: "Client and product are required." };
+
+  const { data: existingSelection } = await supabase
+    .from("sales_portal_product_selections")
+    .select("id")
+    .eq("client_id", input.clientId)
+    .eq("portal_product_id", input.portalProductId)
+    .maybeSingle<{ id: string }>();
+
+  let selectionId = existingSelection?.id || null;
+
+  if (selectionId) {
+    const { error } = await supabase
+      .from("sales_portal_product_selections")
+      .update({ status: "purchase_started" })
+      .eq("id", selectionId);
+    if (error) return { ok: false, error: "Unable to update your selection." };
+  } else {
+    const { data: inserted, error } = await supabase
+      .from("sales_portal_product_selections")
+      .insert({
+        client_id: input.clientId,
+        portal_product_id: input.portalProductId,
+        status: "purchase_started",
+        selected_at: new Date().toISOString()
+      })
+      .select("id")
+      .single<{ id: string }>();
+    if (error || !inserted) return { ok: false, error: "Unable to save your selection." };
+    selectionId = inserted.id;
+  }
+
+  const { error: verificationError } = await supabase.from("sales_purchase_verifications").insert({
+    client_id: input.clientId,
+    portal_product_selection_id: selectionId,
+    verification_method: "client_submitted_pending_review",
+    verified: false,
+    status: "client_submitted",
+    external_reference_id: input.externalReferenceId?.trim() || null,
+    evidence_notes: input.notes?.trim() || null
+  });
+
+  if (verificationError) return { ok: false, error: "Unable to submit your purchase for review." };
+  return { ok: true };
+}
+
+/**
+ * Admin-only. Checks getFusionAdminUser() server-side (never trusts a
+ * client-supplied "isAdmin" flag) before writing a verified purchase record.
+ * This is the ONLY path that can move a checklist item to a real green
+ * checkmark for a purchased (non-owned, non-bundled) product.
+ */
+export async function adminVerifyPortalProductPurchase(input: {
+  clientId: string;
+  portalProductId: string;
+  externalReferenceId?: string;
+  notes?: string;
+  expiresAt?: string | null;
+}) {
+  const admin = await getFusionAdminUser();
+  if (!admin?.isAllowed) return { ok: false, error: "Admin access is required to verify a purchase." };
+
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.clientId || !input.portalProductId) return { ok: false, error: "Client and product are required." };
+
+  const { data: existingSelection } = await supabase
+    .from("sales_portal_product_selections")
+    .select("id")
+    .eq("client_id", input.clientId)
+    .eq("portal_product_id", input.portalProductId)
+    .maybeSingle<{ id: string }>();
+
+  let selectionId = existingSelection?.id || null;
+
+  if (selectionId) {
+    const { error } = await supabase
+      .from("sales_portal_product_selections")
+      .update({ status: "purchased" })
+      .eq("id", selectionId);
+    if (error) return { ok: false, error: "Unable to update the selection." };
+  } else {
+    const { data: inserted, error } = await supabase
+      .from("sales_portal_product_selections")
+      .insert({
+        client_id: input.clientId,
+        portal_product_id: input.portalProductId,
+        status: "purchased",
+        selected_at: new Date().toISOString()
+      })
+      .select("id")
+      .single<{ id: string }>();
+    if (error || !inserted) return { ok: false, error: "Unable to create the selection." };
+    selectionId = inserted.id;
+  }
+
+  const { data: existingVerification } = await supabase
+    .from("sales_purchase_verifications")
+    .select("id")
+    .eq("portal_product_selection_id", selectionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+
+  const verificationPayload = {
+    client_id: input.clientId,
+    portal_product_selection_id: selectionId,
+    verification_method: "admin_manual_verification",
+    verified: true,
+    verified_by: admin.id,
+    verified_at: new Date().toISOString(),
+    status: "verified",
+    external_reference_id: input.externalReferenceId?.trim() || null,
+    evidence_notes: input.notes?.trim() || null,
+    expires_at: input.expiresAt || null
+  };
+
+  const { error: verificationError } = existingVerification
+    ? await supabase.from("sales_purchase_verifications").update(verificationPayload).eq("id", existingVerification.id)
+    : await supabase.from("sales_purchase_verifications").insert(verificationPayload);
+
+  if (verificationError) return { ok: false, error: "Unable to record the verification." };
   return { ok: true };
 }
