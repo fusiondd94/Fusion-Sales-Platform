@@ -24,6 +24,7 @@ import {
   type SubmitBudgetResult
 } from "@/lib/sales-questionnaire";
 import type { AnswerValue } from "@/lib/questionnaire-schema";
+import { generateRecommendationForSession, type StoredRecommendation } from "@/lib/sales-recommendation";
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days - "allow the client to return later"
 
@@ -99,4 +100,17 @@ export async function abandonQuestionnaireAction(): Promise<{ ok: boolean }> {
   if (!token) return { ok: false };
   await markSessionAbandoned(token);
   return { ok: true };
+}
+
+/**
+ * Phase 3: generates (or regenerates) the versioned website recommendation
+ * for the current session. Called automatically once the questionnaire
+ * reaches its final question - see QuestionnaireFlow's completion state.
+ */
+export async function generateRecommendationAction(): Promise<
+  { ok: true; recommendation: StoredRecommendation } | { ok: false; reason: string }
+> {
+  const token = await getSessionToken();
+  if (!token) return { ok: false, reason: "Your session has expired. Please refresh and start again." };
+  return generateRecommendationForSession(token);
 }
