@@ -1201,6 +1201,7 @@ export async function connectWhatsAppEmbeddedSignup(input: {
 code: string;
 phoneNumberId?: string;
 wabaId?: string;
+  isCoexistence?: boolean;
 }): Promise<{ ok: boolean; error?: string }> {
 const user = await requireFusionAdmin();
 if (!user.isAllowed) return { ok: false, error: "You are not authorized to do that." };
@@ -1251,8 +1252,9 @@ credentials: {
 phoneNumberId: input.phoneNumberId,
 wabaId: input.wabaId,
 accessToken,
-tokenExpiresAt: expiresAt,
-connectionMethod: "embedded_signup"
+  tokenExpiresAt: expiresAt,
+connectionMethod: input.isCoexistence ? "embedded_signup_coexistence" : "embedded_signup",
+  coexistence: input.isCoexistence ? "true" : "false"
 }
 });
 
