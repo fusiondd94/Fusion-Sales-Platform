@@ -575,7 +575,8 @@ export type ConsultationReason =
   | "undecided"
   | "wants_payment_plan"
   | "wants_phased_build"
-  | "other";
+  | "other"
+  | "schedule_call_from_results";
 
 export async function createConsultationRequest(
   sessionToken: string,
