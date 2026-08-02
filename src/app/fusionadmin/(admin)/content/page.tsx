@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, Facebook, Instagram, MessageCircle, PlusCircle, Send, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, CalendarClock, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import {
   cancelFusionContentPost,
@@ -84,9 +84,14 @@ export default async function FusionContentCalendarPage({
         title="Content calendar"
         description="Plan posts once and they publish automatically to Facebook, Instagram, and WhatsApp at the time you set."
         action={
-          <Link className="secondary-button compact-button" href="/fusionadmin/settings/connections">
-            <MessageCircle size={16} /> Manage channels
-          </Link>
+          <span style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Link className="primary-button compact-button" href="/fusionadmin/content/bulk">
+              <Sparkles size={16} /> Bulk schedule
+            </Link>
+            <Link className="secondary-button compact-button" href="/fusionadmin/settings/connections">
+              <MessageCircle size={16} /> Manage channels
+            </Link>
+          </span>
         }
       />
 
