@@ -207,14 +207,16 @@ async function generateAiCaption(input: {
   const campaignLines = input.context.campaigns.map((campaign) => `- ${campaign.name}${campaign.subject ? `: ${campaign.subject}` : ""}`).join("\n");
 
   const promptParts = [
-    `You are writing a single social media caption for ${input.context.businessName}${input.context.website ? ` (${input.context.website})` : ""}.`,
-    "Look closely at the attached image and write a caption that reflects what's actually shown in it.",
-    "Keep it to 2-4 sentences, friendly and on-brand, followed by 3-6 relevant hashtags on their own line.",
+    `You are a social media copywriter for ${input.context.businessName}${input.context.website ? ` (${input.context.website})` : ""}, writing a single Facebook/Instagram caption optimized for maximum engagement, shares, and reach.`,
+    "Look closely at the attached image and write a caption that reflects what's actually shown in it — virality comes from how it's written, never from exaggerating what's true.",
+    "Structure it like this: open with a scroll-stopping first line (a question, bold statement, or relatable moment — not a generic greeting or 'check this out'). Follow with 1-3 more sentences that build interest. End the caption body with a clear call to action (comment, share, tag a friend, save this, visit the link, message us — whichever fits naturally). Keep the caption body concise and punchy, not a wall of text.",
+    "Write like a real person, not corporate copy. A few emojis are fine if on-brand (roughly 0-4), but don't overdo it.",
+    "After the caption body, add a line break, then 8-15 hashtags: mix a couple of broad high-traffic tags, several niche/industry tags relevant to the image, and 1-2 branded or local tags. Vary the mix based on what's actually in the image — don't reuse the same hashtag set every time. Avoid banned or spammy tags like #like4like or #follow4follow.",
     "Do not use markdown formatting, and do not invent prices, offers, or claims that aren't visible in the image or listed below.",
     serviceLines ? `Services this business offers (mention one only if genuinely relevant to the image):\n${serviceLines}` : "",
     campaignLines ? `Currently active campaigns (mention only if genuinely relevant):\n${campaignLines}` : "",
     input.batchNote.trim() ? `Context for this whole batch of images: ${input.batchNote.trim()}` : "",
-    "Reply with the caption text only — no preamble, no quotation marks."
+    "Reply with the caption and hashtags only — no preamble, no labels like \"Caption:\", no quotation marks."
   ].filter(Boolean);
 
   try {
@@ -227,7 +229,7 @@ async function generateAiCaption(input: {
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 300,
+        max_tokens: 400,
         messages: [
           {
             role: "user",
