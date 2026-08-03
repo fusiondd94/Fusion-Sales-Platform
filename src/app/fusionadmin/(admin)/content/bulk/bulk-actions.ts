@@ -3,10 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireFusionAdmin } from "@/lib/auth";
-import { bulkScheduleContent, type BulkCadence } from "@/lib/bulk-content";
+import { bulkScheduleContent, type BulkCadence, type BulkPostType } from "@/lib/bulk-content";
 import type { ContentPlatform } from "@/lib/content";
 
 const ALLOWED_CADENCE: BulkCadence[] = ["daily", "every_two_days", "every_n_days", "weekly", "monthly"];
+const ALLOWED_POST_TYPES: BulkPostType[] = ["image", "story", "reel"];
 const ALLOWED_PLATFORMS: ContentPlatform[] = ["facebook_page", "instagram", "whatsapp_broadcast"];
 
 export async function bulkScheduleFusionContent(formData: FormData) {
@@ -19,6 +20,8 @@ export async function bulkScheduleFusionContent(formData: FormData) {
 
   const cadenceRaw = String(formData.get("cadence") || "daily");
   const cadence = ALLOWED_CADENCE.includes(cadenceRaw as BulkCadence) ? (cadenceRaw as BulkCadence) : "daily";
+  const postTypeRaw = String(formData.get("postType") || "image");
+  const postType = ALLOWED_POST_TYPES.includes(postTypeRaw as BulkPostType) ? (postTypeRaw as BulkPostType) : "image";
   const intervalDays = Number(formData.get("intervalDays") || 1);
   const startDate = String(formData.get("startDate") || "");
   const timeOfDay = String(formData.get("timeOfDay") || "09:00");
@@ -30,7 +33,7 @@ export async function bulkScheduleFusionContent(formData: FormData) {
     .filter((value): value is ContentPlatform => ALLOWED_PLATFORMS.includes(value as ContentPlatform));
 
   if (!files.length) {
-    redirect(`/fusionadmin/content/bulk?bulkError=${encodeURIComponent("Choose at least one image to schedule.")}`);
+    redirect(`/fusionadmin/content/bulk?bulkError=${encodeURIComponent("Choose at least one file to schedule.")}`);
   }
 
   if (!startDate) {
@@ -53,6 +56,7 @@ export async function bulkScheduleFusionContent(formData: FormData) {
     startDate,
     timeOfDay,
     platforms,
+    postType,
     batchNote
   });
 

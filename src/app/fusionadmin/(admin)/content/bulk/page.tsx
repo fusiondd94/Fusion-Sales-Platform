@@ -28,6 +28,7 @@ export default async function BulkContentSchedulePage({
     bulkFrom?: string;
     bulkTo?: string;
     bulkErrors?: string;
+    date?: string;
   }>;
 }) {
   const { channelStatus } = await getContentCalendarWorkspace();
@@ -88,16 +89,28 @@ export default async function BulkContentSchedulePage({
 
         <form action={bulkScheduleFusionContent} className="quick-form bulk-schedule-form" encType="multipart/form-data">
           <div className="bulk-field-group">
-            <span className="bulk-field-label">Images</span>
+            <span className="bulk-field-label">Post type</span>
+            <select defaultValue="image" name="postType">
+              <option value="image">Feed post (image)</option>
+              <option value="story">Story (image or video)</option>
+              <option value="reel">Reel (video only)</option>
+            </select>
+            <p className="muted bulk-field-hint">
+              Every file in this batch is scheduled as the same post type. Reels require video files (mp4, mov, or webm).
+            </p>
+          </div>
+
+          <div className="bulk-field-group">
+            <span className="bulk-field-label">Files</span>
             <label className="bulk-file-input">
-              <span>Choose images</span>
-              <input accept="image/*" multiple name="images" required type="file" />
+              <span>Choose files</span>
+              <input accept="image/*,video/*" multiple name="images" required type="file" />
             </label>
             <label className="bulk-file-input">
               <span>Or choose an entire folder</span>
-              <input accept="image/*" multiple name="images" type="file" {...{ webkitdirectory: "", directory: "" }} />
+              <input accept="image/*,video/*" multiple name="images" type="file" {...{ webkitdirectory: "", directory: "" }} />
             </label>
-            <p className="muted bulk-field-hint">Every image you add gets its own post, in the order they&apos;re selected.</p>
+            <p className="muted bulk-field-hint">Every file you add gets its own post, in the order they&apos;re selected.</p>
           </div>
 
           <div className="bulk-field-row">
@@ -120,7 +133,7 @@ export default async function BulkContentSchedulePage({
           <div className="bulk-field-row">
             <label>
               <span>Start date</span>
-              <input name="startDate" required type="date" />
+              <input defaultValue={params.date || undefined} name="startDate" required type="date" />
             </label>
             <label>
               <span>Time of day to post</span>
