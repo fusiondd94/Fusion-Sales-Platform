@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 export type ContentPlatform = "facebook_page" | "instagram" | "whatsapp_broadcast";
-export type ContentType = "text" | "image" | "carousel";
+export type ContentType = "text" | "image" | "carousel" | "story" | "reel";
 export type ContentPostStatus = "draft" | "scheduled" | "publishing" | "published" | "partially_published" | "failed" | "canceled";
 export type ContentTargetStatus = "pending" | "publishing" | "published" | "failed";
 
@@ -121,6 +121,11 @@ function validatePostInput(input: { caption: string; contentType: ContentType; m
   if (input.contentType === "text" && !input.caption.trim()) return "Write a caption for a text post.";
   if (input.contentType !== "text" && !input.mediaUrls.length) return "Upload at least one image.";
   if (input.contentType === "carousel" && input.mediaUrls.length < 2) return "A carousel needs at least two images.";
+  if (input.contentType === "reel" && !input.mediaUrls.length) return "Reels need a video file.";
+  if (input.contentType === "story" && !input.mediaUrls.length) return "Stories need an image or video file.";
+  if ((input.contentType === "story" || input.contentType === "reel") && input.platforms.includes("whatsapp_broadcast")) {
+    return "Stories and Reels can't be sent as WhatsApp broadcasts — choose Facebook or Instagram.";
+  }
   if (input.platforms.includes("instagram") && input.contentType === "text") {
     return "Instagram requires at least one image — it doesn't support text-only posts.";
   }
@@ -299,6 +304,85 @@ function graphError(payload: unknown): string {
   return error?.message || "Meta API error.";
 }
 
+// A video file keeps its extension through upload (see uploadContentMedia's
+// safeName sanitizer), so a simple extension check is enough to tell photo
+// vs. video media apart without storing a separate column for it.
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
+}
+
+// Video-based Instagram containers (Reels, video Stories) are processed
+// asynchronously by Meta — poll until status_code flips to FINISHED before
+// calling media_publish, or the publish call fails with "media not ready".
+async function pollIgContainerStatus(containerId: string, accessToken: string, base: string): Promise<{ ok: boolean; error?: string }> {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const res = await fetch(`${base}${containerId}?fields=status_code&access_token=${accessToken}`);
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: graphError(payload) };
+    const statusCode = (payload as { status_code?: string }).status_code;
+    if (statusCode === "FINISHED") return { ok: true };
+    if (statusCode === "ERROR" || statusCode === "EXPIRED") return { ok: false, error: "Meta could not process the video." };
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+  }
+  return { ok: false, error: "Timed out waiting for Meta to finish processing the video." };
+}
+
+async function publishFacebookReel(pageId: string, accessToken: string, post: ContentPost): Promise<{ ok: boolean; error?: string; externalId?: string }> {
+  const videoUrl = post.media_urls[0];
+  if (!videoUrl) return { ok: false, error: "Reels need a video file." };
+  if (!isVideoUrl(videoUrl)) return { ok: false, error: "Reels require a video file (mp4, mov, or webm)." };
+
+  const base = "https://graph.facebook.com/v19.0/";
+
+  try {
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) return { ok: false, error: "Could not read the uploaded video." };
+    const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+
+    const startRes = await fetch(base + pageId + "/video_reels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ upload_phase: "start", access_token: accessToken })
+    });
+    const startPayload = await startRes.json().catch(() => ({}));
+    if (!startRes.ok) return { ok: false, error: graphError(startPayload) };
+    const videoId = (startPayload as { video_id?: string }).video_id;
+    if (!videoId) return { ok: false, error: "Facebook did not return a video id to start the reel upload." };
+
+    const uploadRes = await fetch(`https://rupload.facebook.com/video-upload/v19.0/${videoId}`, {
+      method: "POST",
+      headers: {
+        "Authorization": `OAuth ${accessToken}`,
+        "offset": "0",
+        "file_size": String(videoBuffer.byteLength),
+        "Content-Type": "application/octet-stream"
+      },
+      body: videoBuffer
+    });
+    if (!uploadRes.ok) {
+      const uploadPayload = await uploadRes.json().catch(() => ({}));
+      return { ok: false, error: graphError(uploadPayload) || "Uploading the reel video to Facebook failed." };
+    }
+
+    const finishRes = await fetch(base + pageId + "/video_reels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        upload_phase: "finish",
+        video_id: videoId,
+        video_state: "PUBLISHED",
+        description: post.caption,
+        access_token: accessToken
+      })
+    });
+    const finishPayload = await finishRes.json().catch(() => ({}));
+    if (!finishRes.ok) return { ok: false, error: graphError(finishPayload) };
+    return { ok: true, externalId: videoId };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unexpected error publishing the Facebook reel." };
+  }
+}
+
 async function publishFacebookPage(channel: ChannelRow, post: ContentPost): Promise<{ ok: boolean; error?: string; externalId?: string }> {
   const pageId = channel.external_account_id;
   const accessToken = channel.credentials?.accessToken;
@@ -328,6 +412,37 @@ async function publishFacebookPage(channel: ChannelRow, post: ContentPost): Prom
       if (!res.ok) return { ok: false, error: graphError(payload) };
       const externalId = (payload as { post_id?: string; id?: string }).post_id || (payload as { id?: string }).id;
       return { ok: true, externalId };
+    }
+
+    if (post.content_type === "story") {
+      const mediaUrl = post.media_urls[0];
+      if (isVideoUrl(mediaUrl)) {
+        return { ok: false, error: "Facebook video stories aren't supported yet — use an image, or post this story to Instagram instead." };
+      }
+
+      const photoRes = await fetch(base + pageId + "/photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: mediaUrl, published: false, access_token: accessToken })
+      });
+      const photoPayload = await photoRes.json().catch(() => ({}));
+      if (!photoRes.ok) return { ok: false, error: graphError(photoPayload) };
+      const photoId = (photoPayload as { id?: string }).id;
+      if (!photoId) return { ok: false, error: "Facebook did not return a photo id for the story." };
+
+      const storyRes = await fetch(base + pageId + "/photo_stories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo_id: photoId, access_token: accessToken })
+      });
+      const storyPayload = await storyRes.json().catch(() => ({}));
+      if (!storyRes.ok) return { ok: false, error: graphError(storyPayload) };
+      const externalId = (storyPayload as { post_id?: string; id?: string }).post_id || (storyPayload as { id?: string }).id;
+      return { ok: true, externalId };
+    }
+
+    if (post.content_type === "reel") {
+      return publishFacebookReel(pageId, accessToken, post);
     }
 
     // Carousel: upload each photo unpublished, then attach them to one feed post.
@@ -374,7 +489,49 @@ async function publishInstagram(channel: ChannelRow, post: ContentPost): Promise
   try {
     let creationId: string | undefined;
 
-    if (post.content_type === "image") {
+    if (post.content_type === "story") {
+      const mediaUrl = post.media_urls[0];
+      const body: Record<string, unknown> = { media_type: "STORIES", access_token: accessToken };
+      if (isVideoUrl(mediaUrl)) body.video_url = mediaUrl;
+      else body.image_url = mediaUrl;
+
+      const res = await fetch(base + igId + "/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: graphError(payload) };
+      creationId = (payload as { id?: string }).id;
+
+      if (creationId && isVideoUrl(mediaUrl)) {
+        const status = await pollIgContainerStatus(creationId, accessToken, base);
+        if (!status.ok) return { ok: false, error: status.error };
+      }
+    } else if (post.content_type === "reel") {
+      const videoUrl = post.media_urls[0];
+      if (!videoUrl || !isVideoUrl(videoUrl)) return { ok: false, error: "Reels require a video file (mp4, mov, or webm)." };
+
+      const res = await fetch(base + igId + "/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          media_type: "REELS",
+          video_url: videoUrl,
+          caption: post.caption,
+          share_to_feed: true,
+          access_token: accessToken
+        })
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: graphError(payload) };
+      creationId = (payload as { id?: string }).id;
+
+      if (creationId) {
+        const status = await pollIgContainerStatus(creationId, accessToken, base);
+        if (!status.ok) return { ok: false, error: status.error };
+      }
+    } else if (post.content_type === "image") {
       const res = await fetch(base + igId + "/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -552,6 +709,12 @@ export async function publishDuePosts(): Promise<{ checked: number; published: n
   if (!supabase) return { checked: 0, published: 0, failed: 0 };
 
   const nowIso = new Date().toISOString();
+  // Video-based posts (Reels, video Stories) can take longer than one function
+  // invocation to finish processing on Meta's side. If a post is still stuck in
+  // "publishing" after 10 minutes — most likely a serverless timeout mid-poll —
+  // pick it back up here rather than leaving it stranded forever.
+  const staleThreshold = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
   const { data: dueRows } = await supabase
     .from("crm_content_posts")
     .select(POST_SELECT)
@@ -559,12 +722,21 @@ export async function publishDuePosts(): Promise<{ checked: number; published: n
     .lte("scheduled_at", nowIso)
     .limit(25);
 
+  const { data: stuckRows } = await supabase
+    .from("crm_content_posts")
+    .select(POST_SELECT)
+    .eq("status", "publishing")
+    .lt("updated_at", staleThreshold)
+    .limit(10);
+
   const duePosts = await attachTargets(supabase, (dueRows || []) as Omit<ContentPost, "targets">[]);
+  const stuckPosts = await attachTargets(supabase, (stuckRows || []) as Omit<ContentPost, "targets">[]);
+  const allPosts = [...duePosts, ...stuckPosts];
 
   let published = 0;
   let failed = 0;
 
-  for (const post of duePosts) {
+  for (const post of allPosts) {
     await publishOnePost(supabase, post);
     const { data: refreshed } = await supabase
       .from("crm_content_posts")
@@ -575,7 +747,7 @@ export async function publishDuePosts(): Promise<{ checked: number; published: n
     else failed += 1;
   }
 
-  return { checked: duePosts.length, published, failed };
+  return { checked: allPosts.length, published, failed };
 }
 
 export async function publishPostNow(postId: string): Promise<{ ok: boolean; error?: string }> {

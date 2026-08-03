@@ -1,7 +1,10 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { createContentPost, getOrganizationIdForContent, uploadContentMedia, type ContentPlatform } from "@/lib/content";
+import { createContentPost, getOrganizationIdForContent, uploadContentMedia, type ContentPlatform, type ContentType } from "@/lib/content";
 
 export type BulkCadence = "daily" | "every_two_days" | "every_n_days" | "weekly" | "monthly";
+export type BulkPostType = "image" | "story" | "reel";
+
+const VIDEO_EXTENSION_RE = /\.(mp4|mov|m4v|webm)$/i;
 
 export type BulkScheduleFile = {
   name: string;
@@ -17,6 +20,7 @@ export type BulkScheduleInput = {
   startDate: string; // "YYYY-MM-DD"
   timeOfDay: string; // "HH:mm"
   platforms: ContentPlatform[];
+  postType: BulkPostType;
   batchNote: string;
 };
 
@@ -266,8 +270,19 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
     fileErrors: []
   };
 
-  if (!input.files.length) return { ...empty, error: "Choose at least one image to schedule." };
+  if (!input.files.length) return { ...empty, error: "Choose at least one file to schedule." };
   if (!input.platforms.length) return { ...empty, error: "Choose at least one platform." };
+
+  if (input.postType === "reel") {
+    const nonVideo = input.files.filter((file) => !VIDEO_EXTENSION_RE.test(file.name));
+    if (nonVideo.length) {
+      return { ...empty, error: `Reels need video files (mp4, mov, or webm). ${nonVideo.map((file) => file.name).join(", ")} ${nonVideo.length === 1 ? "isn't" : "aren't"} a video.` };
+    }
+  }
+
+  if ((input.postType === "story" || input.postType === "reel") && input.platforms.includes("whatsapp_broadcast")) {
+    return { ...empty, error: "Stories and Reels can't go to WhatsApp broadcasts — choose Facebook or Instagram." };
+  }
 
   const supabase = getServiceClient();
   if (!supabase) return { ...empty, error: "Supabase CRM is not configured." };
@@ -307,12 +322,17 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
       continue;
     }
 
-    const aiCaption = await generateAiCaption({
-      imageBuffer: file.buffer,
-      mediaType: file.type || "image/jpeg",
-      context,
-      batchNote: input.batchNote
-    });
+    // Claude's vision captioning needs an actual image — video files (always
+    // true for reels, sometimes true for stories) fall back to the template.
+    const isVideoFile = VIDEO_EXTENSION_RE.test(file.name);
+    const aiCaption = isVideoFile
+      ? null
+      : await generateAiCaption({
+          imageBuffer: file.buffer,
+          mediaType: file.type || "image/jpeg",
+          context,
+          batchNote: input.batchNote
+        });
 
     const caption = aiCaption || buildTemplateCaption(context, input.batchNote, index);
     if (aiCaption) aiCaptionCount += 1;
@@ -322,7 +342,7 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
       actorId: input.actorId,
       title: file.name.replace(/\.[^.]+$/, "").slice(0, 80),
       caption,
-      contentType: "image",
+      contentType: input.postType as ContentType,
       mediaUrls: [uploadResult.url],
       platforms: input.platforms,
       scheduledAt
