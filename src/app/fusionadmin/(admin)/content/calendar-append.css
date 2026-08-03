@@ -1,3 +1,9 @@
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .calendar-day--clickable {
   cursor: pointer;
   position: relative;

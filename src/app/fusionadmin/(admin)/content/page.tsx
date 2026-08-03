@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, CalendarClock, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import {
   cancelFusionContentPost,
@@ -42,8 +42,26 @@ function buildCalendarDays(referenceDate: Date): CalendarDay[] {
   });
 }
 
+// Matches ORG_TIME_ZONE in src/lib/content.ts — the business operates in a
+// single timezone today, so times are displayed and edited in that zone
+// rather than the server's (UTC) or the admin's own browser timezone.
+const DISPLAY_TIME_ZONE = "America/New_York";
+
+// Builds the "YYYY-MM-DDTHH:mm" value a <input type="datetime-local"> needs,
+// representing the post's scheduled time in DISPLAY_TIME_ZONE (not UTC) —
+// otherwise re-saving the edit form unchanged would silently shift the time.
 function toDateTimeLocal(value: string) {
-  return new Date(value).toISOString().slice(0, 16);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: DISPLAY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(new Date(value));
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
 function contentTypeLabel(contentType: string) {
@@ -58,20 +76,49 @@ function statusLabel(status: string) {
   return status.replace(/_/g, " ");
 }
 
+// Buckets a post's UTC-stored scheduled_at into the calendar day it falls on
+// in DISPLAY_TIME_ZONE, not the server's own timezone — otherwise a post near
+// midnight could show up under the wrong day on the calendar.
+function zonedDateKey(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || "00";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function parseMonthParam(month: string | undefined): Date {
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [year, monthNum] = month.split("-").map(Number);
+    if (monthNum >= 1 && monthNum <= 12) return new Date(year, monthNum - 1, 1);
+  }
+  return new Date();
+}
+
+function monthParamKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function shiftMonth(date: Date, delta: number) {
+  return new Date(date.getFullYear(), date.getMonth() + delta, 1);
+}
+
 export default async function FusionContentCalendarPage({
   searchParams
 }: {
-  searchParams: Promise<{ contentError?: string }>;
+  searchParams: Promise<{ contentError?: string; month?: string }>;
 }) {
   const { posts, channelStatus } = await getContentCalendarWorkspace();
-  const { contentError } = await searchParams;
-  const referenceDate = new Date();
+  const { contentError, month } = await searchParams;
+  const referenceDate = parseMonthParam(month);
   const monthDays = buildCalendarDays(referenceDate);
   const monthTitle = referenceDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const prevMonthKey = monthParamKey(shiftMonth(referenceDate, -1));
+  const nextMonthKey = monthParamKey(shiftMonth(referenceDate, 1));
+  const currentMonthKey = monthParamKey(new Date());
+  const isCurrentMonth = monthParamKey(referenceDate) === currentMonthKey;
 
   const postsByDate: Record<string, CalendarPostSummary[]> = {};
   for (const post of posts) {
-    const key = monthKey(new Date(post.scheduled_at));
+    const key = zonedDateKey(new Date(post.scheduled_at), "America/New_York");
     const list = postsByDate[key] || [];
     list.push({
       id: post.id,
@@ -132,7 +179,20 @@ export default async function FusionContentCalendarPage({
         <article className="admin-panel panel-span-2">
           <div className="panel-heading">
             <h2><CalendarClock size={20} /> {monthTitle}</h2>
-            <span className="status-pill">{posts.length} posts</span>
+            <span className="calendar-nav">
+              <Link aria-label="Previous month" className="ghost-button compact-button" href={`/fusionadmin/content?month=${prevMonthKey}`}>
+                <ChevronLeft size={16} />
+              </Link>
+              {!isCurrentMonth ? (
+                <Link className="secondary-button compact-button" href="/fusionadmin/content">
+                  Today
+                </Link>
+              ) : null}
+              <Link aria-label="Next month" className="ghost-button compact-button" href={`/fusionadmin/content?month=${nextMonthKey}`}>
+                <ChevronRight size={16} />
+              </Link>
+              <span className="status-pill">{posts.length} posts</span>
+            </span>
           </div>
           <ContentCalendarGrid channelStatus={channelStatus} monthDays={monthDays} monthTitle={monthTitle} postsByDate={postsByDate} />
           {!posts.length ? <p className="admin-empty calendar-empty-note">No posts scheduled yet. Click a day above, or use the form to plan your first one.</p> : null}
@@ -180,7 +240,7 @@ export default async function FusionContentCalendarPage({
                 <div className="content-post-card__head">
                   <div>
                     <strong>{post.title || "Untitled post"}</strong>
-                    <span className="muted">{new Date(post.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</span>
+                    <span className="muted">{new Date(post.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: DISPLAY_TIME_ZONE })}</span>
                   </div>
                   <span style={{ display: "flex", gap: 6 }}>
                     <span className="status-pill">{contentTypeLabel(post.content_type)}</span>
@@ -269,7 +329,7 @@ export default async function FusionContentCalendarPage({
                   <div className="content-post-card__head">
                     <div>
                       <strong>{post.title || "Untitled post"}</strong>
-                      <span className="muted">{new Date(post.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</span>
+                      <span className="muted">{new Date(post.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: DISPLAY_TIME_ZONE })}</span>
                     </div>
                     <span className="status-pill">{statusLabel(post.status)}</span>
                   </div>
