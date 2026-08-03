@@ -10,8 +10,8 @@ import {
 import { getContentCalendarWorkspace, platformLabel, type ContentPlatform, type ContentPost } from "@/lib/content";
 import { EmptyState, PageHeader } from "../crm-ui";
 import { FormError } from "@/components/ui";
+import { ContentCalendarGrid, type CalendarDay, type CalendarPostSummary } from "./calendar-grid";
 
-const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const PLATFORM_ICONS: Record<ContentPlatform, typeof Facebook> = {
   facebook_page: Facebook,
   instagram: Instagram,
@@ -24,7 +24,7 @@ function monthKey(date: Date) {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-function buildCalendarDays(referenceDate: Date) {
+function buildCalendarDays(referenceDate: Date): CalendarDay[] {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
   const firstOfMonth = new Date(year, month, 1);
@@ -34,16 +34,12 @@ function buildCalendarDays(referenceDate: Date) {
     const date = new Date(gridStart);
     date.setDate(gridStart.getDate() + index);
     return {
-      date,
+      dateIso: date.toISOString(),
       key: monthKey(date),
       isCurrentMonth: date.getMonth() === month,
       dayNumber: date.getDate()
     };
   });
-}
-
-function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 function toDateTimeLocal(value: string) {
@@ -65,12 +61,18 @@ export default async function FusionContentCalendarPage({
   const monthDays = buildCalendarDays(referenceDate);
   const monthTitle = referenceDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  const postsByDate = new Map<string, ContentPost[]>();
+  const postsByDate: Record<string, CalendarPostSummary[]> = {};
   for (const post of posts) {
     const key = monthKey(new Date(post.scheduled_at));
-    const list = postsByDate.get(key) || [];
-    list.push(post);
-    postsByDate.set(key, list);
+    const list = postsByDate[key] || [];
+    list.push({
+      id: post.id,
+      status: post.status,
+      title: post.title,
+      caption: post.caption,
+      scheduledAtIso: post.scheduled_at
+    });
+    postsByDate[key] = list;
   }
 
   const anyChannelConnected = channelStatus.facebook_page || channelStatus.instagram || channelStatus.whatsapp_broadcast;
@@ -82,7 +84,7 @@ export default async function FusionContentCalendarPage({
       <PageHeader
         eyebrow="Marketing"
         title="Content calendar"
-        description="Plan posts once and they publish automatically to Facebook, Instagram, and WhatsApp at the time you set."
+        description="Click any day to schedule a post, story, or reel — plan once and it publishes automatically to Facebook and Instagram at the time you set."
         action={
           <span style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Link className="primary-button compact-button" href="/fusionadmin/content/bulk">
@@ -124,25 +126,8 @@ export default async function FusionContentCalendarPage({
             <h2><CalendarClock size={20} /> {monthTitle}</h2>
             <span className="status-pill">{posts.length} posts</span>
           </div>
-          <div className="calendar-board" aria-label={`${monthTitle} content calendar`}>
-            <div className="calendar-weekdays">
-              {weekdayLabels.map((label) => <span key={label}>{label}</span>)}
-            </div>
-            <div className="calendar-grid">
-              {monthDays.map((day) => (
-                <div className={day.isCurrentMonth ? "calendar-day" : "calendar-day outside-month"} key={day.key}>
-                  <span className="calendar-day-number">{day.dayNumber}</span>
-                  {(postsByDate.get(day.key) || []).map((post) => (
-                    <a className={"calendar-event content-calendar-event content-calendar-event--" + post.status} href={`#post-${post.id}`} key={post.id}>
-                      <strong>{formatTime(post.scheduled_at)}</strong>
-                      <span>{post.title || post.caption.slice(0, 40) || "Untitled post"}</span>
-                    </a>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-          {!posts.length ? <p className="admin-empty calendar-empty-note">No posts scheduled yet. Use the form to plan your first one.</p> : null}
+          <ContentCalendarGrid channelStatus={channelStatus} monthDays={monthDays} monthTitle={monthTitle} postsByDate={postsByDate} />
+          {!posts.length ? <p className="admin-empty calendar-empty-note">No posts scheduled yet. Click a day above, or use the form to plan your first one.</p> : null}
         </article>
 
         <article className="admin-panel">
@@ -257,7 +242,7 @@ export default async function FusionContentCalendarPage({
                 </div>
               </div>
             ))}
-            {!upcomingPosts.length ? <EmptyState>No upcoming posts. Schedule one above.</EmptyState> : null}
+            {!upcomingPosts.length ? <EmptyState>No upcoming posts. Click a day on the calendar, or use the form above.</EmptyState> : null}
           </div>
         </article>
 
