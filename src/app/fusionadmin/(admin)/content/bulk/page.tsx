@@ -104,7 +104,7 @@ export default async function BulkContentSchedulePage({
             <span className="bulk-field-label">Files</span>
             <label className="bulk-file-input">
               <span>Choose files</span>
-              <input accept="image/*,video/*" multiple name="images" required type="file" />
+              <input accept="image/*,video/*" multiple name="images" type="file" />
             </label>
             <label className="bulk-file-input">
               <span>Or choose an entire folder</span>
