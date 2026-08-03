@@ -116,6 +116,42 @@ export async function getContentCalendarWorkspace() {
   return { posts, channelStatus };
 }
 
+// The business operates in a single timezone today — matches the fallback
+// already used elsewhere (bulk-content.ts, crm_organizations.default_time_zone).
+const ORG_TIME_ZONE = "America/New_York";
+
+// Converts a wall-clock date + time in a given IANA timezone to a UTC ISO
+// string via the standard double round-trip through Intl, so it stays correct
+// across DST boundaries without pulling in a date library.
+function zonedDateTimeToUtcIso(dateStr: string, timeStr: string, timeZone: string): string {
+  const naiveUtc = new Date(`${dateStr}T${timeStr}:00Z`);
+  const asZoned = new Date(naiveUtc.toLocaleString("en-US", { timeZone }));
+  const asUtc = new Date(naiveUtc.toLocaleString("en-US", { timeZone: "UTC" }));
+  const offsetMs = asUtc.getTime() - asZoned.getTime();
+  return new Date(naiveUtc.getTime() + offsetMs).toISOString();
+}
+
+// Forms across this app submit "scheduledAt" two different ways: a bare
+// "YYYY-MM-DDTHH:mm" string with no timezone info (from a plain
+// <input type="datetime-local">, used by the quick-schedule panel, the edit
+// form, and the calendar-click modal), or a full UTC ISO string already
+// ending in "Z" (built by the bulk scheduler, which already knows to convert
+// from the org's timezone). A bare string with no timezone marker would
+// otherwise get parsed as the SERVER's local time (UTC on Vercel) by
+// `new Date(...)`, silently shifting the intended publish time by several
+// hours. Treat anything without an explicit offset as wall-clock time in the
+// business's own timezone instead; leave anything with an offset untouched.
+function parseScheduledAt(raw: string): Date {
+  const trimmed = raw.trim();
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
+    return new Date(trimmed);
+  }
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return new Date(trimmed);
+  const [, y, mo, d, h, mi] = match;
+  return new Date(zonedDateTimeToUtcIso(`${y}-${mo}-${d}`, `${h}:${mi}`, ORG_TIME_ZONE));
+}
+
 function validatePostInput(input: { caption: string; contentType: ContentType; mediaUrls: string[]; platforms: ContentPlatform[] }) {
   if (!input.platforms.length) return "Choose at least one platform.";
   if (input.contentType === "text" && !input.caption.trim()) return "Write a caption for a text post.";
@@ -149,7 +185,7 @@ export async function createContentPost(input: {
   const validationError = validatePostInput(input);
   if (validationError) return { ok: false, error: validationError };
 
-  const scheduledDate = new Date(input.scheduledAt);
+  const scheduledDate = parseScheduledAt(input.scheduledAt);
   if (Number.isNaN(scheduledDate.getTime())) return { ok: false, error: "Choose a valid date and time." };
 
   const { data: post, error } = await supabase
@@ -209,7 +245,7 @@ export async function updateContentPost(input: {
   const validationError = validatePostInput({ caption: input.caption, contentType, mediaUrls, platforms: input.platforms });
   if (validationError) return { ok: false, error: validationError };
 
-  const scheduledDate = new Date(input.scheduledAt);
+  const scheduledDate = parseScheduledAt(input.scheduledAt);
   if (Number.isNaN(scheduledDate.getTime())) return { ok: false, error: "Choose a valid date and time." };
 
   const { error } = await supabase
