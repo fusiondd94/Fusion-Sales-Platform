@@ -46,6 +46,14 @@ function toDateTimeLocal(value: string) {
   return new Date(value).toISOString().slice(0, 16);
 }
 
+function contentTypeLabel(contentType: string) {
+  if (contentType === "reel") return "Reel";
+  if (contentType === "story") return "Story";
+  if (contentType === "carousel") return "Carousel";
+  if (contentType === "text") return "Text";
+  return "Feed post";
+}
+
 function statusLabel(status: string) {
   return status.replace(/_/g, " ");
 }
@@ -174,7 +182,10 @@ export default async function FusionContentCalendarPage({
                     <strong>{post.title || "Untitled post"}</strong>
                     <span className="muted">{new Date(post.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</span>
                   </div>
-                  <span className="status-pill">{statusLabel(post.status)}</span>
+                  <span style={{ display: "flex", gap: 6 }}>
+                    <span className="status-pill">{contentTypeLabel(post.content_type)}</span>
+                    <span className="status-pill">{statusLabel(post.status)}</span>
+                  </span>
                 </div>
                 <p className="content-post-card__caption">{post.caption}</p>
                 {post.media_urls.length ? (
