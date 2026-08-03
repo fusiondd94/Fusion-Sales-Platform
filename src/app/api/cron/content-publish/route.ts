@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { publishDuePosts } from "@/lib/content";
 
+// Reels/video Stories can take a while for Meta to process, so give this
+// route more headroom than the default function timeout.
+export const maxDuration = 60;
+
 // Triggered two ways:
 //  1. Vercel Cron once a day (see vercel.json) as a safety net.
 //  2. A Supabase pg_cron job calling this every few minutes for near-real-time
