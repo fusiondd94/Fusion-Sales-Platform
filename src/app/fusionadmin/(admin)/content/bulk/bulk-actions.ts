@@ -63,19 +63,20 @@ export async function bulkScheduleFusionContent(formData: FormData) {
   revalidatePath("/fusionadmin/content");
   revalidatePath("/fusionadmin/content/bulk");
 
-  if (!result.ok) {
+  if (!result.ok || !result.batchId) {
     redirect(`/fusionadmin/content/bulk?bulkError=${encodeURIComponent(result.error || "Nothing could be scheduled.")}`);
   }
 
+  // Nothing is actually scheduled yet — the batch was created as drafts.
+  // Send the admin to review the generated captions before anything goes on
+  // the calendar.
   const params = new URLSearchParams({
-    bulkScheduled: String(result.scheduledCount),
-    bulkFailed: String(result.failedCount),
-    bulkAi: String(result.aiCaptionCount),
-    bulkTemplate: String(result.templateCaptionCount)
+    batch: result.batchId,
+    draftFailed: String(result.failedCount),
+    draftAi: String(result.aiCaptionCount),
+    draftTemplate: String(result.templateCaptionCount)
   });
-  if (result.firstScheduledAt) params.set("bulkFrom", result.firstScheduledAt);
-  if (result.lastScheduledAt) params.set("bulkTo", result.lastScheduledAt);
-  if (result.fileErrors.length) params.set("bulkErrors", result.fileErrors.slice(0, 5).join(" | "));
+  if (result.fileErrors.length) params.set("draftErrors", result.fileErrors.slice(0, 5).join(" | "));
 
-  redirect(`/fusionadmin/content/bulk?${params.toString()}`);
+  redirect(`/fusionadmin/content/bulk/review?${params.toString()}`);
 }

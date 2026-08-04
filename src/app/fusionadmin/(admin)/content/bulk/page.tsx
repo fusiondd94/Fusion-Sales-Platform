@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarRange, CheckCircle2, Sparkles } from "lucide-react";
+import { AlertTriangle, CalendarRange, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { bulkScheduleFusionContent } from "./bulk-actions";
 import { getContentCalendarWorkspace, platformLabel, type ContentPlatform } from "@/lib/content";
@@ -8,39 +8,28 @@ import "./bulk-append.css";
 
 const BULK_PLATFORMS: ContentPlatform[] = ["facebook_page", "instagram"];
 
-function formatRange(fromIso?: string, toIso?: string) {
-  if (!fromIso) return "";
-  const from = new Date(fromIso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  if (!toIso || toIso === fromIso) return from;
-  const to = new Date(toIso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  return `${from} → ${to}`;
-}
+// A real batch (20-30 files) uploads media and calls Claude's vision API for
+// each one — give this route's function real headroom instead of the
+// platform default, which a batch that size would otherwise blow right past.
+export const maxDuration = 300;
 
 export default async function BulkContentSchedulePage({
   searchParams
 }: {
   searchParams: Promise<{
     bulkError?: string;
-    bulkScheduled?: string;
-    bulkFailed?: string;
-    bulkAi?: string;
-    bulkTemplate?: string;
-    bulkFrom?: string;
-    bulkTo?: string;
-    bulkErrors?: string;
     date?: string;
   }>;
 }) {
   const { channelStatus } = await getContentCalendarWorkspace();
   const params = await searchParams;
-  const hasResult = params.bulkScheduled !== undefined;
 
   return (
     <div className="admin-content">
       <PageHeader
         eyebrow="Marketing"
         title="Bulk schedule content"
-        description="Upload a folder of images, set a cadence, and let Claude write on-brand captions and fill the calendar for you."
+        description="Upload a folder of images, set a cadence, and let Claude write on-brand captions. You'll review every caption before anything actually gets scheduled."
         action={
           <Link className="secondary-button compact-button" href="/fusionadmin/content">
             <CalendarRange size={16} /> Back to calendar
@@ -49,30 +38,6 @@ export default async function BulkContentSchedulePage({
       />
 
       <FormError message={params.bulkError} />
-
-      {hasResult && !params.bulkError ? (
-        <div className="bulk-result-banner">
-          <CheckCircle2 aria-hidden="true" size={18} />
-          <div>
-            <strong>
-              Scheduled {params.bulkScheduled} post{params.bulkScheduled === "1" ? "" : "s"}
-              {params.bulkFrom ? ` from ${formatRange(params.bulkFrom, params.bulkTo)}` : ""}.
-            </strong>
-            <p className="muted">
-              {params.bulkAi && Number(params.bulkAi) > 0 ? `${params.bulkAi} caption${params.bulkAi === "1" ? "" : "s"} written by Claude` : null}
-              {params.bulkAi && Number(params.bulkAi) > 0 && params.bulkTemplate && Number(params.bulkTemplate) > 0 ? " · " : null}
-              {params.bulkTemplate && Number(params.bulkTemplate) > 0
-                ? `${params.bulkTemplate} caption${params.bulkTemplate === "1" ? "" : "s"} used the template fallback (add ANTHROPIC_API_KEY in Vercel to enable AI captions)`
-                : null}
-              {params.bulkFailed && Number(params.bulkFailed) > 0 ? ` · ${params.bulkFailed} image${params.bulkFailed === "1" ? "" : "s"} could not be scheduled` : null}
-            </p>
-            {params.bulkErrors ? <p className="muted bulk-result-errors">{params.bulkErrors}</p> : null}
-            <Link className="secondary-button compact-button" href="/fusionadmin/content">
-              View on the calendar
-            </Link>
-          </div>
-        </div>
-      ) : null}
 
       <div className="admin-panel bulk-schedule-panel">
         <div className="panel-heading">
@@ -84,7 +49,8 @@ export default async function BulkContentSchedulePage({
         <p className="muted bulk-schedule-intro">
           Captions are written by Claude based on what&apos;s in each photo, plus your active services and current
           campaigns pulled live from the CRM. If Claude can&apos;t be reached, a caption is still generated from your
-          business info so nothing is left blank.
+          business info so nothing is left blank. Nothing is scheduled yet after this step — you&apos;ll land on a
+          review page to check every caption first.
         </p>
 
         <form action={bulkScheduleFusionContent} className="quick-form bulk-schedule-form" encType="multipart/form-data">
