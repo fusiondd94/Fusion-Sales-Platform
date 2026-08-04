@@ -231,6 +231,7 @@ export function AdminShell({
                           className={active ? "active" : ""}
                           href={item.href}
                           key={item.href}
+                          prefetch={false}
                           title={collapsed ? item.label : undefined}
                         >
                           <Icon size={17} />
@@ -248,10 +249,10 @@ export function AdminShell({
           })}
         </nav>
         <div className="admin-sidebar-footer">
-          <Link href="/portal" className="ghost-button" title={collapsed ? "Client portal" : undefined}>
+          <Link href="/portal" className="ghost-button" prefetch={false} title={collapsed ? "Client portal" : undefined}>
             <MonitorUp size={16} /> <span>Client portal</span>
           </Link>
-          <Link href="/" className="ghost-button" title={collapsed ? "Sales site" : undefined}>
+          <Link href="/" className="ghost-button" prefetch={false} title={collapsed ? "Sales site" : undefined}>
             <BarChart3 size={16} /> <span>Sales site</span>
           </Link>
           <SignOutButton action={signOutFusionAdmin} />
@@ -315,13 +316,13 @@ export function AdminShell({
             </button>
             {userMenuOpen ? (
               <div className="admin-user-dropdown" role="menu">
-                <Link className="admin-user-dropdown__item" href="/fusionadmin/settings" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                <Link className="admin-user-dropdown__item" href="/fusionadmin/settings" onClick={() => setUserMenuOpen(false)} prefetch={false} role="menuitem">
                   <Settings size={16} /> Account settings
                 </Link>
-                <Link className="admin-user-dropdown__item" href="/portal" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                <Link className="admin-user-dropdown__item" href="/portal" onClick={() => setUserMenuOpen(false)} prefetch={false} role="menuitem">
                   <MonitorUp size={16} /> Client portal
                 </Link>
-                <Link className="admin-user-dropdown__item" href="/" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                <Link className="admin-user-dropdown__item" href="/" onClick={() => setUserMenuOpen(false)} prefetch={false} role="menuitem">
                   <BarChart3 size={16} /> Sales site
                 </Link>
                 <div className="admin-user-dropdown__divider" />
