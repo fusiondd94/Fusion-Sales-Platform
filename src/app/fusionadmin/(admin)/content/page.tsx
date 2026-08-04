@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import {
   cancelFusionContentPost,
@@ -104,10 +104,10 @@ function shiftMonth(date: Date, delta: number) {
 export default async function FusionContentCalendarPage({
   searchParams
 }: {
-  searchParams: Promise<{ contentError?: string; month?: string }>;
+  searchParams: Promise<{ contentError?: string; month?: string; published?: string }>;
 }) {
   const { posts, channelStatus } = await getContentCalendarWorkspace();
-  const { contentError, month } = await searchParams;
+  const { contentError, month, published } = await searchParams;
   const referenceDate = parseMonthParam(month);
   const monthDays = buildCalendarDays(referenceDate);
   const monthTitle = referenceDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -153,6 +153,15 @@ export default async function FusionContentCalendarPage({
       />
 
       <FormError message={contentError} />
+
+      {published && Number(published) > 0 ? (
+        <p className="content-success-banner" role="status">
+          <CheckCircle2 aria-hidden="true" size={16} />
+          <span>
+            Published {published} post{published === "1" ? "" : "s"} — {published === "1" ? "it's" : "they're"} now on the calendar.
+          </span>
+        </p>
+      ) : null}
 
       {!anyChannelConnected ? (
         <p className="fusion-form-error" role="status">
