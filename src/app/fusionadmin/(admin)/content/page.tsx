@@ -115,6 +115,7 @@ export default async function FusionContentCalendarPage({
   const nextMonthKey = monthParamKey(shiftMonth(referenceDate, 1));
   const currentMonthKey = monthParamKey(new Date());
   const isCurrentMonth = monthParamKey(referenceDate) === currentMonthKey;
+  const viewedMonthKey = monthParamKey(referenceDate);
 
   const postsByDate: Record<string, CalendarPostSummary[]> = {};
   for (const post of posts) {
@@ -129,6 +130,14 @@ export default async function FusionContentCalendarPage({
     });
     postsByDate[key] = list;
   }
+
+  // The header badge next to the month title should reflect posts scheduled
+  // *in the month currently being viewed*, not the total across all time —
+  // otherwise it stays stuck on the all-time count while you page through
+  // months with zero posts, which reads as a bug.
+  const postsInViewedMonth = posts.filter(
+    (post) => zonedDateKey(new Date(post.scheduled_at), DISPLAY_TIME_ZONE).slice(0, 7) === viewedMonthKey
+  ).length;
 
   const anyChannelConnected = channelStatus.facebook_page || channelStatus.instagram || channelStatus.whatsapp_broadcast;
   const upcomingPosts = posts.filter((post) => post.status === "scheduled" || post.status === "draft");
@@ -200,7 +209,7 @@ export default async function FusionContentCalendarPage({
               <Link aria-label="Next month" className="ghost-button compact-button" href={`/fusionadmin/content?month=${nextMonthKey}`}>
                 <ChevronRight size={16} />
               </Link>
-              <span className="status-pill">{posts.length} posts</span>
+              <span className="status-pill">{postsInViewedMonth} posts</span>
             </span>
           </div>
           <ContentCalendarGrid channelStatus={channelStatus} monthDays={monthDays} monthTitle={monthTitle} postsByDate={postsByDate} />
