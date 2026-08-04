@@ -9,10 +9,11 @@ const ALLOWED_CADENCE: BulkCadence[] = ["daily", "every_two_days", "every_n_days
 const ALLOWED_POST_TYPES: BulkPostType[] = ["image", "story", "reel"];
 const ALLOWED_PLATFORMS: ContentPlatform[] = ["facebook_page", "instagram", "whatsapp_broadcast"];
 
-// A real batch (20-30 files) calls Claude's vision API for each image during
-// scheduling below — give these actions real headroom instead of the
-// platform default, which a batch that size would otherwise blow right past.
-export const maxDuration = 300;
+// Note: maxDuration can't be exported from this file — a "use server" file
+// may only export async functions. The route's maxDuration=300 (set in
+// page.tsx, a Server Component) still governs these actions since it's a
+// route-segment config, so the extra headroom for the Claude vision calls
+// below is still in effect.
 
 // Step 1 of the client-driven bulk flow: given just file names/types (no
 // bytes), return a signed Supabase Storage upload URL + token per file. The
