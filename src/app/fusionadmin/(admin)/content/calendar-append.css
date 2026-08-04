@@ -7,7 +7,6 @@
   border: 1px solid var(--green, #39d98a);
   border-radius: var(--fusion-radius-md, 8px);
   background: rgba(57, 217, 138, 0.1);
-  color: var(--text, #eef5ff);
 }
 
 .content-success-banner svg {
