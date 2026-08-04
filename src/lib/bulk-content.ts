@@ -203,8 +203,11 @@ async function generateAiCaption(input: {
   context: CaptionContext;
   batchNote: string;
 }): Promise<string | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) {
+    console.error("[generateAiCaption] ANTHROPIC_API_KEY is not set.");
+    return null;
+  }
 
   const base64 = Buffer.from(input.imageBuffer).toString("base64");
   const serviceLines = input.context.services.map((service) => `- ${service.name}${service.description ? `: ${service.description}` : ""}`).join("\n");
@@ -246,12 +249,20 @@ async function generateAiCaption(input: {
       })
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      console.error(`[generateAiCaption] Anthropic API returned ${response.status}: ${errorBody.slice(0, 500)}`);
+      return null;
+    }
     const payload = await response.json().catch(() => null);
     const text = payload?.content?.[0]?.text;
-    if (typeof text !== "string" || !text.trim()) return null;
+    if (typeof text !== "string" || !text.trim()) {
+      console.error("[generateAiCaption] Unexpected response shape:", JSON.stringify(payload).slice(0, 500));
+      return null;
+    }
     return text.trim();
-  } catch {
+  } catch (error) {
+    console.error("[generateAiCaption] fetch threw:", error instanceof Error ? error.message : error);
     return null;
   }
 }
