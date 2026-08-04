@@ -889,6 +889,53 @@ export async function uploadContentMedia(input: { organizationId: string; fileNa
   return { ok: true, url: publicUrlData.publicUrl };
 }
 
+// Real photo/video batches routinely exceed Vercel's hard 4.5MB serverless
+// request body limit (and this app's own 2MB Server Action body cap) if the
+// raw file bytes are sent through a server action — that's the root cause of
+// the bulk scheduler failing on real-world batches even though tiny test
+// files worked fine. This generates one Supabase Storage "signed upload URL"
+// per file instead: the browser then PUTs each file directly to Supabase,
+// bypassing the Vercel function entirely for the large binary data. The
+// signed token is what authorizes the upload — no bucket RLS policy or
+// authenticated browser session is required for this to work safely.
+export async function createBulkUploadTargets(input: {
+  organizationId: string;
+  files: { name: string; type: string }[];
+}): Promise<{
+  ok: boolean;
+  error?: string;
+  targets?: { name: string; type: string; path: string; token: string; signedUrl: string; publicUrl: string }[];
+}> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase storage is not configured." };
+  if (!input.files.length) return { ok: false, error: "No files to prepare." };
+
+  const targets: { name: string; type: string; path: string; token: string; signedUrl: string; publicUrl: string }[] = [];
+
+  for (const file of input.files) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `${input.organizationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+
+    const { data, error } = await supabase.storage.from("content-media").createSignedUploadUrl(path);
+    if (error || !data) {
+      return { ok: false, error: `Could not prepare upload for ${file.name}: ${error?.message || "unknown error"}` };
+    }
+
+    const { data: publicUrlData } = supabase.storage.from("content-media").getPublicUrl(path);
+
+    targets.push({
+      name: file.name,
+      type: file.type,
+      path,
+      token: data.token,
+      signedUrl: data.signedUrl,
+      publicUrl: publicUrlData.publicUrl
+    });
+  }
+
+  return { ok: true, targets };
+}
+
 export async function getOrganizationIdForContent(): Promise<string | null> {
   const supabase = getServiceClient();
   if (!supabase) return null;

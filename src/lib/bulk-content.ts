@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { createContentPost, getOrganizationIdForContent, uploadContentMedia, type ContentPlatform, type ContentType } from "@/lib/content";
+import { createContentPost, getOrganizationIdForContent, type ContentPlatform, type ContentType } from "@/lib/content";
 
-// How many files to upload + caption concurrently. Each file does a storage
-// upload plus (for images) a multi-second Anthropic vision call; running them
-// sequentially for a real batch of 20-30 files easily exceeds a serverless
-// function's time limit, killing the whole request mid-batch after already
-// paying for some AI captions — and a retry reprocesses everything from
-// scratch, burning credits again. A small concurrency window keeps this well
-// within time limits without hammering Anthropic's rate limits.
+// How many files to caption + schedule concurrently. Each file does a
+// multi-second Anthropic vision call (for images); running them sequentially
+// for a real batch of 20-30 files easily exceeds a serverless function's time
+// limit, killing the whole request mid-batch after already paying for some AI
+// captions — and a retry reprocesses everything from scratch, burning credits
+// again. A small concurrency window keeps this well within time limits
+// without hammering Anthropic's rate limits.
 const BULK_PROCESS_CONCURRENCY = 4;
 
 export type BulkCadence = "daily" | "every_two_days" | "every_n_days" | "weekly" | "monthly";
@@ -16,10 +16,16 @@ export type BulkPostType = "image" | "story" | "reel";
 
 const VIDEO_EXTENSION_RE = /\.(mp4|mov|m4v|webm)$/i;
 
+// Files are uploaded directly from the browser to Supabase Storage before
+// this module ever runs (see createBulkUploadTargets in src/lib/content.ts
+// and BulkScheduleForm.tsx) — real photo/video batches routinely exceed
+// Vercel's hard 4.5MB serverless request body limit if the raw bytes are sent
+// through a server action, so only the already-uploaded public URL travels
+// through the server action now, not the file itself.
 export type BulkScheduleFile = {
   name: string;
   type: string;
-  buffer: ArrayBuffer;
+  url: string;
 };
 
 export type BulkScheduleInput = {
@@ -318,11 +324,6 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
 
   const organizationId = await getOrganizationIdForContent();
   if (!organizationId) return { ...empty, error: "CRM organization is not configured." };
-  // Narrowing from the check above isn't preserved inside the processFile
-  // closure below (TS types closures using the declared type of captured
-  // variables, not the narrowed type at closure-creation time), so bind a
-  // separate const with the narrowed non-null type here.
-  const orgId: string = organizationId;
 
   const context = await getCaptionContext(supabase, organizationId);
 
@@ -342,31 +343,38 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
   async function processFile(file: BulkScheduleFile, index: number): Promise<FileOutcome> {
     const scheduledAt = scheduledDates[index];
 
-    const uploadResult = await uploadContentMedia({
-      organizationId: orgId,
-      fileName: file.name,
-      contentType: file.type || "image/jpeg",
-      data: file.buffer
-    });
-
-    if (!uploadResult.ok || !uploadResult.url) {
-      return { ok: false, error: `${file.name}: ${uploadResult.error || "upload failed"}` };
-    }
-
-    // Claude's vision captioning needs an actual image — video files (always
-    // true for reels, sometimes true for stories) fall back to the template.
+    // The file itself already lives in Supabase Storage — it was uploaded
+    // directly from the browser via a signed upload URL before this server
+    // action ever ran (see createBulkUploadTargets / BulkScheduleForm.tsx),
+    // so there's no upload step here anymore, only a fetch-back for
+    // AI captioning (images only; videos always fall back to the template).
     const isVideoFile = VIDEO_EXTENSION_RE.test(file.name);
-    const aiCaption = isVideoFile
-      ? null
-      : await generateAiCaption({
-          imageBuffer: file.buffer,
-          mediaType: file.type || "image/jpeg",
-          context,
-          batchNote: input.batchNote
-        });
+
+    let aiCaption: string | null = null;
+    if (!isVideoFile) {
+      try {
+        const mediaRes = await fetch(file.url);
+        if (mediaRes.ok) {
+          const imageBuffer = await mediaRes.arrayBuffer();
+          aiCaption = await generateAiCaption({
+            imageBuffer,
+            mediaType: file.type || "image/jpeg",
+            context,
+            batchNote: input.batchNote
+          });
+        } else {
+          console.error(`[bulkScheduleContent] Could not fetch ${file.name} back for captioning: ${mediaRes.status}`);
+        }
+      } catch (error) {
+        console.error(`[bulkScheduleContent] Fetch threw while captioning ${file.name}:`, error instanceof Error ? error.message : error);
+      }
+    }
 
     const caption = aiCaption || buildTemplateCaption(context, input.batchNote, index);
 
+    // Every file becomes its own post with a single-element mediaUrls array —
+    // postType here is always "image" | "story" | "reel", never "carousel",
+    // so a bulk batch never merges multiple images into one multi-image post.
     // Created as a draft — nothing actually gets scheduled until the admin
     // reviews the batch and clicks "Publish everything".
     const createResult = await createContentPost({
@@ -374,7 +382,7 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
       title: file.name.replace(/\.[^.]+$/, "").slice(0, 80),
       caption,
       contentType: input.postType as ContentType,
-      mediaUrls: [uploadResult.url],
+      mediaUrls: [file.url],
       platforms: input.platforms,
       scheduledAt,
       status: "draft",
