@@ -1,5 +1,15 @@
+import { randomUUID } from "node:crypto";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { createContentPost, getOrganizationIdForContent, uploadContentMedia, type ContentPlatform, type ContentType } from "@/lib/content";
+
+// How many files to upload + caption concurrently. Each file does a storage
+// upload plus (for images) a multi-second Anthropic vision call; running them
+// sequentially for a real batch of 20-30 files easily exceeds a serverless
+// function's time limit, killing the whole request mid-batch after already
+// paying for some AI captions — and a retry reprocesses everything from
+// scratch, burning credits again. A small concurrency window keeps this well
+// within time limits without hammering Anthropic's rate limits.
+const BULK_PROCESS_CONCURRENCY = 4;
 
 export type BulkCadence = "daily" | "every_two_days" | "every_n_days" | "weekly" | "monthly";
 export type BulkPostType = "image" | "story" | "reel";
@@ -34,6 +44,10 @@ export type BulkScheduleResult = {
   firstScheduledAt?: string;
   lastScheduledAt?: string;
   fileErrors: string[];
+  // Posts are created as drafts under this batch, reviewed at
+  // /fusionadmin/content/bulk/review?batch=<id>, and only actually scheduled
+  // once the admin clicks "Publish everything" there.
+  batchId?: string;
 };
 
 let cachedClient: SupabaseClient<any> | null = null;
@@ -316,13 +330,11 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
     count: input.files.length
   });
 
-  let scheduledCount = 0;
-  let aiCaptionCount = 0;
-  let templateCaptionCount = 0;
-  const fileErrors: string[] = [];
+  const batchId = randomUUID();
 
-  for (let index = 0; index < input.files.length; index += 1) {
-    const file = input.files[index];
+  type FileOutcome = { ok: true; aiCaption: boolean } | { ok: false; error: string };
+
+  async function processFile(file: BulkScheduleFile, index: number): Promise<FileOutcome> {
     const scheduledAt = scheduledDates[index];
 
     const uploadResult = await uploadContentMedia({
@@ -333,8 +345,7 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
     });
 
     if (!uploadResult.ok || !uploadResult.url) {
-      fileErrors.push(`${file.name}: ${uploadResult.error || "upload failed"}`);
-      continue;
+      return { ok: false, error: `${file.name}: ${uploadResult.error || "upload failed"}` };
     }
 
     // Claude's vision captioning needs an actual image — video files (always
@@ -350,9 +361,9 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
         });
 
     const caption = aiCaption || buildTemplateCaption(context, input.batchNote, index);
-    if (aiCaption) aiCaptionCount += 1;
-    else templateCaptionCount += 1;
 
+    // Created as a draft — nothing actually gets scheduled until the admin
+    // reviews the batch and clicks "Publish everything".
     const createResult = await createContentPost({
       actorId: input.actorId,
       title: file.name.replace(/\.[^.]+$/, "").slice(0, 80),
@@ -360,26 +371,56 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
       contentType: input.postType as ContentType,
       mediaUrls: [uploadResult.url],
       platforms: input.platforms,
-      scheduledAt
+      scheduledAt,
+      status: "draft",
+      batchId
     });
 
     if (!createResult.ok) {
-      fileErrors.push(`${file.name}: ${createResult.error || "could not schedule"}`);
-      continue;
+      return { ok: false, error: `${file.name}: ${createResult.error || "could not schedule"}` };
     }
 
-    scheduledCount += 1;
+    return { ok: true, aiCaption: Boolean(aiCaption) };
+  }
+
+  // Process in small concurrent batches rather than one file at a time —
+  // keeps a 20-30 file batch well within a serverless function's time limit
+  // instead of timing out partway through (after already paying for some AI
+  // captions) and forcing a full, costly retry from scratch.
+  const outcomes: FileOutcome[] = new Array(input.files.length);
+  for (let start = 0; start < input.files.length; start += BULK_PROCESS_CONCURRENCY) {
+    const chunk = input.files.slice(start, start + BULK_PROCESS_CONCURRENCY);
+    const chunkOutcomes = await Promise.all(chunk.map((file, offset) => processFile(file, start + offset)));
+    chunkOutcomes.forEach((outcome, offset) => {
+      outcomes[start + offset] = outcome;
+    });
+  }
+
+  let scheduledCount = 0;
+  let aiCaptionCount = 0;
+  let templateCaptionCount = 0;
+  const fileErrors: string[] = [];
+
+  for (const outcome of outcomes) {
+    if (outcome.ok) {
+      scheduledCount += 1;
+      if (outcome.aiCaption) aiCaptionCount += 1;
+      else templateCaptionCount += 1;
+    } else {
+      fileErrors.push(outcome.error);
+    }
   }
 
   return {
     ok: scheduledCount > 0,
-    error: scheduledCount === 0 ? "None of the images could be scheduled." : undefined,
+    error: scheduledCount === 0 ? "None of the files could be scheduled." : undefined,
     scheduledCount,
     failedCount: fileErrors.length,
     aiCaptionCount,
     templateCaptionCount,
     firstScheduledAt: scheduledDates[0],
     lastScheduledAt: scheduledDates[input.files.length - 1],
+    batchId: scheduledCount > 0 ? batchId : undefined,
     fileErrors
   };
 }

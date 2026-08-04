@@ -33,6 +33,7 @@ export type ContentPost = {
   media_urls: string[];
   scheduled_at: string;
   status: ContentPostStatus;
+  batch_id: string | null;
   created_at: string;
   updated_at: string;
   targets: ContentPostTarget[];
@@ -63,7 +64,7 @@ async function getDefaultOrganizationId(supabase: SupabaseClient<any>) {
   return data?.id || null;
 }
 
-const POST_SELECT = "id, organization_id, title, caption, content_type, media_urls, scheduled_at, status, created_at, updated_at";
+const POST_SELECT = "id, organization_id, title, caption, content_type, media_urls, scheduled_at, status, batch_id, created_at, updated_at";
 const TARGET_SELECT = "id, post_id, platform, status, external_post_id, recipient_count, error, published_at";
 
 async function attachTargets(supabase: SupabaseClient<any>, posts: Omit<ContentPost, "targets">[]): Promise<ContentPost[]> {
@@ -95,6 +96,9 @@ export async function getContentCalendarWorkspace() {
     .from("crm_content_posts")
     .select(POST_SELECT)
     .eq("organization_id", organizationId)
+    // Drafts (an unreviewed bulk batch waiting at /content/bulk/review) don't
+    // show on the calendar until the admin reviews and publishes the batch.
+    .neq("status", "draft")
     .order("scheduled_at", { ascending: true })
     .limit(500);
 
@@ -176,6 +180,8 @@ export async function createContentPost(input: {
   mediaUrls: string[];
   platforms: ContentPlatform[];
   scheduledAt: string;
+  status?: "draft" | "scheduled";
+  batchId?: string;
 }): Promise<{ ok: boolean; error?: string; id?: string }> {
   const supabase = getServiceClient();
   if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
@@ -197,7 +203,8 @@ export async function createContentPost(input: {
       content_type: input.contentType,
       media_urls: input.mediaUrls,
       scheduled_at: scheduledDate.toISOString(),
-      status: "scheduled",
+      status: input.status || "scheduled",
+      batch_id: input.batchId || null,
       created_by: input.actorId,
       updated_by: input.actorId
     })
@@ -306,6 +313,69 @@ export async function deleteContentPost(input: { postId: string }): Promise<{ ok
 
   const { error } = await supabase.from("crm_content_posts").delete().eq("id", input.postId);
   if (error) return { ok: false, error: "Unable to delete post: " + error.message };
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Draft batches — the bulk scheduler creates posts as drafts first so the
+// admin can review generated captions before anything actually gets
+// scheduled; publishing a batch flips every post in it to "scheduled" in one
+// step. crm_content_post_targets rows cascade-delete with their post.
+// ---------------------------------------------------------------------------
+
+export async function getDraftBatch(batchId: string): Promise<ContentPost[]> {
+  const supabase = getServiceClient();
+  if (!supabase) return [];
+
+  const { data: postRows } = await supabase
+    .from("crm_content_posts")
+    .select(POST_SELECT)
+    .eq("batch_id", batchId)
+    .eq("status", "draft")
+    .order("scheduled_at", { ascending: true });
+
+  return attachTargets(supabase, (postRows || []) as Omit<ContentPost, "targets">[]);
+}
+
+export async function updateDraftCaption(input: { postId: string; caption: string }): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+
+  const { error } = await supabase
+    .from("crm_content_posts")
+    .update({ caption: input.caption, updated_at: new Date().toISOString() })
+    .eq("id", input.postId)
+    .eq("status", "draft");
+
+  if (error) return { ok: false, error: "Unable to save caption: " + error.message };
+  return { ok: true };
+}
+
+export async function publishDraftBatch(input: { batchId: string; actorId: string }): Promise<{ ok: boolean; error?: string; publishedCount: number }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured.", publishedCount: 0 };
+
+  const { data: rows, error } = await supabase
+    .from("crm_content_posts")
+    .update({ status: "scheduled", updated_by: input.actorId, updated_at: new Date().toISOString() })
+    .eq("batch_id", input.batchId)
+    .eq("status", "draft")
+    .select("id");
+
+  if (error) return { ok: false, error: "Unable to publish batch: " + error.message, publishedCount: 0 };
+
+  const publishedCount = (rows || []).length;
+  if (!publishedCount) return { ok: false, error: "Nothing left in this batch to publish.", publishedCount: 0 };
+
+  return { ok: true, publishedCount };
+}
+
+export async function discardDraftBatch(batchId: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+
+  const { error } = await supabase.from("crm_content_posts").delete().eq("batch_id", batchId).eq("status", "draft");
+  if (error) return { ok: false, error: "Unable to discard batch: " + error.message };
   return { ok: true };
 }
 
