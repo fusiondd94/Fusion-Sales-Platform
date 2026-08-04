@@ -318,6 +318,11 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
 
   const organizationId = await getOrganizationIdForContent();
   if (!organizationId) return { ...empty, error: "CRM organization is not configured." };
+  // Narrowing from the check above isn't preserved inside the processFile
+  // closure below (TS types closures using the declared type of captured
+  // variables, not the narrowed type at closure-creation time), so bind a
+  // separate const with the narrowed non-null type here.
+  const orgId: string = organizationId;
 
   const context = await getCaptionContext(supabase, organizationId);
 
@@ -338,7 +343,7 @@ export async function bulkScheduleContent(input: BulkScheduleInput): Promise<Bul
     const scheduledAt = scheduledDates[index];
 
     const uploadResult = await uploadContentMedia({
-      organizationId,
+      organizationId: orgId,
       fileName: file.name,
       contentType: file.type || "image/jpeg",
       data: file.buffer
