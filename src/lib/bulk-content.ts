@@ -255,7 +255,11 @@ async function generateAiCaption(input: {
       return null;
     }
     const payload = await response.json().catch(() => null);
-    const text = payload?.content?.[0]?.text;
+    // Don't assume content[0] is the text block — some responses lead with a
+    // "thinking" block before the actual text block, so find it by type.
+    const blocks = Array.isArray(payload?.content) ? payload.content : [];
+    const textBlock = blocks.find((block: { type?: string; text?: string }) => block?.type === "text");
+    const text = textBlock?.text;
     if (typeof text !== "string" || !text.trim()) {
       console.error("[generateAiCaption] Unexpected response shape:", JSON.stringify(payload).slice(0, 500));
       return null;
