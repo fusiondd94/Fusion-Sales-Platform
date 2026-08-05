@@ -31,7 +31,7 @@ function getPhaseProgress(currentPhase: string | null | undefined, projectStatus
   return Math.round(((idx + 1) / PORTAL_PHASES.length) * 100);
 }
 
-export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: ClientPortalWorkspace; highlightCommentId?: string }) {
+export function PortalWorkspace({ workspace, highlightCommentId, logoUrl }: { workspace: ClientPortalWorkspace; highlightCommentId?: string; logoUrl?: string | null }) {
   const [commentMode, setCommentMode] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
@@ -145,7 +145,7 @@ export function PortalWorkspace({ workspace, highlightCommentId }: { workspace: 
       <div className="admin-shell crm-shell">
         <nav className="nav admin-nav">
           <a className="brand" href="/">
-            <span className="brand-mark">FDD</span>
+            {logoUrl ? <img alt="Brand logo" className="brand-mark brand-mark--logo" src={logoUrl} /> : <span className="brand-mark">FDD</span>}
             <span>Client Portal</span>
           </a>
           <form action={signOutClientPortal}>
