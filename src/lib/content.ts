@@ -231,6 +231,12 @@ export async function updateContentPost(input: {
   mediaUrls?: string[];
   platforms: ContentPlatform[];
   scheduledAt: string;
+  // Repost: explicitly allow editing/rescheduling a post that already went
+  // out (published/partially_published/failed) by resetting it back to
+  // "scheduled" and clearing prior per-platform results, rather than
+  // creating a brand-new row. Off by default so plain edits of untouched
+  // scheduled/draft posts keep their original safety behavior.
+  resetForRepost?: boolean;
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = getServiceClient();
   if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
@@ -242,8 +248,12 @@ export async function updateContentPost(input: {
     .maybeSingle<{ id: string; status: ContentPostStatus; content_type: ContentType; media_urls: string[] }>();
 
   if (!existing) return { ok: false, error: "Post not found." };
-  if (existing.status === "publishing" || existing.status === "published") {
-    return { ok: false, error: "This post has already gone out and can no longer be edited." };
+  if (existing.status === "publishing") {
+    return { ok: false, error: "This post is publishing right now — try again in a moment." };
+  }
+  const alreadyWentOut = existing.status === "published" || existing.status === "partially_published" || existing.status === "failed";
+  if (alreadyWentOut && !input.resetForRepost) {
+    return { ok: false, error: "This post has already gone out. Use Repost to send it again with your changes." };
   }
 
   const contentType = input.contentType ?? existing.content_type;
@@ -296,6 +306,25 @@ export async function updateContentPost(input: {
       .in("platform", toRemove);
   }
 
+  // Reposting: reset every remaining target back to "pending" and clear its
+  // prior result, so publishDuePosts/publishPostNow treats this exactly like
+  // a fresh scheduled post instead of skipping targets that already have a
+  // (stale) "published" or "failed" status from the earlier run.
+  if (alreadyWentOut && input.resetForRepost) {
+    await supabase
+      .from("crm_content_post_targets")
+      .update({
+        status: "pending",
+        external_post_id: null,
+        recipient_count: null,
+        error: null,
+        published_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("post_id", input.postId)
+      .in("platform", input.platforms);
+  }
+
   return { ok: true };
 }
 
@@ -314,6 +343,32 @@ export async function deleteContentPost(input: { postId: string }): Promise<{ ok
   const { error } = await supabase.from("crm_content_posts").delete().eq("id", input.postId);
   if (error) return { ok: false, error: "Unable to delete post: " + error.message };
   return { ok: true };
+}
+
+// Repost: clone an already-sent post (published/partially_published/failed)
+// into a brand-new draft-free "scheduled" post with fresh targets, so the
+// original historical post (and its external_post_id / analytics) stays
+// untouched while a new copy goes out at the newly chosen time.
+export async function repostContentPost(input: {
+  actorId: string;
+  postId: string;
+  title: string;
+  caption: string;
+  contentType: ContentType;
+  mediaUrls: string[];
+  platforms: ContentPlatform[];
+  scheduledAt: string;
+}): Promise<{ ok: boolean; error?: string; id?: string }> {
+  return createContentPost({
+    actorId: input.actorId,
+    title: input.title,
+    caption: input.caption,
+    contentType: input.contentType,
+    mediaUrls: input.mediaUrls,
+    platforms: input.platforms,
+    scheduledAt: input.scheduledAt,
+    status: "scheduled"
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -417,9 +472,14 @@ function isVideoUrl(url: string): boolean {
   return /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
 }
 
-// Video-based Instagram containers (Reels, video Stories) are processed
-// asynchronously by Meta — poll until status_code flips to FINISHED before
-// calling media_publish, or the publish call fails with "media not ready".
+// Instagram media containers are ALWAYS processed asynchronously by Meta —
+// including plain image containers, not just video. Calling media_publish
+// immediately after creating a container can race Meta's own processing and
+// fail with "Media ID is not available" even though the container will be
+// ready a second or two later. Poll status_code until it flips to FINISHED
+// (or IN_PROGRESS keeps ticking) before ever calling media_publish, for
+// every content type — images included. Images normally finish in 1-2
+// polls; this only adds real wait time for the rare slow case.
 async function pollIgContainerStatus(containerId: string, accessToken: string, base: string): Promise<{ ok: boolean; error?: string }> {
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const res = await fetch(`${base}${containerId}?fields=status_code&access_token=${accessToken}`);
@@ -427,10 +487,10 @@ async function pollIgContainerStatus(containerId: string, accessToken: string, b
     if (!res.ok) return { ok: false, error: graphError(payload) };
     const statusCode = (payload as { status_code?: string }).status_code;
     if (statusCode === "FINISHED") return { ok: true };
-    if (statusCode === "ERROR" || statusCode === "EXPIRED") return { ok: false, error: "Meta could not process the video." };
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    if (statusCode === "ERROR" || statusCode === "EXPIRED") return { ok: false, error: "Meta could not process the media." };
+    await new Promise((resolve) => setTimeout(resolve, 1500));
   }
-  return { ok: false, error: "Timed out waiting for Meta to finish processing the video." };
+  return { ok: false, error: "Timed out waiting for Meta to finish processing the media." };
 }
 
 async function publishFacebookReel(pageId: string, accessToken: string, post: ContentPost): Promise<{ ok: boolean; error?: string; externalId?: string }> {
@@ -609,11 +669,6 @@ async function publishInstagram(channel: ChannelRow, post: ContentPost): Promise
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) return { ok: false, error: graphError(payload) };
       creationId = (payload as { id?: string }).id;
-
-      if (creationId && isVideoUrl(mediaUrl)) {
-        const status = await pollIgContainerStatus(creationId, accessToken, base);
-        if (!status.ok) return { ok: false, error: status.error };
-      }
     } else if (post.content_type === "reel") {
       const videoUrl = post.media_urls[0];
       if (!videoUrl || !isVideoUrl(videoUrl)) return { ok: false, error: "Reels require a video file (mp4, mov, or webm)." };
@@ -632,11 +687,6 @@ async function publishInstagram(channel: ChannelRow, post: ContentPost): Promise
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) return { ok: false, error: graphError(payload) };
       creationId = (payload as { id?: string }).id;
-
-      if (creationId) {
-        const status = await pollIgContainerStatus(creationId, accessToken, base);
-        if (!status.ok) return { ok: false, error: status.error };
-      }
     } else if (post.content_type === "image") {
       const res = await fetch(base + igId + "/media", {
         method: "POST",
@@ -661,6 +711,14 @@ async function publishInstagram(channel: ChannelRow, post: ContentPost): Promise
       }
       if (childIds.length < 2) return { ok: false, error: "Instagram carousels need at least two images to upload successfully." };
 
+      // Each child container also needs to finish processing before it can
+      // be attached to the parent carousel container, or the carousel
+      // creation call itself can fail the same "not ready" way.
+      for (const childId of childIds) {
+        const status = await pollIgContainerStatus(childId, accessToken, base);
+        if (!status.ok) return { ok: false, error: status.error };
+      }
+
       const parentRes = await fetch(base + igId + "/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -677,6 +735,14 @@ async function publishInstagram(channel: ChannelRow, post: ContentPost): Promise
     }
 
     if (!creationId) return { ok: false, error: "Instagram did not return a media container." };
+
+    // Every container type — image, video, story, carousel parent — is
+    // processed asynchronously by Meta. Poll until it reports FINISHED
+    // before calling media_publish; this is what was missing for plain
+    // image posts and image stories, which used to call media_publish
+    // immediately and could lose the race with Meta's own processing.
+    const status = await pollIgContainerStatus(creationId, accessToken, base);
+    if (!status.ok) return { ok: false, error: status.error };
 
     const publishRes = await fetch(base + igId + "/media_publish", {
       method: "POST",
@@ -866,6 +932,27 @@ export async function publishPostNow(postId: string): Promise<{ ok: boolean; err
   const [post] = await attachTargets(supabase, [row as Omit<ContentPost, "targets">]);
   if (post.status === "published") return { ok: false, error: "This post has already been published." };
   if (post.status === "publishing") return { ok: false, error: "This post is already publishing." };
+
+  await publishOnePost(supabase, post);
+  return { ok: true };
+}
+
+// Retry: re-run publishing for a post that's already partially_published or
+// failed, but only against the targets that didn't succeed — a previously
+// successful Facebook post is left completely alone so it never gets
+// duplicated, while the failed Instagram (or other) target gets a fresh
+// attempt against the now-fixed publishing logic.
+export async function retryFailedTargets(postId: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase CRM is not configured." };
+
+  const { data: row } = await supabase.from("crm_content_posts").select(POST_SELECT).eq("id", postId).maybeSingle();
+  if (!row) return { ok: false, error: "Post not found." };
+
+  const [post] = await attachTargets(supabase, [row as Omit<ContentPost, "targets">]);
+  if (post.status !== "partially_published" && post.status !== "failed") {
+    return { ok: false, error: "Only partially published or failed posts can be retried." };
+  }
 
   await publishOnePost(supabase, post);
   return { ok: true };
