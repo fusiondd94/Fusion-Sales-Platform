@@ -5917,3 +5917,15 @@ undefined
     width: 100%;
   }
 }
+
+/* Public/portal/legal nav & footer: logo image variant of .brand-mark
+   (admin + login shells already have their own scoped rule; this covers
+   every other context that renders <img class="brand-mark brand-mark--logo">) */
+.brand .brand-mark--logo {
+  width: 2.4rem;
+  height: 2.4rem;
+  background: #ffffff;
+  padding: 0.3rem;
+  object-fit: contain;
+  border-radius: 8px;
+}
