@@ -1,7 +1,12 @@
+import { cookies } from "next/headers";
 import { ArrowRight, BarChart3, Globe2, LockKeyhole, Mail, Megaphone, Server, ShoppingCart, Wand2 } from "lucide-react";
-import { ClosingSignals, SalesFlow } from "@/components/SalesFlow";
+import { ClosingSignals } from "@/components/SalesFlow";
+import { QuestionnaireFlow } from "@/components/QuestionnaireFlow";
 import { Reveal } from "@/components/Reveal";
 import { getFusionAdminUser } from "@/lib/auth";
+import { getFusionAdminSettings } from "@/lib/crm";
+import { QUESTIONNAIRE_COOKIE_NAME } from "@/lib/questionnaire-cookie";
+import { loadQuestionnaireState } from "@/lib/sales-questionnaire";
 
 const offers = [
   { icon: Globe2, title: "Domains", text: "Secure the name, connect DNS, and make launch clean." },
@@ -22,13 +27,21 @@ const process = [
 ];
 
 export default async function Home() {
-  const adminUser = await getFusionAdminUser();
+  const store = await cookies();
+  const token = store.get(QUESTIONNAIRE_COOKIE_NAME)?.value || null;
+
+  const [adminUser, admin, initialState] = await Promise.all([
+    getFusionAdminUser(),
+    getFusionAdminSettings(),
+    token ? loadQuestionnaireState(token) : Promise.resolve(null)
+  ]);
+  const logoUrl = admin.settings?.logo_url;
 
   return (
     <main className="shell shell-light">
       <nav className="nav">
         <a className="brand" href="#">
-          <span className="brand-mark">FDD</span>
+          {logoUrl ? <img alt="Brand logo" className="brand-mark brand-mark--logo" src={logoUrl} /> : <span className="brand-mark">FDD</span>}
           <span>Fusion Digital Dynamics</span>
         </a>
         <div className="nav-links">
@@ -106,14 +119,16 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" id="sales-flow">
         <Reveal as="div" className="section-heading">
           <div>
             <p className="eyebrow">Get your plan</p>
             <h2>Answer a few questions. Get a tailored plan and price, today.</h2>
           </div>
         </Reveal>
-        <SalesFlow />
+        <div className="questionnaire-container">
+          <QuestionnaireFlow initialState={initialState} />
+        </div>
       </section>
 
       <section className="cta-band">
@@ -129,7 +144,7 @@ export default async function Home() {
         <div className="footer-grid">
           <div className="footer-brand">
             <a className="brand" href="#">
-              <span className="brand-mark">FDD</span>
+              {logoUrl ? <img alt="Brand logo" className="brand-mark brand-mark--logo" src={logoUrl} /> : <span className="brand-mark">FDD</span>}
               <span>Fusion Digital Dynamics</span>
             </a>
             <p className="muted">
