@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getFusionAdminSettings } from "@/lib/crm";
 import "./legal-append.css";
 
 export const metadata: Metadata = {
@@ -6,12 +7,15 @@ export const metadata: Metadata = {
   description: "The terms that govern your use of Fusion Digital Dynamics LLC's services and platform."
 };
 
-export default function TermsOfServicePage() {
+export default async function TermsOfServicePage() {
+  const admin = await getFusionAdminSettings();
+  const logoUrl = admin.settings?.logo_url;
+
   return (
     <main className="shell shell-light legal-shell">
       <nav className="nav">
         <a className="brand" href="/">
-          <span className="brand-mark">FDD</span>
+          {logoUrl ? <img alt="Brand logo" className="brand-mark brand-mark--logo" src={logoUrl} /> : <span className="brand-mark">FDD</span>}
           <span>Fusion Digital Dynamics</span>
         </a>
         <div className="nav-links">
