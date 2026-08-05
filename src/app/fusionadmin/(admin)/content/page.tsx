@@ -1,8 +1,7 @@
-import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, Send, Sparkles } from "lucide-react";
 import Link from "next/link";
 import {
   cancelFusionContentPost,
-  createFusionContentPost,
   deleteFusionContentPost,
   publishFusionContentPostNow,
   updateFusionContentPost
@@ -13,6 +12,7 @@ import { PageHeader } from "../crm-ui";
 import { FormError } from "@/components/ui";
 import { ContentCalendarGrid, type CalendarDay, type CalendarPostSummary } from "./calendar-grid";
 import { ContentPostList } from "./ContentPostList";
+import { ScheduleComposer } from "./ScheduleComposer";
 
 const PLATFORM_ICONS: Record<ContentPlatform, typeof Facebook> = {
   facebook_page: Facebook,
@@ -203,35 +203,8 @@ export default async function FusionContentCalendarPage({
           {!posts.length ? <p className="admin-empty calendar-empty-note">No posts scheduled yet. Click a day above, or use the form to plan your first one.</p> : null}
         </article>
 
-        <article className="admin-panel">
-          <h2><PlusCircle size={20} /> Schedule a post</h2>
-          <form className="quick-form content-composer-form" action={createFusionContentPost} data-track-unsaved="true">
-            <input name="title" placeholder="Internal label (optional)" />
-            <textarea name="caption" placeholder="Write your caption..." required rows={4} />
-            <label>
-              <span>Images (optional — leave empty for a text post)</span>
-              <input accept="image/*" multiple name="media" type="file" />
-            </label>
-            <div className="content-platform-picker">
-              {CONTENT_PLATFORM_ORDER.map((platform) => {
-                const connected = channelStatus[platform];
-                return (
-                  <label className={connected ? "content-platform-option" : "content-platform-option content-platform-option--disabled"} key={platform}>
-                    <input disabled={!connected} name="platforms" type="checkbox" value={platform} />
-                    <span>{platformLabel(platform)}</span>
-                    {!connected ? <small>Not connected</small> : null}
-                  </label>
-                );
-              })}
-            </div>
-            <label>
-              <span>Publish at</span>
-              <input name="scheduledAt" required type="datetime-local" />
-            </label>
-            <button className="primary-button" type="submit">
-              <CalendarClock size={16} /> Schedule post
-            </button>
-          </form>
+        <article className="admin-panel panel-span-2">
+          <ScheduleComposer channelStatus={channelStatus} />
         </article>
 
         <article className="admin-panel panel-span-2">
