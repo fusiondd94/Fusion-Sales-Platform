@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, PlusCircle, Send, Sparkles } from "lucide-react";
 import Link from "next/link";
 import {
   cancelFusionContentPost,
@@ -7,10 +7,12 @@ import {
   publishFusionContentPostNow,
   updateFusionContentPost
 } from "@/app/fusionadmin/actions";
-import { getContentCalendarWorkspace, platformLabel, type ContentPlatform, type ContentPost } from "@/lib/content";
-import { EmptyState, PageHeader } from "../crm-ui";
+import { editAndRescheduleContentPost, repostFusionContentPost, retryFusionContentPostTargets } from "./content-post-actions";
+import { getContentCalendarWorkspace, platformLabel, type ContentPlatform } from "@/lib/content";
+import { PageHeader } from "../crm-ui";
 import { FormError } from "@/components/ui";
 import { ContentCalendarGrid, type CalendarDay, type CalendarPostSummary } from "./calendar-grid";
+import { ContentPostList } from "./ContentPostList";
 
 const PLATFORM_ICONS: Record<ContentPlatform, typeof Facebook> = {
   facebook_page: Facebook,
@@ -47,35 +49,6 @@ function buildCalendarDays(referenceDate: Date): CalendarDay[] {
 // rather than the server's (UTC) or the admin's own browser timezone.
 const DISPLAY_TIME_ZONE = "America/New_York";
 
-// Builds the "YYYY-MM-DDTHH:mm" value a <input type="datetime-local"> needs,
-// representing the post's scheduled time in DISPLAY_TIME_ZONE (not UTC) —
-// otherwise re-saving the edit form unchanged would silently shift the time.
-function toDateTimeLocal(value: string) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: DISPLAY_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).formatToParts(new Date(value));
-  const get = (type: string) => parts.find((part) => part.type === type)?.value || "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
-
-function contentTypeLabel(contentType: string) {
-  if (contentType === "reel") return "Reel";
-  if (contentType === "story") return "Story";
-  if (contentType === "carousel") return "Carousel";
-  if (contentType === "text") return "Text";
-  return "Feed post";
-}
-
-function statusLabel(status: string) {
-  return status.replace(/_/g, " ");
-}
-
 // Buckets a post's UTC-stored scheduled_at into the calendar day it falls on
 // in DISPLAY_TIME_ZONE, not the server's own timezone — otherwise a post near
 // midnight could show up under the wrong day on the calendar.
@@ -104,10 +77,10 @@ function shiftMonth(date: Date, delta: number) {
 export default async function FusionContentCalendarPage({
   searchParams
 }: {
-  searchParams: Promise<{ contentError?: string; month?: string; published?: string }>;
+  searchParams: Promise<{ contentError?: string; month?: string; published?: string; reposted?: string; retried?: string }>;
 }) {
   const { posts, channelStatus } = await getContentCalendarWorkspace();
-  const { contentError, month, published } = await searchParams;
+  const { contentError, month, published, reposted, retried } = await searchParams;
   const referenceDate = parseMonthParam(month);
   const monthDays = buildCalendarDays(referenceDate);
   const monthTitle = referenceDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -169,6 +142,20 @@ export default async function FusionContentCalendarPage({
           <span>
             Published {published} post{published === "1" ? "" : "s"} — {published === "1" ? "it's" : "they're"} now on the calendar.
           </span>
+        </p>
+      ) : null}
+
+      {reposted ? (
+        <p className="content-success-banner" role="status">
+          <CheckCircle2 aria-hidden="true" size={16} />
+          <span>Saved. Scroll down to see it in Upcoming or History.</span>
+        </p>
+      ) : null}
+
+      {retried ? (
+        <p className="content-success-banner" role="status">
+          <CheckCircle2 aria-hidden="true" size={16} />
+          <span>Retried the failed platforms for that post.</span>
         </p>
       ) : null}
 
@@ -252,87 +239,15 @@ export default async function FusionContentCalendarPage({
             <h2><Send size={20} /> Upcoming</h2>
             <span className="status-pill">{upcomingPosts.length}</span>
           </div>
-          <div className="content-post-list">
-            {upcomingPosts.map((post) => (
-              <div className="content-post-card" id={`post-${post.id}`} key={post.id}>
-                <div className="content-post-card__head">
-                  <div>
-                    <strong>{post.title || "Untitled post"}</strong>
-                    <span className="muted">{new Date(post.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: DISPLAY_TIME_ZONE })}</span>
-                  </div>
-                  <span style={{ display: "flex", gap: 6 }}>
-                    <span className="status-pill">{contentTypeLabel(post.content_type)}</span>
-                    <span className="status-pill">{statusLabel(post.status)}</span>
-                  </span>
-                </div>
-                <p className="content-post-card__caption">{post.caption}</p>
-                {post.media_urls.length ? (
-                  <div className="content-post-card__media">
-                    {post.media_urls.map((url) => <img alt="" key={url} src={url} />)}
-                  </div>
-                ) : null}
-                <div className="content-post-card__targets">
-                  {post.targets.map((target) => {
-                    const Icon = PLATFORM_ICONS[target.platform];
-                    return (
-                      <span className={"content-target-badge content-target-badge--" + target.status} key={target.id} title={target.error || undefined}>
-                        <Icon size={13} /> {platformLabel(target.platform)} · {statusLabel(target.status)}
-                      </span>
-                    );
-                  })}
-                </div>
-
-                <details className="content-post-card__edit">
-                  <summary>Edit</summary>
-                  <form action={updateFusionContentPost} className="record-edit-grid" data-track-unsaved="true">
-                    <input name="postId" type="hidden" value={post.id} />
-                    <label className="full-field">
-                      Title
-                      <input defaultValue={post.title} name="title" />
-                    </label>
-                    <label className="full-field">
-                      Caption
-                      <textarea defaultValue={post.caption} name="caption" required rows={3} />
-                    </label>
-                    <label>
-                      Publish at
-                      <input defaultValue={toDateTimeLocal(post.scheduled_at)} name="scheduledAt" required type="datetime-local" />
-                    </label>
-                    <div className="content-platform-picker full-field">
-                      {CONTENT_PLATFORM_ORDER.map((platform) => {
-                        const connected = channelStatus[platform];
-                        const checked = post.targets.some((target) => target.platform === platform);
-                        return (
-                          <label className={connected ? "content-platform-option" : "content-platform-option content-platform-option--disabled"} key={platform}>
-                            <input defaultChecked={checked} disabled={!connected} name="platforms" type="checkbox" value={platform} />
-                            <span>{platformLabel(platform)}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    <p className="muted full-field">To change the image, delete this post and schedule a new one.</p>
-                    <button className="secondary-button compact-button" type="submit">Save changes</button>
-                  </form>
-                </details>
-
-                <div className="content-post-card__actions">
-                  <form action={publishFusionContentPostNow}>
-                    <input name="postId" type="hidden" value={post.id} />
-                    <button className="secondary-button compact-button" type="submit"><Send size={14} /> Publish now</button>
-                  </form>
-                  <form action={cancelFusionContentPost}>
-                    <input name="postId" type="hidden" value={post.id} />
-                    <button className="ghost-button compact-button" type="submit"><XCircle size={14} /> Cancel</button>
-                  </form>
-                  <form action={deleteFusionContentPost}>
-                    <input name="postId" type="hidden" value={post.id} />
-                    <button className="ghost-button compact-button content-delete-button" type="submit"><Trash2 size={14} /> Delete</button>
-                  </form>
-                </div>
-              </div>
-            ))}
-            {!upcomingPosts.length ? <EmptyState>No upcoming posts. Click a day on the calendar, or use the form above.</EmptyState> : null}
-          </div>
+          <ContentPostList
+            cancelAction={cancelFusionContentPost}
+            channelStatus={channelStatus}
+            deleteAction={deleteFusionContentPost}
+            posts={upcomingPosts}
+            publishNowAction={publishFusionContentPostNow}
+            scope="upcoming"
+            updateAction={updateFusionContentPost}
+          />
         </article>
 
         {pastPosts.length ? (
@@ -341,29 +256,14 @@ export default async function FusionContentCalendarPage({
               <h2>History</h2>
               <span className="status-pill">{pastPosts.length}</span>
             </div>
-            <div className="content-post-list">
-              {pastPosts.map((post) => (
-                <div className="content-post-card content-post-card--compact" key={post.id}>
-                  <div className="content-post-card__head">
-                    <div>
-                      <strong>{post.title || "Untitled post"}</strong>
-                      <span className="muted">{new Date(post.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: DISPLAY_TIME_ZONE })}</span>
-                    </div>
-                    <span className="status-pill">{statusLabel(post.status)}</span>
-                  </div>
-                  <div className="content-post-card__targets">
-                    {post.targets.map((target) => {
-                      const Icon = PLATFORM_ICONS[target.platform];
-                      return (
-                        <span className={"content-target-badge content-target-badge--" + target.status} key={target.id} title={target.error || undefined}>
-                          <Icon size={13} /> {platformLabel(target.platform)} · {statusLabel(target.status)}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ContentPostList
+              channelStatus={channelStatus}
+              editRescheduleAction={editAndRescheduleContentPost}
+              posts={pastPosts}
+              repostAction={repostFusionContentPost}
+              retryAction={retryFusionContentPostTargets}
+              scope="history"
+            />
           </article>
         ) : null}
       </section>
