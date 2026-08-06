@@ -230,10 +230,10 @@ export function resolveBusinessRules(rows: BusinessRuleRow[]): BusinessRules {
       "Prices shown are for Fusion Digital Dynamics LLC website design services only. Domain, hosting, SSL, email, and other third-party products are purchased separately through the Fusion client portal and are not included in this estimate."
     ),
     belowMinimumMessage: textField(
-      "below_minimum_message",
-      "text",
-      `Our minimum project budget is $${ABSOLUTE_MINIMUM_TOTAL_BUDGET}. Let's talk about what's possible at your budget, a payment plan, or a phased build.`
-    ),
+                "below_minimum_message",
+                "text",
+                "That amount is below what we need to get started on a quality launch. Please enter a higher amount to continue, or choose one of the options below."
+              ),
     portalPricingDisclaimerText: textField(
       "portal_pricing_disclaimer_text",
       "text",
