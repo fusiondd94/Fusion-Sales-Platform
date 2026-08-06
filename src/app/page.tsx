@@ -3,6 +3,7 @@ import { ArrowRight, BarChart3, Globe2, LockKeyhole, Mail, Megaphone, Server, Sh
 import { ClosingSignals } from "@/components/SalesFlow";
 import { QuestionnaireFlow } from "@/components/QuestionnaireFlow";
 import { Reveal } from "@/components/Reveal";
+import { EcommerceTiers } from "@/components/EcommerceTiers";
 import { getFusionAdminUser } from "@/lib/auth";
 import { getFusionAdminSettings } from "@/lib/crm";
 import { QUESTIONNAIRE_COOKIE_NAME } from "@/lib/questionnaire-cookie";
@@ -139,6 +140,8 @@ export default async function Home() {
           <a className="primary-button" href="#sales-flow">Start now <ArrowRight size={17} /></a>
         </Reveal>
       </section>
+
+      <EcommerceTiers />
 
       <footer className="site-footer">
         <div className="footer-grid">
