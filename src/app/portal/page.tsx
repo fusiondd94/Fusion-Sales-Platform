@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getClientPortalWorkspace } from "@/lib/portal";
 import { getFusionAdminSettings } from "@/lib/crm";
+import { getOrderBalancesForClient } from "@/lib/sales-orders";
 import { PortalWorkspace } from "./PortalWorkspace";
 
 type PageProps = {
@@ -15,5 +16,14 @@ export default async function PortalPage({ searchParams }: PageProps) {
     redirect("/portal/login");
   }
 
-  return <PortalWorkspace highlightCommentId={params.highlightComment} logoUrl={admin.settings?.logo_url ?? null} workspace={workspace} />;
+  const balances = workspace.client.id.startsWith("admin-preview-") ? [] : await getOrderBalancesForClient(workspace.client.id);
+
+  return (
+    <PortalWorkspace
+      balances={balances}
+      highlightCommentId={params.highlightComment}
+      logoUrl={admin.settings?.logo_url ?? null}
+      workspace={workspace}
+    />
+  );
 }
