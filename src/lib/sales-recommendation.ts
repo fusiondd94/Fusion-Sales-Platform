@@ -180,6 +180,7 @@ async function insertRequirements(
 export type StoredRecommendation = RecommendationResult & {
   recommendationId: string;
   version: number;
+  resultToken: string | null;
 };
 
 export async function generateRecommendationForSession(
@@ -279,7 +280,7 @@ export async function generateRecommendationForSession(
   // client (via text/email, or copied from the admin CRM lead view)
   // without a separate provisioning step. Never blocks recommendation
   // generation if it fails for some reason.
-  await ensureShareTokenForSession(state.session.id);
+  const resultToken = await ensureShareTokenForSession(state.session.id);
 
   const alternatives = result.paths.filter((p) => p.kind !== "recommended");
   if (alternatives.length) {
@@ -332,7 +333,7 @@ export async function generateRecommendationForSession(
     );
   }
 
-  return { ok: true, recommendation: { ...result, recommendationId: recRow.id, version: recRow.version } };
+  return { ok: true, recommendation: { ...result, recommendationId: recRow.id, version: recRow.version, resultToken } };
 }
 
 export async function loadLatestRecommendation(
