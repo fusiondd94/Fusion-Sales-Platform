@@ -8,14 +8,18 @@
  * next-steps-grid, status-pill, primary/secondary-button) as
  * QuestionnaireFlow's RecommendationSummaryView so a shared link looks and
  * feels identical to finishing the questionnaire live, plus the
- * accept/decline/schedule-call CTAs this standalone page adds.
+ * payment / accept/decline/schedule-call CTAs this standalone page adds.
+ *
+ * Payment is the primary, above-the-fold call to action per the "capture
+ * the customer immediately" requirement - it's rendered first, ahead of
+ * the softer accept/decline/schedule-call options.
  */
 
 import { useState, useTransition } from "react";
-import { ArrowRight, Calendar, Check, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, Calendar, Check, CreditCard, ShieldCheck, X } from "lucide-react";
 import type { RecommendationPathKind } from "@/lib/recommendation-engine";
 import type { PublicResultPayload } from "@/lib/sales-result";
-import { requestCallAction, submitDecisionAction } from "@/app/results/[token]/actions";
+import { createPaymentCheckoutAction, requestCallAction, submitDecisionAction } from "@/app/results/[token]/actions";
 
 const FEASIBILITY_LABELS: Record<string, string> = {
   READY_TO_PROCEED: "Ready to proceed",
@@ -46,7 +50,26 @@ export function ResultView({ token, result }: { token: string; result: PublicRes
   const [callRequested, setCallRequested] = useState(Boolean(result.callRequestedAt));
   const [callMethod, setCallMethod] = useState("email");
   const [callError, setCallError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentPending, setPaymentPending] = useState<"full" | "deposit" | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const hasBudget = result.totalPlannedBudget > 0;
+  const depositAmount = Math.round(result.totalPlannedBudget / 2);
+
+  function handlePayment(paymentType: "full" | "deposit") {
+    setPaymentError(null);
+    setPaymentPending(paymentType);
+    startTransition(async () => {
+      const outcome = await createPaymentCheckoutAction(token, paymentType);
+      if (!outcome.ok) {
+        setPaymentError(outcome.reason);
+        setPaymentPending(null);
+        return;
+      }
+      window.location.href = outcome.url;
+    });
+  }
 
   function handleDecision(next: "accepted" | "declined") {
     setDecisionError(null);
@@ -136,6 +159,27 @@ export function ResultView({ token, result }: { token: string; result: PublicRes
       ) : null}
 
       {result.portalPricingDisclaimer ? <p className="muted">{result.portalPricingDisclaimer}</p> : null}
+
+      {hasBudget ? (
+        <div className="result-actions payment-actions">
+          <h3>Ready to get started?</h3>
+          <p className="muted">
+            Secure your spot on the Fusion build calendar today. Pay your full budget now, or put down 50% to get started and pay the rest
+            whenever you&apos;re ready from your client portal.
+          </p>
+          <div className="flow-actions">
+            <button className="primary-button" disabled={pending} onClick={() => handlePayment("full")} type="button">
+              <CreditCard size={17} /> Pay in full - ${result.totalPlannedBudget.toLocaleString()}
+              {paymentPending === "full" ? "..." : ""}
+            </button>
+            <button className="secondary-button" disabled={pending} onClick={() => handlePayment("deposit")} type="button">
+              <CreditCard size={17} /> Pay 50% deposit now - ${depositAmount.toLocaleString()}
+              {paymentPending === "deposit" ? "..." : ""}
+            </button>
+          </div>
+          {paymentError ? <p className="form-error">{paymentError}</p> : null}
+        </div>
+      ) : null}
 
       <div className="result-actions">
         <h3>Ready to move forward?</h3>
