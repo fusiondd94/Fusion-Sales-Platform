@@ -79,6 +79,7 @@ syncChannelHistory,
 import {
 cancelContentPost,
 ContentPlatform,
+ContentType,
 createContentPost,
 deleteContentPost,
 getOrganizationIdForContent,
@@ -1298,7 +1299,17 @@ if (uploadResult.ok && uploadResult.url) mediaUrls.push(uploadResult.url);
 }
 }
 
-const contentType = mediaUrls.length === 0 ? "text" : mediaUrls.length === 1 ? "image" : "carousel";
+const postType = String(formData.get("postType") || "feed");
+const contentType: ContentType =
+  postType === "reel"
+    ? "reel"
+    : postType === "story"
+      ? "story"
+      : mediaUrls.length === 0
+        ? "text"
+        : mediaUrls.length === 1
+          ? "image"
+          : "carousel";
 
 const result = await createContentPost({
 actorId: user.id,
