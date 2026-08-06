@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CheckCircle2, Circle, Clock, Download, Eye, File as FileIcon, FileUp, GripVertical, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, ShieldCheck, Smartphone, Tablet, Trash2, X } from "lucide-react";
-import { addProjectComment, adminVerifyPurchaseAction, deleteOwnProjectComment, deleteOwnProjectFile, markAllOwnNotificationsRead, markOwnNotificationRead, reorderOwnBoardTasks, signOutClientPortal, submitPurchaseConfirmationAction, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
+import { Bell, CheckCircle2, Circle, Clock, CreditCard, Download, Eye, File as FileIcon, FileUp, GripVertical, LayoutDashboard, ListChecks, LogOut, MessageSquarePlus, Monitor, MousePointer2, Send, ShieldCheck, Smartphone, Tablet, Trash2, X } from "lucide-react";
+import { addProjectComment, adminVerifyPurchaseAction, deleteOwnProjectComment, deleteOwnProjectFile, makePortalPaymentAction, markAllOwnNotificationsRead, markOwnNotificationRead, reorderOwnBoardTasks, signOutClientPortal, submitPurchaseConfirmationAction, updateOwnClientTaskStatus, uploadProjectFile } from "@/app/portal/actions";
 import type { ClientPortalWorkspace } from "@/lib/portal";
 import { statusLabel, type LaunchChecklistItem } from "@/lib/launch-requirements";
+import type { ClientOrderBalance } from "@/lib/sales-orders";
 
 const DEFAULT_FRAME_HEIGHT = 1400;
 const DESKTOP_FIT_WIDTH = 1280;
@@ -31,13 +32,13 @@ function getPhaseProgress(currentPhase: string | null | undefined, projectStatus
   return Math.round(((idx + 1) / PORTAL_PHASES.length) * 100);
 }
 
-export function PortalWorkspace({ workspace, highlightCommentId, logoUrl }: { workspace: ClientPortalWorkspace; highlightCommentId?: string; logoUrl?: string | null }) {
+export function PortalWorkspace({ workspace, highlightCommentId, logoUrl, balances }: { workspace: ClientPortalWorkspace; highlightCommentId?: string; logoUrl?: string | null; balances?: ClientOrderBalance[] }) {
   const [commentMode, setCommentMode] = useState(false);
   const [marker, setMarker] = useState<{ x: number; y: number } | null>(null);
   const [frameHeight, setFrameHeight] = useState(DEFAULT_FRAME_HEIGHT);
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commentsTab, setCommentsTab] = useState<"active" | "resolved">("active");
-  const [activeTool, setActiveTool] = useState<"review" | "uploads" | "dashboard" | "tasks" | "launch">("review");
+  const [activeTool, setActiveTool] = useState<"review" | "uploads" | "dashboard" | "tasks" | "launch" | "billing">("review");
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadNotifCount = workspace.notifications.filter((notification) => !notification.read_at).length;
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -241,6 +242,9 @@ export function PortalWorkspace({ workspace, highlightCommentId, logoUrl }: { wo
             <button className={activeTool === "launch" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("launch")} type="button">
               <ShieldCheck size={16} /> <span>Launch Requirements</span>
               {outstandingLaunchCount > 0 ? <span className="portal-notif-badge" style={{ position: "static" }}>{outstandingLaunchCount}</span> : null}
+            </button>
+            <button className={activeTool === "billing" ? "portal-tool-tab portal-tool-tab--active" : "portal-tool-tab"} onClick={() => setActiveTool("billing")} type="button">
+              <CreditCard size={16} /> <span>Billing</span>
             </button>
           </div>
 
@@ -509,6 +513,8 @@ export function PortalWorkspace({ workspace, highlightCommentId, logoUrl }: { wo
             <DashboardView workspace={workspace} />
           ) : activeTool === "launch" ? (
             <LaunchRequirementsView canSubmitPortalWork={canSubmitPortalWork} isAdminPreview={Boolean(workspace.isAdminPreview)} selectedClientId={selectedClientId} workspace={workspace} />
+          ) : activeTool === "billing" ? (
+            <BillingView balances={balances || []} clientId={selectedClientId} />
           ) : (
             <TasksView workspace={workspace} />
           )}
@@ -574,6 +580,96 @@ function DashboardView({ workspace }: { workspace: ClientPortalWorkspace }) {
           ) : null}
         </div>
         {workspace.project.client_instructions ? <p className="muted">{workspace.project.client_instructions}</p> : null}
+      </article>
+    </div>
+  );
+}
+
+function BillingView({ balances, clientId }: { balances: ClientOrderBalance[]; clientId: string }) {
+  const [amountByOrder, setAmountByOrder] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+
+  function handlePay(orderId: string) {
+    setError(null);
+    const raw = amountByOrder[orderId];
+    const amount = Number(raw);
+    if (!amount || amount <= 0) {
+      setError("Enter a valid payment amount.");
+      return;
+    }
+    setPendingOrderId(orderId);
+    makePortalPaymentAction(clientId, orderId, amount).then((outcome) => {
+      if (!outcome.ok) {
+        setError(outcome.reason);
+        setPendingOrderId(null);
+        return;
+      }
+      window.location.href = outcome.url;
+    });
+  }
+
+  return (
+    <div className="portal-side-stack portal-billing-view">
+      <article className="admin-panel">
+        <div className="panel-heading">
+          <h2><CreditCard size={20} /> Project balance</h2>
+        </div>
+        {balances.length ? (
+          balances.map((balance) => {
+            const totalDollars = balance.totalAmountCents / 100;
+            const paidDollars = balance.amountPaidCents / 100;
+            const remainingDollars = balance.remainingCents / 100;
+            return (
+              <div className="dashboard-detail-grid" key={balance.orderId} style={{ marginBottom: 16 }}>
+                <div>
+                  <span className="muted">Total project cost</span>
+                  <p>${totalDollars.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <span className="muted">Paid so far</span>
+                  <p>${paidDollars.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <span className="muted">Remaining balance</span>
+                  <p>${remainingDollars.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </div>
+                {remainingDollars > 0 ? (
+                  <div className="quick-form" style={{ gridColumn: "1 / -1" }}>
+                    <label>
+                      Payment amount
+                      <input
+                        min="1"
+                        onChange={(event) => setAmountByOrder((prev) => ({ ...prev, [balance.orderId]: event.target.value }))}
+                        placeholder={`Up to $${remainingDollars.toFixed(2)}`}
+                        step="0.01"
+                        type="number"
+                        value={amountByOrder[balance.orderId] || ""}
+                      />
+                    </label>
+                    <button
+                      className="primary-button compact-button"
+                      disabled={pendingOrderId === balance.orderId}
+                      onClick={() => handlePay(balance.orderId)}
+                      type="button"
+                    >
+                      <CreditCard size={14} /> Make a payment
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="muted">Status</span>
+                    <p>Paid in full</p>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <p className="admin-empty">No open balance on your project right now.</p>
+        )}
+        {error ? <p className="form-error">{error}</p> : null}
+        <p className="muted">Pay any amount at any time, whenever you are ready - your remaining balance updates as soon as a payment completes.</p>
       </article>
     </div>
   );
