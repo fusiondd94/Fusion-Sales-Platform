@@ -15,7 +15,8 @@ import {
     updateClientTaskStatus,
     uploadClientProjectFile,
 } from "@/lib/portal";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { createIncrementCheckoutSession } from "@/lib/sales-orders";
 
 export async function signInClientPortal(_: unknown, formData: FormData) {
     const email = String(formData.get("email") || "").trim();
@@ -152,4 +153,33 @@ export async function adminVerifyPurchaseAction(formData: FormData) {
   });
 
   revalidatePath("/portal");
+}
+
+/**
+ * Flexible "pay anytime" top-up from the client portal Billing tab. Always
+ * re-verifies server-side that the order actually belongs to the signed-in
+ * client before creating a Stripe Checkout session - never trusts the
+ * clientId/orderId pairing from the client alone.
+ */
+export async function makePortalPaymentAction(
+    clientId: string,
+    orderId: string,
+    amountDollars: number
+  ): Promise<{ ok: true; url: string } | { ok: false; reason: string }> {
+    if (!clientId || !orderId) return { ok: false, reason: "We could not verify that order." };
+
+    const supabase = createSupabaseServiceClient();
+    if (!supabase) return { ok: false, reason: "Payments are not configured yet." };
+
+    const { data: order } = await supabase
+        .from("sales_orders")
+        .select("id, client_id")
+        .eq("id", orderId)
+        .maybeSingle<{ id: string; client_id: string | null }>();
+
+    if (!order || order.client_id !== clientId) {
+        return { ok: false, reason: "We could not verify that order." };
+    }
+
+    return createIncrementCheckoutSession(orderId, amountDollars);
 }
