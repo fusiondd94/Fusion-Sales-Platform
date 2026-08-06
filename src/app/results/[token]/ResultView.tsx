@@ -223,6 +223,19 @@ export function ResultView({ token, result }: { token: string; result: PublicRes
           </>
         )}
       </div>
+    
+      <div className="result-actions">
+        <h3>Not ready to decide right now?</h3>
+        <p className="muted">You can pick this plan back up anytime from this same link, or head to the homepage or your client portal.</p>
+        <div className="flow-actions">
+          <a className="secondary-button" href="/">
+            Back to homepage
+          </a>
+          <a className="secondary-button" href="/portal">
+            Go to my account
+          </a>
+        </div>
+      </div>
     </section>
   );
 }
