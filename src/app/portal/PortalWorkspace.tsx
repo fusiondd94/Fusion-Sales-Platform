@@ -622,6 +622,12 @@ function BillingView({ balances, clientId }: { balances: ClientOrderBalance[]; c
             const remainingDollars = balance.remainingCents / 100;
             return (
               <div className="dashboard-detail-grid" key={balance.orderId} style={{ marginBottom: 16 }}>
+                {balance.description ? (
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <span className="muted">What this is for</span>
+                    <p>{balance.description}</p>
+                  </div>
+                ) : null}
                 <div>
                   <span className="muted">Total project cost</span>
                   <p>${totalDollars.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
