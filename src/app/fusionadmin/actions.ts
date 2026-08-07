@@ -63,6 +63,7 @@ resolveProjectComment,
 updateClientProject
 } from "@/lib/portal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cancelClientOrder, createManualClientCharge, markOrderPaidManually } from "@/lib/sales-orders";
 import {
 backfillContactNames,
 disconnectMessageChannel,
@@ -336,6 +337,44 @@ clientInstructions: String(formData.get("clientInstructions") || "")
 revalidatePath("/fusionadmin");
 revalidatePath("/fusionadmin/clients");
 revalidatePath("/portal");
+}
+
+
+export async function createFusionClientCharge(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await createManualClientCharge({
+    clientId: String(formData.get("clientId") || ""),
+    description: String(formData.get("description") || ""),
+    amountDollars: Number(formData.get("amountDollars") || 0)
+  });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+  revalidatePath("/portal");
+}
+
+export async function markFusionOrderPaid(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await markOrderPaidManually({ orderId: String(formData.get("orderId") || "") });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+  revalidatePath("/portal");
+}
+
+export async function cancelFusionOrder(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await cancelClientOrder({ orderId: String(formData.get("orderId") || "") });
+
+  revalidatePath("/fusionadmin");
+  revalidatePath("/fusionadmin/clients");
+  revalidatePath("/portal");
 }
 
 export async function deleteFusionProjectComment(formData: FormData) {
