@@ -19,10 +19,23 @@
  *   3. createEcommerceTierCheckoutSession - fixed-price quick-buy tiers on
  *      the homepage, no questionnaire required.
  *
+ * A fourth surface, admin-created manual charges (createManualClientCharge,
+ * near the bottom of this file), covers everything that doesn't start from
+ * a questionnaire or checkout flow - retainers, change orders, deposits
+ * requested by phone or email, etc. These are plain sales_orders rows an
+ * admin creates directly from the client's record in fusionadmin; the
+ * client then pays them from the same portal Billing tab and "pay anytime"
+ * flow used for every other order (createIncrementCheckoutSession), so
+ * there's only one payment code path on the client side regardless of how
+ * the order originated.
+ *
  * Fulfillment (fulfillOrderPayment) is idempotent via the unique
  * stripe_checkout_session_id column on sales_payments, and is safe to call
  * from both the Stripe webhook and the /order/success page independently -
- * whichever gets there first wins, the other is a no-op.
+ * whichever gets there first wins, the other is a no-op. markOrderPaidManually
+ * is the equivalent idempotent-in-effect path for payments collected outside
+ * Stripe (cash, check, wire) - it still writes a matching sales_payments row
+ * so the ledger stays consistent between both payment paths.
  */
 
 import type Stripe from "stripe";
@@ -519,6 +532,7 @@ export async function getOrderSummaryByCheckoutSessionId(checkoutSessionId: stri
 
 export type ClientOrderBalance = {
   orderId: string;
+  description: string | null;
   totalAmountCents: number;
   amountPaidCents: number;
   remainingCents: number;
@@ -535,17 +549,188 @@ export async function getOrderBalancesForClient(clientId: string): Promise<Clien
 
   const { data } = await supabase
     .from("sales_orders")
-    .select("id, total_amount_cents, amount_paid_cents, status")
+    .select("id, description, total_amount_cents, amount_paid_cents, status")
     .eq("client_id", clientId)
     .neq("status", "cancelled")
     .order("created_at", { ascending: false })
-    .returns<Array<{ id: string; total_amount_cents: number; amount_paid_cents: number; status: string }>>();
+    .returns<Array<{ id: string; description: string | null; total_amount_cents: number; amount_paid_cents: number; status: string }>>();
 
   return (data || []).map((order) => ({
     orderId: order.id,
+    description: order.description,
     totalAmountCents: order.total_amount_cents,
     amountPaidCents: order.amount_paid_cents,
     remainingCents: Math.max(order.total_amount_cents - order.amount_paid_cents, 0),
     status: order.status
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Admin billing controls - manual charges created from fusionadmin, outside
+// the questionnaire/checkout flows above. See file header for how these fit
+// alongside the Stripe-driven paths.
+// ---------------------------------------------------------------------------
+
+async function resolveDefaultOrganizationId(supabase: ServiceClient): Promise<string | null> {
+  const { data } = await supabase
+    .from("crm_organizations")
+    .select("id")
+    .eq("slug", "fusion-digital-dynamics")
+    .maybeSingle<{ id: string }>();
+  return data?.id || null;
+}
+
+export type AdminOrderSummary = {
+  id: string;
+  orderKind: string;
+  description: string | null;
+  totalAmountCents: number;
+  amountPaidCents: number;
+  status: string;
+  createdAt: string;
+};
+
+/**
+ * Admin-only order list for a client, including cancelled orders - unlike
+ * getOrderBalancesForClient (the client-facing Billing tab), which hides
+ * cancelled orders from the customer.
+ */
+export async function getOrdersForAdminClient(clientId: string): Promise<AdminOrderSummary[]> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase || !clientId) return [];
+
+  const { data } = await supabase
+    .from("sales_orders")
+    .select("id, order_kind, description, total_amount_cents, amount_paid_cents, status, created_at")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false })
+    .returns<
+      Array<{
+        id: string;
+        order_kind: string;
+        description: string | null;
+        total_amount_cents: number;
+        amount_paid_cents: number;
+        status: string;
+        created_at: string;
+      }>
+    >();
+
+  return (data || []).map((order) => ({
+    id: order.id,
+    orderKind: order.order_kind,
+    description: order.description,
+    totalAmountCents: order.total_amount_cents,
+    amountPaidCents: order.amount_paid_cents,
+    status: order.status,
+    createdAt: order.created_at
+  }));
+}
+
+/**
+ * Admin-created charge for a client outside the questionnaire/checkout
+ * flow - e.g. a monthly retainer, a change-order fee, or a deposit
+ * requested by phone or email. Creates an unpaid sales_orders row; the
+ * client then pays it from their portal Billing tab through the same
+ * "pay anytime" flow (createIncrementCheckoutSession) used for every other
+ * order, so there's only one payment code path on the client side.
+ */
+export async function createManualClientCharge(input: {
+  clientId: string;
+  description: string;
+  amountDollars: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.clientId) return { ok: false, error: "Client is required." };
+
+  const description = input.description.trim();
+  if (!description) return { ok: false, error: "Describe what this charge is for." };
+
+  const amountCents = Math.round(input.amountDollars * 100);
+  if (!Number.isFinite(amountCents) || amountCents < 100) return { ok: false, error: "Enter a valid amount." };
+
+  const { data: client } = await supabase
+    .from("crm_clients")
+    .select("customer_email, customer_name, organization_id")
+    .eq("id", input.clientId)
+    .maybeSingle<{ customer_email: string | null; customer_name: string | null; organization_id: string | null }>();
+
+  if (!client) return { ok: false, error: "Client not found." };
+
+  const organizationId = client.organization_id || (await resolveDefaultOrganizationId(supabase));
+
+  const { error } = await supabase.from("sales_orders").insert({
+    organization_id: organizationId,
+    client_id: input.clientId,
+    order_kind: "manual_charge",
+    description,
+    customer_email: client.customer_email || "pending@checkout.stripe.com",
+    customer_name: client.customer_name,
+    total_amount_cents: amountCents,
+    amount_paid_cents: 0,
+    status: "pending"
+  });
+
+  if (error) return { ok: false, error: "Unable to create the charge." };
+  return { ok: true };
+}
+
+/**
+ * Marks an order paid outside Stripe (cash, check, wire, etc.) and records
+ * a matching sales_payments row so the ledger stays consistent with the
+ * Stripe-fulfilled path in fulfillOrderPayment().
+ */
+export async function markOrderPaidManually(input: { orderId: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.orderId) return { ok: false, error: "Order id is required." };
+
+  const { data: order } = await supabase
+    .from("sales_orders")
+    .select("id, total_amount_cents, amount_paid_cents")
+    .eq("id", input.orderId)
+    .maybeSingle<{ id: string; total_amount_cents: number; amount_paid_cents: number }>();
+
+  if (!order) return { ok: false, error: "Order not found." };
+
+  const remainingCents = Math.max(order.total_amount_cents - order.amount_paid_cents, 0);
+  const now = new Date().toISOString();
+
+  if (remainingCents > 0) {
+    await supabase.from("sales_payments").insert({
+      order_id: order.id,
+      amount_cents: remainingCents,
+      payment_type: "manual",
+      status: "completed",
+      completed_at: now
+    });
+  }
+
+  const { error } = await supabase
+    .from("sales_orders")
+    .update({ amount_paid_cents: order.total_amount_cents, status: "paid_in_full", updated_at: now })
+    .eq("id", order.id);
+
+  if (error) return { ok: false, error: "Unable to update the order." };
+  return { ok: true };
+}
+
+/**
+ * Cancels a charge that was created in error. Removes it from both the
+ * admin's active view and the client's Billing tab (which excludes
+ * cancelled orders via getOrderBalancesForClient).
+ */
+export async function cancelClientOrder(input: { orderId: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!input.orderId) return { ok: false, error: "Order id is required." };
+
+  const { error } = await supabase
+    .from("sales_orders")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", input.orderId);
+
+  if (error) return { ok: false, error: "Unable to cancel the order." };
+  return { ok: true };
 }
