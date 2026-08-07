@@ -1,9 +1,12 @@
 import { Building2, CheckCircle2, GitMerge, Search, Trash2, UserRoundPlus, UsersRound } from "lucide-react";
 import {
   assignFusionClientTask,
+  cancelFusionOrder,
   createFusionClient,
+  createFusionClientCharge,
   createFusionContact,
   deleteFusionProjectComment,
+  markFusionOrderPaid,
   mergeFusionContacts,
   resolveFusionProjectComment,
   updateFusionClientProject,
@@ -11,6 +14,7 @@ import {
   updateFusionContact,
   updateFusionLead
 } from "@/app/fusionadmin/actions";
+import { getOrdersForAdminClient, type AdminOrderSummary } from "@/lib/sales-orders";
 import { ChannelIcon, ChannelIconType } from "@/components/ChannelIcon";
 import { FormError } from "@/components/ui";
 import { getFusionCrmWorkspace } from "@/lib/crm";
@@ -65,6 +69,7 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
   const selectedCompany = crm.companies.find((company) => company.id === filters.companyId);
   const selectedContact = crm.contacts.find((contact) => contact.id === filters.contactId);
   const selectedPortalClient = portalClients.find((client) => client.id === filters.clientId);
+  const selectedClientOrders: AdminOrderSummary[] = selectedPortalClient ? await getOrdersForAdminClient(selectedPortalClient.id) : [];
   const selectedLeadShareUrl = selectedLead ? await getShareUrlForLead(selectedLead.id) : null;
 
   return (
@@ -589,7 +594,48 @@ export default async function FusionClientsPage({ searchParams }: PageProps) {
                 <FusionSubmitButton className="compact-button" pendingLabel="Saving project...">Save portal project</FusionSubmitButton>
               </div>
             </form>
-              <form action={assignFusionClientTask} data-track-unsaved="true" style={{ marginTop: "1.5rem" }}>
+              <div className="portal-admin-comments" style={{ marginTop: "1.5rem" }}>
+              <h3 style={{ marginBottom: "0.5rem" }}>Billing</h3>
+              {selectedClientOrders.length ? (
+                selectedClientOrders.map((order) => (
+                  <div className="portal-admin-comment" key={order.id}>
+                    <div>
+                      <strong>{order.description || order.orderKind}</strong>
+                      <div className="portal-admin-comment__meta">
+                        {formatCurrency(order.amountPaidCents / 100)} of {formatCurrency(order.totalAmountCents / 100)} paid &middot; <FusionBadge tone={statusTone(order.status)}>{order.status}</FusionBadge>
+                      </div>
+                    </div>
+                    {order.status !== "paid_in_full" && order.status !== "cancelled" ? (
+                      <div className="portal-admin-comment__actions">
+                        <form action={markFusionOrderPaid}>
+                          <input name="orderId" type="hidden" value={order.id} />
+                          <button className="text-link" type="submit">Mark paid</button>
+                        </form>
+                        <form action={cancelFusionOrder}>
+                          <input name="orderId" type="hidden" value={order.id} />
+                          <button className="text-link text-link--danger" type="submit">Cancel</button>
+                        </form>
+                      </div>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <p className="admin-empty">No charges yet for this client.</p>
+              )}
+              <form action={createFusionClientCharge} data-track-unsaved="true" style={{ marginTop: "1rem" }}>
+                <input name="clientId" type="hidden" value={selectedPortalClient.id} />
+                <FusionField label="What is this charge for?">
+                  <FusionInput name="description" placeholder="e.g. Website redesign - 50% deposit" required />
+                </FusionField>
+                <FusionField label="Amount (USD)">
+                  <FusionInput name="amountDollars" type="number" min="1" step="0.01" required />
+                </FusionField>
+                <div className="fusion-form-actions fusion-form-actions--end">
+                  <FusionSubmitButton className="compact-button" pendingLabel="Adding charge...">Add a charge</FusionSubmitButton>
+                </div>
+              </form>
+            </div>
+            <form action={assignFusionClientTask} data-track-unsaved="true" style={{ marginTop: "1.5rem" }}>
                 <input name="clientId" type="hidden" value={selectedPortalClient.id} />
                 <h3 style={{ marginBottom: "0.5rem" }}>Assign a task to this client</h3>
                 <div className="fusion-form-section__grid">
