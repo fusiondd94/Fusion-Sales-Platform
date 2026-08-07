@@ -40,6 +40,19 @@ export function createSupabaseServiceClient() {
       auth: {
         persistSession: false,
         autoRefreshToken: false
+      },
+      global: {
+        // Next.js's fetch patch caches GET requests indefinitely by default,
+        // even on dynamically-rendered admin/portal routes. Without this,
+        // reads made through this service-role client (used almost
+        // everywhere in fusionadmin and the client portal) can keep
+        // returning stale data after a write - e.g. an admin edit that
+        // saves successfully to the database but the page (and any other
+        // page reading the same row) keeps rendering the old value until
+        // the underlying Data Cache entry happens to expire. Force every
+        // request from this client to bypass that cache so admins always
+        // see the record they just saved.
+        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" })
       }
     });
   }
