@@ -1,4 +1,4 @@
-import { addFusionHashtagsToPool } from "@/app/fusionadmin/actions";
+import { addFusionHashtagsToPool, deleteFusionHashtagFromPool } from "@/app/fusionadmin/actions";
 import { getHashtagPool } from "@/lib/hashtags";
 import { FusionField, FusionInput, FusionSubmitButton, PageHeader } from "../../crm-ui";
 import "./hashtags-append.css";
@@ -51,6 +51,12 @@ export default async function HashtagPoolPage() {
                 title={tag.used ? `Used ${tag.useCount} time${tag.useCount === 1 ? "" : "s"}` : "Not used yet"}
               >
                 {tag.tag}
+                <form action={deleteFusionHashtagFromPool} className="hashtag-chip__remove-form">
+                  <input name="hashtagId" type="hidden" value={tag.id} />
+                  <button aria-label={`Remove ${tag.tag}`} className="hashtag-chip__remove" title="Remove from pool" type="submit">
+                    &times;
+                  </button>
+                </form>
               </span>
             ))}
           </div>
