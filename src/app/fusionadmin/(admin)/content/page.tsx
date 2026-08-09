@@ -1,9 +1,10 @@
-import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Facebook, Instagram, MessageCircle, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Facebook, Hash, Instagram, MessageCircle, Send, Sparkles } from "lucide-react";
 import Link from "next/link";
 import {
   cancelFusionContentPost,
   deleteFusionContentPost,
   publishFusionContentPostNow,
+  randomizeFusionContentHashtags,
   updateFusionContentPost
 } from "@/app/fusionadmin/actions";
 import { editAndRescheduleContentPost, repostFusionContentPost, retryFusionContentPostTargets } from "./content-post-actions";
@@ -130,6 +131,9 @@ export default async function FusionContentCalendarPage({
             <Link className="secondary-button compact-button" href="/fusionadmin/settings/connections">
               <MessageCircle size={16} /> Manage channels
             </Link>
+            <Link className="secondary-button compact-button" href="/fusionadmin/content/hashtags">
+              <Hash size={16} /> Hashtag pool
+            </Link>
           </span>
         }
       />
@@ -216,6 +220,7 @@ export default async function FusionContentCalendarPage({
             cancelAction={cancelFusionContentPost}
             channelStatus={channelStatus}
             deleteAction={deleteFusionContentPost}
+            hashtagAction={randomizeFusionContentHashtags}
             posts={upcomingPosts}
             publishNowAction={publishFusionContentPostNow}
             scope="upcoming"
