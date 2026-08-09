@@ -204,3 +204,29 @@ export async function applyRandomHashtagsToPost(
 
   return { ok: true, addedTags: selected.map((row) => row.tag) };
 }
+
+/**
+ * Removes a single hashtag from the pool by id. Scoped to the org so a
+ * stray/incorrect id can't delete another organization's row. Does not
+ * touch any post captions - this only removes the tag from future
+ * randomizer picks and from the pool listing.
+ */
+export async function deleteHashtagFromPool(
+  id: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  if (!id) return { ok: false, error: "Hashtag id is required." };
+
+  const organizationId = await resolveOrganizationId(supabase);
+  if (!organizationId) return { ok: false, error: "Unable to resolve organization." };
+
+  const { error } = await supabase
+    .from("hashtag_pool")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organizationId);
+
+  if (error) return { ok: false, error: "Unable to delete hashtag from the pool." };
+  return { ok: true };
+}
