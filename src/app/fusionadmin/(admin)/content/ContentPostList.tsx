@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Facebook, Instagram, LayoutGrid, List, MessageCircle, RefreshCcw, Repeat, Send, Trash2, XCircle } from "lucide-react";
+import { Facebook, Hash, Instagram, LayoutGrid, List, MessageCircle, RefreshCcw, Repeat, Send, Trash2, XCircle } from "lucide-react";
 import type { ContentPlatform, ContentPost } from "@/lib/content";
 import "./content-list-append.css";
 
@@ -67,6 +67,7 @@ function toDateTimeLocal(iso: string) {
 }
 
 type ActionProps = {
+  hashtagAction?: (formData: FormData) => void;
   updateAction?: (formData: FormData) => void;
   publishNowAction?: (formData: FormData) => void;
   cancelAction?: (formData: FormData) => void;
@@ -313,6 +314,12 @@ function PostActions({ post, channelStatus, scope, ...actions }: { post: Content
         ) : null}
 
         <div className="content-post-card__actions">
+          {!/#[A-Za-z0-9_]+/.test(post.caption) && actions.hashtagAction ? (
+            <form action={actions.hashtagAction}>
+              <input name="postId" type="hidden" value={post.id} />
+              <button className="secondary-button compact-button" type="submit"><Hash size={14} /> Add hashtags</button>
+            </form>
+          ) : null}
           {actions.publishNowAction ? (
             <form action={actions.publishNowAction}>
               <input name="postId" type="hidden" value={post.id} />
