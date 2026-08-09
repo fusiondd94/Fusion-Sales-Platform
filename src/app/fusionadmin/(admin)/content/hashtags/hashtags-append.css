@@ -27,3 +27,29 @@
   border-color: rgba(249, 115, 22, 0.35);
   color: #c2410c;
 }
+.hashtag-chip__remove-form {
+  display: inline-flex;
+  margin: 0;
+  margin-left: 6px;
+}
+
+.hashtag-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.12);
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hashtag-chip__remove:hover {
+  background: rgba(220, 38, 38, 0.85);
+  color: #fff;
+}
