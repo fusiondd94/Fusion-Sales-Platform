@@ -88,7 +88,7 @@ publishPostNow,
 updateContentPost,
 uploadContentMedia
 } from "@/lib/content";
-import { addHashtagsToPool, applyRandomHashtagsToPost } from "@/lib/hashtags";
+import { addHashtagsToPool, applyRandomHashtagsToPost, deleteHashtagFromPool } from "@/lib/hashtags";
 import {
 addAudienceMember,
 createEmailAudience,
@@ -1419,6 +1419,14 @@ export async function addFusionHashtagsToPool(formData: FormData) {
   if (!user.isAllowed) return;
 
   await addHashtagsToPool(String(formData.get("hashtags") || ""));
+  revalidatePath("/fusionadmin/content/hashtags");
+}
+
+export async function deleteFusionHashtagFromPool(formData: FormData) {
+  const user = await requireFusionAdmin();
+  if (!user.isAllowed) return;
+
+  await deleteHashtagFromPool(String(formData.get("hashtagId") || ""));
   revalidatePath("/fusionadmin/content/hashtags");
 }
 
