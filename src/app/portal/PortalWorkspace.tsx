@@ -19,6 +19,21 @@ function normalizeUrl(url: string | null | undefined) {
   return url.split("#")[0].replace(/\/$/, "");
 }
 
+function getInitials(name: string | null | undefined) {
+  const trimmed = (name || "").trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function formatCommentTime(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
 const PORTAL_PHASES = ["Discovery", "Design", "Development", "Client Review", "Launch"];
 
 function getPhaseIndex(currentPhase: string | null | undefined) {
@@ -307,23 +322,27 @@ export function PortalWorkspace({ workspace, highlightCommentId, logoUrl, balanc
                   </div>
                   <div className="timeline-list">
                     {visibleComments.map((comment) => (
-                      <div className={comment.id === highlightCommentId ? "timeline-item timeline-item--target" : "timeline-item"} key={comment.id}>
-                        {pinNumberById.get(comment.id) ? <span className="timeline-item__number">{pinNumberById.get(comment.id)}</span> : null}
-                        <p>
-                          <strong>{comment.author_name}</strong>
-                          <br />
-                          <span className="muted">{comment.body}</span>
-                          <br />
-                          <span className={`status-pill status-pill--${comment.status}`}>{comment.status}</span>
-                        </p>
-                        {comment.author_user_id === workspace.user.id ? (
-                          <form action={deleteOwnProjectComment}>
-                            <input name="clientId" type="hidden" value={selectedClientId} />
-                            <input name="commentId" type="hidden" value={comment.id} />
-                            <button aria-label="Delete comment" className="timeline-item__delete" type="submit"><Trash2 size={14} /></button>
-                          </form>
-                        ) : null}
-                      </div>
+                                    <div className={comment.id === highlightCommentId ? "timeline-item timeline-item--target" : "timeline-item"} key={comment.id}>
+                    <div aria-hidden="true" className="timeline-item__avatar">{getInitials(comment.author_name)}</div>
+                  <div className="timeline-item__content">
+                  <div className="timeline-item__head">
+                  <strong className="timeline-item__author">{comment.author_name}</strong>
+                    {pinNumberById.get(comment.id) ? <span className="timeline-item__number">Pin {pinNumberById.get(comment.id)}</span> : null}
+                  </div>
+                  <p className="timeline-item__body">{comment.body}</p>
+                  <div className="timeline-item__foot">
+                  <span className="timeline-item__time"><Clock size={11} /> {formatCommentTime(comment.created_at)}</span>
+                  <span className={`status-pill status-pill--${comment.status}`}>{comment.status}</span>
+                  </div>
+                  </div>
+                    {comment.author_user_id === workspace.user.id ? (
+              <form action={deleteOwnProjectComment} className="timeline-item__delete-form">
+              <input name="clientId" type="hidden" value={selectedClientId} />
+              <input name="commentId" type="hidden" value={comment.id} />
+              <button aria-label="Delete comment" className="timeline-item__delete" type="submit"><Trash2 size={14} /></button>
+              </form>
+              ) : null}
+                  </div>
                     ))}
                     {!visibleComments.length ? (
                       <div className="portal-comments-empty">
