@@ -762,7 +762,7 @@ export type QuestionnaireProgress = {
 
 export function computeProgress(answers: AnswerMap): QuestionnaireProgress {
   const visible = getVisibleQuestions(answers);
-  const answeredCount = visible.filter((question) => (question.key in answers && answers[question.key] != null).length;
+  const answeredCount = visible.filter((question) => (question.key in answers && answers[question.key] != null)).length;
   const totalVisible = visible.length;
   const percent = totalVisible === 0 ? 0 : Math.round((answeredCount / totalVisible) * 100);
   return { answeredCount, totalVisible, percent, isComplete: answeredCount === totalVisible };
