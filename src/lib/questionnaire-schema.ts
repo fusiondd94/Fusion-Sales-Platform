@@ -748,7 +748,7 @@ export function getVisibleQuestions(answers: AnswerMap): QuestionDefinition[] {
 export function getNextQuestion(answers: AnswerMap): QuestionDefinition | null {
   const visible = getVisibleQuestions(answers);
   for (const question of visible) {
-    if (!isAnswered(answers[question.key])) return question;
+    if (!(question.key in answers) || answers[question.key] == null) return question;
   }
   return null;
 }
@@ -762,14 +762,14 @@ export type QuestionnaireProgress = {
 
 export function computeProgress(answers: AnswerMap): QuestionnaireProgress {
   const visible = getVisibleQuestions(answers);
-  const answeredCount = visible.filter((question) => isAnswered(answers[question.key])).length;
+  const answeredCount = visible.filter((question) => (question.key in answers && answers[question.key] != null).length;
   const totalVisible = visible.length;
   const percent = totalVisible === 0 ? 0 : Math.round((answeredCount / totalVisible) * 100);
   return { answeredCount, totalVisible, percent, isComplete: answeredCount === totalVisible };
 }
 
 export function hasContactInfo(answers: AnswerMap): boolean {
-  return CONTACT_QUESTION_KEYS.every((key) => isAnswered(answers[key]));
+  return CONTACT_QUESTION_KEYS.every((key) => (key in answers && answers[key] != null));
 }
 
 // ---------------------------------------------------------------------------
