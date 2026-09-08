@@ -14,6 +14,11 @@
     color: var(--text-on-dark) !important;
 }
 
+.login-shell.shell-light .login-brand > span {
+     display: inline !important;
+     color: var(--text-on-dark) !important;
+}
+
 .login-shell.shell-light .login-brand .brand-mark {
     background: var(--lg-gradient) !important;
     color: #fff !important;
