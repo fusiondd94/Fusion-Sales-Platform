@@ -36,8 +36,7 @@
      box-shadow: none !important;
      width: 5.2rem !important;
      height: 5.2rem !important;
-     filter: grayscale(1) brightness(1.9) contrast(1.05);
-}
+         filter: brightness(0) invert(1);
 
 .shell-light .footer-brand .brand-mark--logo {
      width: 6.4rem !important;
@@ -48,3 +47,145 @@
 .shell-light .brand > span:not(.brand-mark) {
   display: none !important;
 }
+
+/* ---------- Account menu: replaces the plain "Signed in as" text ---------- */
+.shell-light .nav-user-menu {
+     position: relative;
+     margin-left: 1.35rem;
+     padding-left: 1.35rem;
+     border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.shell-light .nav-user-menu__trigger {
+     display: inline-flex;
+     align-items: center;
+     gap: 0.5rem;
+     padding: 0.45rem 0.9rem;
+     border-radius: 999px;
+     border: 1px solid rgba(255, 255, 255, 0.18);
+     background: rgba(255, 255, 255, 0.06);
+     color: rgba(255, 255, 255, 0.85);
+     font-size: 0.85rem;
+     font-weight: 500;
+     cursor: pointer;
+     transition: background 200ms ease, border-color 200ms ease;
+}
+
+.shell-light .nav-user-menu__trigger:hover,
+   .shell-light .nav-user-menu[data-open="true"] .nav-user-menu__trigger {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.32);
+   }
+
+.shell-light .nav-user-menu__trigger svg {
+     color: var(--lg-gold-bright, #e3c08e);
+}
+
+.shell-light .nav-user-menu__trigger .chevron {
+     color: rgba(255, 255, 255, 0.6);
+     transition: transform 200ms ease;
+}
+
+.shell-light .nav-user-menu[data-open="true"] .chevron {
+     transform: rotate(180deg);
+}
+
+.shell-light .nav-user-dropdown {
+     position: absolute;
+     top: calc(100% + 0.6rem);
+     right: 0;
+     min-width: 15.5rem;
+     padding: 0.6rem;
+     border-radius: 16px;
+     background: rgba(20, 16, 28, 0.96);
+     border: 1px solid rgba(255, 255, 255, 0.16);
+     box-shadow: 0 24px 60px rgba(2, 1, 6, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+     backdrop-filter: blur(24px) saturate(160%);
+     -webkit-backdrop-filter: blur(24px) saturate(160%);
+     z-index: 60;
+}
+
+.shell-light .nav-user-dropdown__heading {
+     display: flex;
+     flex-direction: column;
+     gap: 0.1rem;
+     padding: 0.5rem 0.7rem 0.7rem;
+     margin-bottom: 0.35rem;
+     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.shell-light .nav-user-dropdown__heading small {
+     color: rgba(255, 255, 255, 0.55);
+     font-size: 0.72rem;
+     text-transform: uppercase;
+     letter-spacing: 0.04em;
+}
+
+.shell-light .nav-user-dropdown__heading strong {
+     color: var(--text-on-dark, #f4eefc);
+     font-size: 0.95rem;
+}
+
+.shell-light .nav-user-dropdown a.nav-user-dropdown__item {
+     display: flex !important;
+     align-items: center;
+     gap: 0.6rem;
+     padding: 0.55rem 0.7rem;
+     border-radius: 10px;
+     color: rgba(255, 255, 255, 0.85) !important;
+     font-size: 0.88rem;
+     text-decoration: none;
+     transition: background 150ms ease;
+}
+
+.shell-light .nav-user-dropdown a.nav-user-dropdown__item::after {
+     content: none !important;
+}
+
+.shell-light .nav-user-dropdown a.nav-user-dropdown__item:hover {
+     background: rgba(255, 255, 255, 0.1);
+     color: #fff !important;
+}
+
+.shell-light .nav-user-dropdown__item svg {
+     color: var(--lg-gold-bright, #e3c08e);
+     flex-shrink: 0;
+}
+
+.shell-light .nav-user-dropdown__divider {
+     height: 1px;
+     margin: 0.4rem 0.2rem;
+     background: rgba(255, 255, 255, 0.12);
+}
+
+.shell-light .nav-user-dropdown__item--signout {
+     padding: 0;
+}
+
+.shell-light .nav-user-dropdown__item--signout form {
+     margin: 0;
+}
+
+.shell-light .nav-user-dropdown__item--signout .ghost-button {
+     width: 100%;
+     justify-content: flex-start;
+     gap: 0.6rem;
+     padding: 0.55rem 0.7rem;
+     border: none !important;
+     border-radius: 10px;
+     background: transparent !important;
+     color: #e59a9a !important;
+     font-size: 0.88rem;
+     box-shadow: none !important;
+}
+
+.shell-light .nav-user-dropdown__item--signout .ghost-button:hover {
+     background: rgba(229, 154, 154, 0.14) !important;
+}
+
+@media (max-width: 720px) {
+     .shell-light .nav-user-menu__trigger span {
+            display: none;
+     }
+}
+   
