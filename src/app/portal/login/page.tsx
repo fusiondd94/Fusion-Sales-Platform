@@ -6,7 +6,7 @@ export default async function ClientPortalLoginPage() {
   const logoUrl = admin.settings?.logo_url;
 
   return (
-    <main className="login-shell">
+    <main className="login-shell shell-light">
       <a className="brand login-brand" href="/">
         {logoUrl ? <img alt="Brand logo" className="brand-mark brand-mark--logo" src={logoUrl} /> : <span className="brand-mark">FDD</span>}
         <span>Fusion Client Portal</span>
