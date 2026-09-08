@@ -207,3 +207,17 @@ overriding the "on-dark" .hero .eyebrow rule above via source order ---------- *
 .shell-light .metric svg {
   color: var(--lg-violet-deep) !important;
 }
+
+/* ---------- Offer-tile icon badge: force a solid, visible gradient badge ---------- */
+.shell-light .offer-tile svg {
+   width: 20px !important;
+   height: 20px !important;
+   padding: 10px !important;
+   box-sizing: content-box !important;
+   border-radius: 999px !important;
+   display: inline-flex !important;
+   align-items: center !important;
+   justify-content: center !important;
+   background: var(--lg-gradient) !important;
+   color: #fff !important;
+}
