@@ -313,3 +313,16 @@
     filter: blur(40px);
   }
 }
+/* ---------- CTA band text: dark for legibility on light glass ---------- */
+.shell-light .cta-band .eyebrow {
+   color: var(--fusion-teal-900, #004443);
+}
+
+.shell-light .cta-band h2 {
+   color: #0c1728;
+}
+
+.shell-light .cta-band p {
+   color: rgba(12, 23, 40, 0.68);
+}
+
