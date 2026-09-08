@@ -1,0 +1,83 @@
+/* ============================================================
+   Liquid Glass v4 — client portal login page
+      Loaded after liquid-glass-v3-append.css. Scoped to
+         .login-shell.shell-light so only the portal login page
+            (which opts in via the "shell-light" class) is affected;
+               the fusionadmin login and access-denied screens are untouched.
+                  ============================================================ */
+
+.login-shell.shell-light {
+    padding-top: 3rem;
+}
+
+.login-shell.shell-light .login-brand {
+    color: var(--text-on-dark) !important;
+}
+
+.login-shell.shell-light .login-brand .brand-mark {
+    background: var(--lg-gradient) !important;
+    color: #fff !important;
+}
+
+.login-shell.shell-light .login-brand .brand-mark--logo {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    filter: brightness(0) invert(1);
+}
+
+.login-shell.shell-light .login-story .eyebrow {
+    color: var(--lg-gold-bright) !important;
+}
+
+.login-shell.shell-light .login-story h1 {
+    color: var(--text-on-dark) !important;
+}
+
+.login-shell.shell-light .login-story > p {
+    color: var(--text-on-dark-muted) !important;
+}
+
+.login-shell.shell-light .login-proof-grid > div {
+    background: var(--glass-surface);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 18px 40px rgba(5, 3, 10, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.login-shell.shell-light .login-card {
+    background: var(--glass-surface);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
+.login-shell.shell-light .login-icon {
+    background: var(--lg-gradient) !important;
+    color: #fff !important;
+}
+
+.login-shell.shell-light .login-card .eyebrow {
+    color: var(--lg-violet-deep) !important;
+}
+
+.login-shell.shell-light .login-card input {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(32, 26, 44, 0.16);
+}
+
+.login-shell.shell-light .login-card input:focus {
+    border-color: var(--lg-violet-deep);
+    box-shadow: 0 0 0 3px rgba(124, 107, 160, 0.18);
+}
+
+@media (max-width: 640px) {
+    .login-shell.shell-light {
+          padding-top: 1.5rem;
+    }
+}
