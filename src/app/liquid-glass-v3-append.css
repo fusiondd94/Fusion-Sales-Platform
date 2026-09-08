@@ -26,20 +26,22 @@
   }
 }
 
-/* ---------- Logo: bigger, no gradient badge, natural grey/white mark ---------- */
+/* ---------- Logo: bigger, no box/border, natural grey/white mark ---------- */
 .shell-light .brand-mark--logo {
-  background: none !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  width: 3.4rem !important;
-  height: 3.4rem !important;
-  filter: grayscale(1) brightness(1.9) contrast(1.05);
+     background: none !important;
+     padding: 0 !important;
+     border: none !important;
+     outline: none !important;
+     border-radius: 0 !important;
+     box-shadow: none !important;
+     width: 5.2rem !important;
+     height: 5.2rem !important;
+     filter: grayscale(1) brightness(1.9) contrast(1.05);
 }
 
 .shell-light .footer-brand .brand-mark--logo {
-  width: 4.2rem !important;
-  height: 4.2rem !important;
+     width: 6.4rem !important;
+     height: 6.4rem !important;
 }
 
 /* ---------- Hide the wordmark next to the logo, nav and footer alike ---------- */
