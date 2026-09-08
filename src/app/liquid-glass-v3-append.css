@@ -1,0 +1,48 @@
+/* ============================================================
+   Liquid Glass v3 — e-commerce tiers layout + logo treatment
+   Loaded after liquid-glass-v2-append.css, wins the cascade.
+   ============================================================ */
+
+/* ---------- E-commerce tiers: side by side, not stacked ---------- */
+.shell-light .next-steps-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 1.25rem !important;
+  align-items: stretch;
+}
+
+.shell-light .next-step-card {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.shell-light .next-step-card .primary-button {
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .shell-light .next-steps-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---------- Logo: bigger, no gradient badge, natural grey/white mark ---------- */
+.shell-light .brand-mark--logo {
+  background: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  width: 3.4rem !important;
+  height: 3.4rem !important;
+  filter: grayscale(1) brightness(1.9) contrast(1.05);
+}
+
+.shell-light .footer-brand .brand-mark--logo {
+  width: 4.2rem !important;
+  height: 4.2rem !important;
+}
+
+/* ---------- Hide the wordmark next to the logo, nav and footer alike ---------- */
+.shell-light .brand > span:not(.brand-mark) {
+  display: none !important;
+}
