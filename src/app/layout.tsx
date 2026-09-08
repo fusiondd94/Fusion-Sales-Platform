@@ -10,6 +10,7 @@ import "./whatsapp-embedded-append.css";
 import "./content-append.css";
 import "./liquid-glass-append.css";
 import "./liquid-glass-v2-append.css";
+import "./liquid-glass-v3-append.css";
 
 const inter = Inter({
   subsets: ["latin"],
