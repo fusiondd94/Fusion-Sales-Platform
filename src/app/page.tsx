@@ -8,6 +8,7 @@ import { getFusionAdminUser } from "@/lib/auth";
 import { getFusionAdminSettings } from "@/lib/crm";
 import { QUESTIONNAIRE_COOKIE_NAME } from "@/lib/questionnaire-cookie";
 import { loadQuestionnaireState } from "@/lib/sales-questionnaire";
+import { NavAccountMenu } from "@/components/NavAccountMenu";
 
 const offers = [
   { icon: Globe2, title: "Domains", text: "Secure the name, connect DNS, and make launch clean." },
@@ -50,7 +51,7 @@ export default async function Home() {
           <a href="#sales-flow">Sales Flow</a>
           {adminUser?.isAllowed ? <a href="/fusionadmin">CRM</a> : null}
           <a href="/portal">Portal</a>
-          {adminUser?.isAllowed ? <span className="nav-user">Signed in as {adminUser.displayName}</span> : null}
+          {adminUser?.isAllowed ? <NavAccountMenu displayName={adminUser.displayName} /> : null}
         </div>
         <a className="nav-cta" href="#sales-flow">Start</a>
       </nav>
