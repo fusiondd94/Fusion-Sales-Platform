@@ -1,0 +1,209 @@
+/* ============================================================
+   Liquid Glass v2 — atmosphere + contrast + new palette
+   Loaded after liquid-glass-append.css, wins the cascade.
+   Twilight palette (violet / dusty rose / champagne gold) —
+   not tied to brand colors, used only on the sales page.
+   ============================================================ */
+
+.shell-light {
+  --lg-violet: #7c6ba0;
+  --lg-violet-deep: #5b4a7d;
+  --lg-rose: #c48a99;
+  --lg-gold: #d1a86a;
+  --lg-gold-bright: #e3c08e;
+  --lg-gradient: linear-gradient(135deg, #7c6ba0 0%, #c48a99 55%, #d1a86a 100%);
+
+--glass-surface: rgba(255, 255, 255, 0.88);
+  --glass-surface-strong: rgba(255, 255, 255, 0.96);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-border-strong: rgba(255, 255, 255, 0.75);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 30px 80px rgba(5, 3, 10, 0.5);
+
+--text-on-dark: #f4eefc;
+  --text-on-dark-muted: rgba(244, 238, 252, 0.72);
+  --text-on-glass: #201a2c;
+  --text-on-glass-muted: rgba(32, 26, 44, 0.68);
+
+background:
+  radial-gradient(50rem 30rem at 20% 8%, rgba(124, 107, 160, 0.24), transparent 65%),
+  radial-gradient(45rem 28rem at 85% 12%, rgba(196, 138, 153, 0.2), transparent 65%),
+  radial-gradient(55rem 32rem at 50% 100%, rgba(209, 168, 106, 0.16), transparent 65%),
+  linear-gradient(165deg, #0e0b16 0%, #1a1425 45%, #140f1f 100%) !important;
+}
+
+/* ---------- Recolor ambient drifting blobs ---------- */
+.shell-light::before {
+  background: radial-gradient(circle, rgba(124, 107, 160, 0.4), transparent 70%) !important;
+  opacity: 0.45 !important;
+}
+
+.shell-light::after {
+  background: radial-gradient(circle, rgba(209, 168, 106, 0.32), transparent 70%) !important;
+  opacity: 0.4 !important;
+}
+
+/* ---------- Buttons: new signature gradient ---------- */
+.shell-light .primary-button,
+.shell-light .nav-cta {
+  background: var(--lg-gradient) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 34px rgba(92, 74, 125, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+.shell-light .brand-mark {
+  background: var(--lg-gradient) !important;
+  box-shadow: 0 0 0 1px var(--glass-border), 0 8px 20px rgba(92, 74, 125, 0.35) !important;
+}
+
+.shell-light .pulse-bar {
+  background: var(--lg-gradient) !important;
+}
+
+/* Secondary button: ghost glass on dark canvas, not opaque card glass */
+.shell-light .secondary-button {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: var(--text-on-dark) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.shell-light .secondary-button:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* ---------- Recolor gradient-based glows and badges ---------- */
+.shell-light .hero-panel::before {
+  background: conic-gradient(from 0deg, rgba(124, 107, 160, 0.3), transparent 25%, rgba(209, 168, 106, 0.26) 50%, transparent 75%, rgba(196, 138, 153, 0.28)) !important;
+}
+
+.shell-light .process-step::before {
+  background: var(--lg-gradient) !important;
+  box-shadow: 0 6px 16px rgba(92, 74, 125, 0.4) !important;
+}
+
+.shell-light .offer-tile svg {
+  background: linear-gradient(135deg, rgba(124, 107, 160, 0.2), rgba(209, 168, 106, 0.18)) !important;
+  color: var(--lg-violet-deep) !important;
+}
+
+.shell-light .cta-band::before {
+  background:
+    radial-gradient(30rem 16rem at 15% 20%, rgba(124, 107, 160, 0.26), transparent 65%),
+    radial-gradient(26rem 14rem at 85% 85%, rgba(209, 168, 106, 0.22), transparent 65%) !important;
+}
+
+.shell-light .nav-links a::after {
+  background: var(--lg-gradient) !important;
+}
+
+/* ---------- Text directly on the dark canvas (outside glass cards) ---------- */
+.shell-light .hero .eyebrow {
+  color: var(--lg-gold-bright) !important;
+}
+
+.shell-light .hero h1 {
+  color: var(--text-on-dark) !important;
+}
+
+.shell-light .hero-copy {
+  color: var(--text-on-dark-muted) !important;
+}
+
+.shell-light .section-heading .eyebrow {
+  color: var(--lg-gold-bright) !important;
+}
+
+.shell-light .section-heading h2 {
+  color: var(--text-on-dark) !important;
+}
+
+.shell-light .ecommerce-tiers > .eyebrow {
+  color: var(--lg-gold-bright) !important;
+}
+
+.shell-light .ecommerce-tiers > h2 {
+  color: var(--text-on-dark) !important;
+}
+
+.shell-light .ecommerce-tiers > p.muted {
+  color: var(--text-on-dark-muted) !important;
+}
+
+.shell-light .nav-links a {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+.shell-light .nav-links a:hover {
+  color: #fff !important;
+}
+
+/* ---------- CTA band accent now matches new palette ---------- */
+.shell-light .cta-band .eyebrow {
+  color: var(--lg-violet-deep) !important;
+}
+
+/* ---------- Footer sits directly on the dark canvas ---------- */
+.shell-light .site-footer {
+  color: var(--text-on-dark-muted);
+}
+
+.shell-light .site-footer h4 {
+  color: var(--text-on-dark) !important;
+}
+
+.shell-light .footer-brand .muted {
+  color: var(--text-on-dark-muted) !important;
+}
+
+.shell-light .footer-col a {
+  color: var(--text-on-dark-muted) !important;
+}
+
+.shell-light .footer-col a:hover {
+  color: var(--text-on-dark) !important;
+}
+
+.shell-light .footer-bottom {
+  color: var(--text-on-dark-muted) !important;
+}
+
+.shell-light .footer-bottom .muted {
+  color: var(--text-on-dark-muted) !important;
+}
+
+.shell-light .site-footer .brand span {
+  color: var(--text-on-dark) !important;
+}
+
+/* ---------- EcommerceTiers cards: match the glass card language ---------- */
+.shell-light .next-step-card {
+  border-radius: var(--glass-radius-sm);
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 18px 40px rgba(5, 3, 10, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.shell-light .next-step-card h3,
+.shell-light .next-step-card p {
+  color: var(--text-on-glass);
+}
+
+.shell-light .next-step-card p.muted {
+  color: var(--text-on-glass-muted) !important;
+}
+
+/* ---------- Fix: eyebrow inside the light hero-panel card must stay dark,
+overriding the "on-dark" .hero .eyebrow rule above via source order ---------- */
+.shell-light .hero-panel .eyebrow {
+  color: var(--lg-violet-deep) !important;
+}
+
+/* ---------- ClosingSignals icons inside the hero card: match palette ---------- */
+.shell-light .metric svg {
+  color: var(--lg-violet-deep) !important;
+}
