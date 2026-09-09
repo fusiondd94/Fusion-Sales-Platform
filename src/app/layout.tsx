@@ -14,6 +14,7 @@ import "./liquid-glass-v3-append.css";
 import "./liquid-glass-v4-portal-login-append.css";
 import "./admin-dashboard-masonry-append.css";
 import "./admin-dashboard-overflow-fix-append.css";
+import "./settings-masonry-append.css";
 
 const inter = Inter({
   subsets: ["latin"],
