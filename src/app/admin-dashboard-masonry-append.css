@@ -1,0 +1,53 @@
+/* ============================================================
+   CRM dashboard: masonry-style panel grid.
+      The stock CSS Grid layout (.admin-dashboard-grid) reserves a
+         full row's height for the tallest panel in that row, leaving
+            large empty gaps under shorter panels — e.g. the short
+               "Notifications" and "Proposals" cards next to the much taller
+                  "Recent activity" list. A balanced CSS multi-column layout lets
+                     every panel take only the height its own content needs, closing
+                        those gaps.
+
+                           Scoped only to .admin-dashboard-grid — .admin-two-column and any
+                              other layout sharing the base grid rule in globals.css are left
+                                 untouched.
+                                    ============================================================ */
+
+.admin-dashboard-grid {
+    display: block !important;
+    column-count: 3;
+    column-gap: 1rem;
+}
+
+.admin-dashboard-grid::after {
+    content: "";
+    display: block;
+    clear: both;
+}
+
+.admin-dashboard-grid > .dashboard-panel {
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    margin-bottom: 1rem;
+}
+
+.admin-dashboard-grid > .panel-span-2 {
+    column-span: all;
+    -webkit-column-span: all;
+    width: auto;
+}
+
+@media (max-width: 1080px) {
+    .admin-dashboard-grid {
+          column-count: 2;
+    }
+}
+
+@media (max-width: 880px) {
+    .admin-dashboard-grid {
+          column-count: 1;
+    }
+}
