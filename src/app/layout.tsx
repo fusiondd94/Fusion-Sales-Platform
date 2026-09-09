@@ -13,6 +13,7 @@ import "./liquid-glass-v2-append.css";
 import "./liquid-glass-v3-append.css";
 import "./liquid-glass-v4-portal-login-append.css";
 import "./admin-dashboard-masonry-append.css";
+import "./admin-dashboard-overflow-fix-append.css";
 
 const inter = Inter({
   subsets: ["latin"],
