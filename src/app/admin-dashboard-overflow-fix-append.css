@@ -1,0 +1,62 @@
+/* ============================================================
+   CRM/marketing dashboard: stop panel content from bleeding
+   past the right edge of the page.
+
+   Root cause: the masonry dashboard grid (admin-dashboard-masonry-append.css)
+   lays panels out in CSS columns. Unlike CSS Grid, columns do not
+   clip or shrink content that is wider than the column - a long
+   unbroken string (an email, a URL, a long lead/company name with
+   no spaces) simply overflows the column edge and bleeds to the
+   right instead of wrapping. This file makes every panel and its
+   text content respect the width it is given, wrapping onto
+   additional lines and stacking instead of ever overflowing, and
+   adds a safety clip on the grid itself as a last resort.
+   ============================================================ */
+
+.admin-dashboard-grid {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+.admin-dashboard-grid > .dashboard-panel,
+.admin-dashboard-grid > .panel-span-2 {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.dashboard-panel,
+.dashboard-panel * {
+    min-width: 0;
+}
+
+.dashboard-panel .panel-heading,
+.dashboard-panel .stage-heading {
+    flex-wrap: wrap;
+}
+
+.dashboard-panel .panel-heading h2,
+.dashboard-panel .status-pill,
+.dashboard-panel .stage-heading strong,
+.dashboard-panel .stage-heading span,
+.dashboard-panel .stack-list p,
+.dashboard-panel .timeline-list p,
+.dashboard-panel .deal-card,
+.dashboard-panel .deal-card strong,
+.dashboard-panel .deal-card span,
+.dashboard-focus-list p,
+.dashboard-focus-list strong,
+.dashboard-focus-list span {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+.dashboard-panel .pipeline-board {
+    max-width: 100%;
+}
+
+.admin-main,
+.admin-content {
+    max-width: 100%;
+    overflow-x: hidden;
+}
