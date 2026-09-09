@@ -37,7 +37,8 @@
 .admin-dashboard-grid > .panel-span-2 {
     column-span: all;
     -webkit-column-span: all;
-    width: auto;
+      display: block !important;
+     width: 100% !important;
 }
 
 @media (max-width: 1080px) {
