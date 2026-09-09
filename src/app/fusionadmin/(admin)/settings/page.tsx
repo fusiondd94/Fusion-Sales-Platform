@@ -27,7 +27,7 @@ export default async function FusionSettingsPage() {
         description="Control the platform settings that shape pricing, admin identity, and backend access."
       />
 
-      <section className="admin-two-column">
+      <section className="admin-two-column settings-masonry">
         <article className="admin-panel">
           <div className="panel-heading">
             <h2><MessageCircle size={20} /> Connections</h2>
