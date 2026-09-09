@@ -66,3 +66,41 @@
           column-count: 1;
     }
 }
+
+/* Settings page: fix the trailing "Add user" + "Access snapshot" pair.
+   These two panels sit after the full-width "Service pricing" panel
+   (column-span: all), which starts a new column-balancing context.
+   With only two boxes left, some browsers fail to balance them across
+   both columns and leave one column of the pair completely empty.
+   Wrapping them in their own two-column flow (scoped via
+   .settings-tail-masonry) sidesteps that continuation-balance edge
+   case entirely. */
+
+.settings-tail-masonry {
+     display: block !important;
+     column-count: 2;
+     column-gap: 1rem;
+}
+
+.settings-tail-masonry::after {
+     content: "";
+     display: block;
+     clear: both;
+}
+
+.settings-tail-masonry > .admin-panel {
+     display: inline-block;
+     width: 100%;
+     vertical-align: top;
+     break-inside: avoid;
+     -webkit-column-break-inside: avoid;
+     margin-bottom: 1rem;
+     min-width: 0;
+     max-width: 100%;
+}
+
+@media (max-width: 880px) {
+     .settings-tail-masonry {
+            column-count: 1;
+     }
+}
