@@ -1,0 +1,68 @@
+/* ============================================================
+   Settings page: masonry-style panel grid, matching the CRM
+   dashboard treatment. The stock two-column CSS Grid
+   (.admin-two-column) reserves a full row's height for the
+   taller panel in each row, leaving gaps under shorter panels
+   (e.g. "Connections" next to the taller "Brand settings", or
+   "Add user" next to "Access snapshot"). A CSS multi-column
+   layout lets each panel take only the height its own content
+   needs, closing those gaps.
+
+   Scoped to .admin-two-column.settings-masonry - only the
+   Settings page opts in via the "settings-masonry" class - so
+   every other page using .admin-two-column (reports, deals,
+   proposals, clients, tasks, team, calendar, content, email,
+   services, forms) is untouched.
+   ============================================================ */
+
+.admin-two-column.settings-masonry {
+    display: block !important;
+    column-count: 2;
+    column-gap: 1rem;
+}
+
+.admin-two-column.settings-masonry::after {
+    content: "";
+    display: block;
+    clear: both;
+}
+
+.admin-two-column.settings-masonry > .admin-panel {
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    margin-bottom: 1rem;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.admin-two-column.settings-masonry > .panel-span-2 {
+    column-span: all;
+    -webkit-column-span: all;
+    display: block !important;
+    width: 100% !important;
+}
+
+.admin-two-column.settings-masonry .admin-panel,
+.admin-two-column.settings-masonry .admin-panel * {
+    min-width: 0;
+}
+
+.admin-two-column.settings-masonry .stack-list p,
+.admin-two-column.settings-masonry .stack-list strong,
+.admin-two-column.settings-masonry .stack-list span,
+.admin-two-column.settings-masonry .settings-list p,
+.admin-two-column.settings-masonry .settings-list span,
+.admin-two-column.settings-masonry .price-editor-wrap {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+@media (max-width: 880px) {
+    .admin-two-column.settings-masonry {
+          column-count: 1;
+    }
+}
