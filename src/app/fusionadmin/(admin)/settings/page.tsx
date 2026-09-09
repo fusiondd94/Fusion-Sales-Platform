@@ -142,7 +142,8 @@ export default async function FusionSettingsPage() {
           </div>
         </article>
 
-        <article className="admin-panel">
+<div className="panel-span-2 settings-tail-masonry">
+  <article className="admin-panel">
           <h2><UsersRound size={20} /> Add user</h2>
           <form className="quick-form" action={inviteFusionTeamMember} data-track-unsaved="true">
             <input name="displayName" placeholder="Full name" />
@@ -171,6 +172,7 @@ export default async function FusionSettingsPage() {
             {!admin.members.length ? <EmptyState>No teammates have been added yet.</EmptyState> : null}
           </div>
         </article>
+</div>
       </section>
     </div>
   );
