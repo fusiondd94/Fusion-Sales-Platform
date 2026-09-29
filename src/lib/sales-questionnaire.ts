@@ -333,7 +333,7 @@ export async function submitAnswer(
   }
 
   const nextQuestion = getNextQuestion(answers);
-  if (!nextQuestion && session.status === "in_progress") {
+  if (getNextStep(answers) === null && session.status === "in_progress") {
     await markSessionCompleted(sessionToken, orgId);
     session.status = "completed";
   }
