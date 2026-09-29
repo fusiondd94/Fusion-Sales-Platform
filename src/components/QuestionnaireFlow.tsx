@@ -676,4 +676,4 @@ function SpecialAckView({ token, onContinue }: { token: SpecialAck; onContinue: 
                 </div>
           </section>
         );
-}</></></section>
+}
