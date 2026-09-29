@@ -875,7 +875,7 @@ export function getNextStep(answers: AnswerMap): QuestionnaireStep | null {
     const visibleSteps = getVisibleSteps(answers);
     for (const step of visibleSteps) {
           const stepQuestions = getVisibleStepQuestions(step, answers);
-          const hasUnanswered = stepQuestions.some((question) => !isAnswered(answers[question.key]));
+          const hasUnanswered = stepQuestions.some((question) => question.required && !isAnswered(answers[question.key]));
           if (hasUnanswered) return step;
     }
     return null;
