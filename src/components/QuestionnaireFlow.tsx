@@ -336,7 +336,7 @@ function BudgetStep({
                       </button>
                     ))}
                 </div>
-          </>>
+          </>
         );
 }
 
@@ -426,7 +426,7 @@ function StepView({
                                   Continue <ArrowRight size={17} />
                         </button>
                 </div>
-          </>>
+          </>
         );
 }
 
