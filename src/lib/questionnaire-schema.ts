@@ -724,6 +724,180 @@ export const QUESTION_DEFINITIONS: QuestionDefinition[] = [
 
 export const CONTACT_QUESTION_KEYS = ["business_name", "contact_name", "contact_email", "contact_phone"] as const;
 
+export type QuestionnaireStep = {
+    key: string;
+    title: string;
+    heading: string;
+    questionKeys: string[];
+};
+
+export const QUESTIONNAIRE_STEPS: QuestionnaireStep[] = [
+  {
+        key: "budget",
+        title: "Budget",
+        heading: "Let's start with your budget",
+        questionKeys: ["total_budget"]
+  },
+  {
+        key: "contact_info",
+        title: "Contact info",
+        heading: "Tell us about you and your business",
+        questionKeys: ["business_name", "contact_name", "contact_email", "contact_phone"]
+  },
+  {
+        key: "contact_preferences",
+        title: "How to reach you",
+        heading: "How should we stay in touch?",
+        questionKeys: ["preferred_contact_method", "marketing_consent"]
+  },
+  {
+        key: "business_basics",
+        title: "About your business",
+        heading: "Tell us a bit more about your business",
+        questionKeys: ["industry", "business_location", "business_exists"]
+  },
+  {
+        key: "website_scope",
+        title: "Website purpose & scope",
+        heading: "What's this website for?",
+        questionKeys: ["website_purpose", "expected_pages", "initial_product_count"]
+  },
+  {
+        key: "site_functionality",
+        title: "What your site needs to do",
+        heading: "What should your website be able to do?",
+        questionKeys: [
+                "sells_physical_products",
+                "sells_digital_products",
+                "digital_download_protection",
+                "offers_services",
+                "offers_subscriptions",
+                "accepts_donations",
+                "needs_customer_accounts",
+                "marketplace_vendors",
+                "needs_payment_processing",
+                "needs_shipping",
+                "tax_requirements",
+                "inventory_requirements",
+                "needs_bookings",
+                "booking_deposits_required",
+                "booking_staff_calendars",
+                "booking_recurring_appointments",
+                "needs_memberships",
+                "membership_protected_content",
+                "membership_subscription_billing"
+              ]
+  },
+  {
+        key: "existing_assets",
+        title: "What you already have",
+        heading: "What do you already have in place?",
+        questionKeys: [
+                "has_existing_website",
+                "has_existing_domain",
+                "domain_transferable",
+                "has_existing_hosting",
+                "hosting_transferable",
+                "has_existing_ssl",
+                "has_existing_professional_email",
+                "has_existing_branding",
+                "has_existing_logo",
+                "has_existing_written_content",
+                "has_existing_media"
+              ]
+  },
+  {
+        key: "help_wanted",
+        title: "What you'd like help with",
+        heading: "What would you like help with?",
+        questionKeys: [
+                "needs_content_writing",
+                "needs_logo_design",
+                "needs_seo",
+                "needs_email_marketing",
+                "needs_professional_email",
+                "needs_microsoft_365",
+                "needs_crm",
+                "needs_appointment_scheduling",
+                "needs_forms",
+                "needs_live_chat",
+                "needs_ai_chatbot",
+                "needs_marketing_automations",
+                "needs_multilingual",
+                "needs_accessibility"
+              ]
+  },
+  {
+        key: "timeline_decision",
+        title: "Timeline & decision",
+        heading: "Let's talk timeline",
+        questionKeys: [
+                "desired_launch_date",
+                "decision_timeline",
+                "is_decision_maker",
+                "payment_plan_interest",
+                "preferred_investment_level"
+              ]
+  },
+  {
+        key: "final_details",
+        title: "Final details",
+        heading: "Just a few final details",
+        questionKeys: [
+                "must_have_features",
+                "nice_to_have_features",
+                "biggest_business_problem",
+                "primary_conversion_goal",
+                "referral_source"
+              ]
+  }
+  ];
+
+export function getStepQuestions(step: QuestionnaireStep): QuestionDefinition[] {
+    return step.questionKeys
+      .map((key) => QUESTION_DEFINITIONS.find((question) => question.key === key))
+      .filter((question): question is QuestionDefinition => Boolean(question));
+}
+
+export function getVisibleStepQuestions(step: QuestionnaireStep, answers: AnswerMap): QuestionDefinition[] {
+    return getStepQuestions(step).filter((question) => isQuestionVisible(question, answers));
+}
+
+export function isStepVisible(step: QuestionnaireStep, answers: AnswerMap): boolean {
+    return getVisibleStepQuestions(step, answers).length > 0;
+}
+
+export function getVisibleSteps(answers: AnswerMap): QuestionnaireStep[] {
+    return QUESTIONNAIRE_STEPS.filter((step) => isStepVisible(step, answers));
+}
+
+export function getNextStep(answers: AnswerMap): QuestionnaireStep | null {
+    const visibleSteps = getVisibleSteps(answers);
+    for (const step of visibleSteps) {
+          const stepQuestions = getVisibleStepQuestions(step, answers);
+          const hasUnanswered = stepQuestions.some((question) => !isAnswered(answers[question.key]));
+          if (hasUnanswered) return step;
+    }
+    return null;
+}
+
+export type QuestionnaireStepProgress = {
+    currentStepNumber: number;
+    totalSteps: number;
+    percent: number;
+    isComplete: boolean;
+};
+
+export function computeStepProgress(answers: AnswerMap): QuestionnaireStepProgress {
+    const visibleSteps = getVisibleSteps(answers);
+    const totalSteps = visibleSteps.length;
+    const nextStep = getNextStep(answers);
+    const isComplete = nextStep === null;
+const currentStepIndex = nextStep === null ? totalSteps : visibleSteps.findIndex((step) => step.key === nextStep.key);
+      const currentStepNumber = nextStep === null ? totalSteps : currentStepIndex + 1;
+  const percent = totalSteps === 0 ? 0 : Math.round((currentStepNumber / totalSteps) * 100);
+    return { currentStepNumber, totalSteps, percent, isComplete };
+}
 // ---------------------------------------------------------------------------
 // Engine: visibility, progress, next-question resolution
 // ---------------------------------------------------------------------------
