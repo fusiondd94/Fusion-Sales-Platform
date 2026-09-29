@@ -25,6 +25,7 @@ import {
 } from "@/lib/sales-questionnaire";
 import type { AnswerValue } from "@/lib/questionnaire-schema";
 import { generateRecommendationForSession, type StoredRecommendation } from "@/lib/sales-recommendation";
+import { createSessionCheckoutSession } from "@/lib/sales-orders";
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days - "allow the client to return later"
 
@@ -113,4 +114,20 @@ export async function generateRecommendationAction(): Promise<
   const token = await getSessionToken();
   if (!token) return { ok: false, reason: "Your session has expired. Please refresh and start again." };
   return generateRecommendationForSession(token);
+}
+
+
+/**
+ * "Pay in full" or "Pay a deposit" from the live in-flow recommendation
+ * screen, shown right after the customer sees their personalized website
+ * plan. depositPercent must be one of the fixed presets validated inside
+ * createSessionCheckoutSession - never trusted as a free-form amount.
+ */
+export async function createRecommendationCheckoutAction(
+  paymentType: "full" | "deposit",
+  depositPercent: number
+): Promise<{ ok: true; url: string } | { ok: false; reason: string }> {
+  const token = await getSessionToken();
+  if (!token) return { ok: false, reason: "Your session has expired. Please refresh and start again." };
+  return createSessionCheckoutSession(token, paymentType, depositPercent);
 }
