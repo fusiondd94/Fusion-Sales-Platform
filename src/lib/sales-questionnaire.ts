@@ -14,15 +14,25 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type { AnswerMap, AnswerValue, BudgetParseResult, QuestionDefinition, QuestionnaireProgress } from "@/lib/questionnaire-schema";
+import type {
+    AnswerMap,
+    AnswerValue,
+    BudgetParseResult,
+    QuestionDefinition,
+    QuestionnaireProgress,
+    QuestionnaireStep,
+    QuestionnaireStepProgress
+} from "@/lib/questionnaire-schema";
 import {
-  CONTACT_QUESTION_KEYS,
-  QUESTION_DEFINITIONS,
-  computeProgress,
-  getNextQuestion,
-  hasContactInfo,
-  parseBudgetInput,
-  validateAnswerForQuestion
+    CONTACT_QUESTION_KEYS,
+    QUESTION_DEFINITIONS,
+    computeProgress,
+    computeStepProgress,
+    getNextQuestion,
+    getNextStep,
+    hasContactInfo,
+    parseBudgetInput,
+    validateAnswerForQuestion
 } from "@/lib/questionnaire-schema";
 import type { BudgetAssessmentResult } from "@/lib/sales-rules";
 import { assessBudgetForOrganization, loadPortalProductCatalog } from "@/lib/sales-rules";
@@ -106,6 +116,8 @@ export type QuestionnaireState = {
   answers: AnswerMap;
   nextQuestion: QuestionDefinition | null;
   progress: QuestionnaireProgress;
+  nextStep: QuestionnaireStep | null;
+  stepProgress: QuestionnaireStepProgress;
 };
 
 export type SubmitAnswerResult =
@@ -169,7 +181,9 @@ export async function createQuestionnaireSession(
     session: data,
     answers: {},
     nextQuestion: getNextQuestion({}),
-    progress: computeProgress({})
+    progress: computeProgress({}),
+    nextStep: getNextStep({}),
+    stepProgress: computeStepProgress({})
   };
 }
 
@@ -214,7 +228,9 @@ export async function loadQuestionnaireState(sessionToken: string, organizationI
     session,
     answers,
     nextQuestion: getNextQuestion(answers),
-    progress: computeProgress(answers)
+    progress: computeProgress(answers),
+    nextStep: getNextStep(answers),
+    stepProgress: computeStepProgress(answers)
   };
 }
 
@@ -324,7 +340,14 @@ export async function submitAnswer(
 
   return {
     ok: true,
-    state: { session, answers, nextQuestion, progress: computeProgress(answers) }
+state: {
+        session,
+        answers,
+        nextQuestion,
+        progress: computeProgress(answers),
+        nextStep: getNextStep(answers),
+        stepProgress: computeStepProgress(answers)
+}
   };
 }
 
@@ -424,7 +447,14 @@ export async function submitBudgetAnswer(sessionToken: string, rawInput: string,
     parseResult,
     assessment,
     requiredPortalCostEstimate,
-    state: { session, answers, nextQuestion, progress: computeProgress(answers) }
+state: {
+        session,
+        answers,
+        nextQuestion,
+        progress: computeProgress(answers),
+        nextStep: getNextStep(answers),
+        stepProgress: computeStepProgress(answers)
+}
   };
 }
 
