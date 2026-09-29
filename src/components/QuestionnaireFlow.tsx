@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, ChevronLeft, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, CreditCard, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { AnswerMap, AnswerValue, QuestionDefinition, QuestionnaireStep } from "@/lib/questionnaire-schema";
 import { QUESTIONNAIRE_STEPS, getVisibleStepQuestions } from "@/lib/questionnaire-schema";
@@ -16,6 +16,7 @@ import {
     submitAnswerAction,
     submitBudgetAction
 } from "@/app/get-started/actions";
+import { createRecommendationCheckoutAction } from "@/app/get-started/actions";
 
 const FEASIBILITY_LABELS: Record<FeasibilityStatus, string> = {
     READY_TO_PROCEED: "Ready to proceed",
@@ -56,6 +57,8 @@ const NEXT_STEP_TO_CONSULTATION_REASON: Record<NextStepAction, ConsultationReaso
 };
 
 const BUDGET_STEP_KEY = "budget";
+
+const DEPOSIT_PRESETS = [20, 30, 40, 50];
 
 export function QuestionnaireFlow({ initialState }: { initialState: QuestionnaireState | null }) {
     const [state, setState] = useState<QuestionnaireState | null>(initialState);
@@ -560,7 +563,26 @@ function RecommendationSummaryView({
     status: "idle" | "loading" | "ready" | "error";
     recommendation: StoredRecommendation | null;
 }) {
-    if (status === "loading" || status === "idle") {
+    const [paymentPending, setPaymentPending] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [checkoutPending, startCheckoutTransition] = useTransition();
+
+  function handlePayment(paymentType: "full" | "deposit", depositPercent?: number) {
+    setPaymentError(null);
+    const key = paymentType === "full" ? "full" : `deposit-${depositPercent}`;
+    setPaymentPending(key);
+    startCheckoutTransition(async () => {
+      const outcome = await createRecommendationCheckoutAction(paymentType, depositPercent ?? 50);
+      if (!outcome.ok) {
+        setPaymentError(outcome.reason);
+        setPaymentPending(null);
+        return;
+      }
+      window.location.href = outcome.url;
+    });
+  }
+
+  if (status === "loading" || status === "idle") {
           return (
                   <section className="flow-panel building-plan">
                           <p className="eyebrow">Almost there</p>
@@ -642,6 +664,46 @@ function RecommendationSummaryView({
             {recommendation.portalPricingDisclaimer ? (
                     <p className="muted">{recommendation.portalPricingDisclaimer}</p>
                   ) : null}
+
+      {recommendation.totalPlannedBudget > 0 ? (
+        <div className="result-actions payment-actions">
+          <h3>Ready to get started?</h3>
+          <p className="muted">
+            Secure your spot on the Fusion build calendar today. Pay your full budget now, or put down a deposit to
+            get started and pay the rest whenever you&apos;re ready from your client portal.
+          </p>
+          <div className="flow-actions">
+            <button
+              className="primary-button"
+              disabled={checkoutPending}
+              onClick={() => handlePayment("full")}
+              type="button"
+            >
+              <CreditCard size={17} /> Pay in full - ${recommendation.totalPlannedBudget.toLocaleString()}
+              {paymentPending === "full" ? "…" : ""}
+            </button>
+          </div>
+          <div className="flow-actions deposit-presets">
+            {DEPOSIT_PRESETS.map((pct) => {
+              const amount = Math.round((recommendation.totalPlannedBudget * pct) / 100);
+              const key = `deposit-${pct}`;
+              return (
+                <button
+                  className="secondary-button"
+                  disabled={checkoutPending}
+                  key={pct}
+                  onClick={() => handlePayment("deposit", pct)}
+                  type="button"
+                >
+                  <CreditCard size={17} /> Pay {pct}% deposit - ${amount.toLocaleString()}
+                  {paymentPending === key ? "…" : ""}
+                </button>
+              );
+            })}
+          </div>
+          {paymentError ? <p className="form-error">{paymentError}</p> : null}
+        </div>
+      ) : null}
           </section>
         );
 }
