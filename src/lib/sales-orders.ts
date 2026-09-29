@@ -99,6 +99,50 @@ async function resolveOrderContextByShareToken(supabase: ServiceClient, shareTok
   };
 }
 
+async function resolveOrderContextBySessionToken(supabase: ServiceClient, sessionToken: string): Promise<OrderContext | null> {
+  const { data: session } = await supabase
+    .from("sales_questionnaire_sessions")
+    .select("id, organization_id, lead_id")
+    .eq("session_token", sessionToken)
+    .maybeSingle<{ id: string; organization_id: string | null; lead_id: string | null }>();
+
+  if (!session) return null;
+
+  const { data: recommendation } = await supabase
+    .from("sales_website_recommendations")
+    .select("id, total_planned_budget")
+    .eq("session_id", session.id)
+    .eq("status", "draft")
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; total_planned_budget: number }>();
+
+  if (!recommendation) return null;
+
+  let customerEmail: string | null = null;
+  let customerName: string | null = null;
+
+  if (session.lead_id) {
+    const { data: lead } = await supabase
+      .from("crm_leads")
+      .select("customer_email, customer_name")
+      .eq("id", session.lead_id)
+      .maybeSingle<{ customer_email: string | null; customer_name: string | null }>();
+    customerEmail = lead?.customer_email ?? null;
+    customerName = lead?.customer_name ?? null;
+  }
+
+  return {
+    sessionId: session.id,
+    organizationId: session.organization_id,
+    leadId: session.lead_id,
+    recommendationId: recommendation.id,
+    totalPlannedBudget: recommendation.total_planned_budget,
+    customerEmail,
+    customerName
+  };
+}
+
 async function findOrCreateWebsiteOrder(
   supabase: ServiceClient,
   ctx: OrderContext
@@ -183,6 +227,91 @@ export async function createBudgetCheckoutSession(shareToken: string, paymentTyp
     },
     success_url: `${appUrl}/order/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/results/${shareToken}?checkout=cancelled`
+  });
+
+  if (!session.url) return { ok: false, reason: "Unable to start checkout. Please try again." };
+
+  await supabase.from("sales_payments").insert({
+    order_id: order.id,
+    stripe_checkout_session_id: session.id,
+    amount_cents: amountCents,
+    payment_type: paymentType,
+    status: "pending"
+  });
+
+  return { ok: true, url: session.url };
+}
+
+/**
+ * Deposit preset percentages the live in-flow "how would you like to pay"
+ * step offers - kept server-side so a client-supplied percentage can never
+ * be trusted.
+ */
+const ALLOWED_DEPOSIT_PERCENTS = [20, 30, 40, 50];
+
+/**
+ * "Pay in full" or "Pay a deposit" from the live questionnaire flow, shown
+ * right after the customer sees their recommendation. Unlike
+ * createBudgetCheckoutSession (the public /results/[token] link, which is
+ * always a fixed 50% deposit), this resolves the order directly from the
+ * httpOnly session cookie - no share token - and accepts a caller-chosen
+ * deposit percentage that is validated against ALLOWED_DEPOSIT_PERCENTS.
+ */
+export async function createSessionCheckoutSession(
+  sessionToken: string,
+  paymentType: "full" | "deposit",
+  depositPercent: number = 50
+): Promise<CheckoutResult> {
+  const stripe = getStripe();
+  const supabase = createSupabaseServiceClient();
+  if (!stripe || !supabase) return { ok: false, reason: "Payments are not configured yet. Please contact Fusion directly." };
+
+  if (paymentType === "deposit" && !ALLOWED_DEPOSIT_PERCENTS.includes(depositPercent)) {
+    return { ok: false, reason: "Please choose a valid deposit amount." };
+  }
+
+  const ctx = await resolveOrderContextBySessionToken(supabase, sessionToken);
+  if (!ctx) return { ok: false, reason: "We could not find your plan." };
+  if (!ctx.totalPlannedBudget || ctx.totalPlannedBudget <= 0) {
+    return { ok: false, reason: "Please enter a project budget before continuing to payment." };
+  }
+
+  const order = await findOrCreateWebsiteOrder(supabase, ctx);
+  const amountCents =
+    paymentType === "full" ? order.totalAmountCents : Math.round((order.totalAmountCents * depositPercent) / 100);
+
+  if (amountCents < 100) return { ok: false, reason: "That amount is too small to process. Please enter a higher budget." };
+
+  const appUrl = getAppUrl();
+  const email = ctx.customerEmail && ctx.customerEmail !== "pending@checkout.stripe.com" ? ctx.customerEmail : undefined;
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: email,
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name:
+              paymentType === "full"
+                ? "Website project - full payment"
+                : `Website project - ${depositPercent}% deposit to get started`
+          },
+          unit_amount: amountCents
+        },
+        quantity: 1
+      }
+    ],
+    metadata: {
+      orderKind: "sales_order",
+      orderId: order.id,
+      paymentType,
+      depositPercent: paymentType === "deposit" ? String(depositPercent) : "",
+      sessionToken
+    },
+    success_url: `${appUrl}/order/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/get-started?checkout=cancelled`
   });
 
   if (!session.url) return { ok: false, reason: "Unable to start checkout. Please try again." };
